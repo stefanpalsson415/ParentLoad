@@ -17,6 +17,7 @@ export function FamilyProvider({ children }) {
   
   const [familyId, setFamilyId] = useState(null);
   const [familyName, setFamilyName] = useState('');
+  const [familyPicture, setFamilyPicture] = useState(null);
   const [familyMembers, setFamilyMembers] = useState([]);
   const [selectedUser, setSelectedUser] = useState(null);
   const [surveyResponses, setSurveyResponses] = useState({});
@@ -24,15 +25,29 @@ export function FamilyProvider({ children }) {
   const [currentWeek, setCurrentWeek] = useState(1);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  const [surveySchedule, setSurveySchedule] = useState({});
 
   // Initialize family data from auth context
   useEffect(() => {
     if (initialFamilyData) {
       setFamilyId(initialFamilyData.familyId);
       setFamilyName(initialFamilyData.familyName || '');
+      setFamilyPicture(initialFamilyData.familyPicture || null);
       setFamilyMembers(initialFamilyData.familyMembers || []);
       setCompletedWeeks(initialFamilyData.completedWeeks || []);
       setCurrentWeek(initialFamilyData.currentWeek || 1);
+      setSurveySchedule(initialFamilyData.surveySchedule || {});
+      setSurveyResponses(initialFamilyData.surveyResponses || {});
+      
+      // Set document title with family name
+      if (initialFamilyData.familyName) {
+        document.title = `${initialFamilyData.familyName} Family AI Balancer`;
+      }
+      
+      // Set favicon if family picture exists
+      if (initialFamilyData.familyPicture) {
+        updateFavicon(initialFamilyData.familyPicture);
+      }
       
       // Try to set the selected user to the current authenticated user
       if (currentUser) {
@@ -52,16 +67,36 @@ export function FamilyProvider({ children }) {
     }
   }, [initialFamilyData, currentUser]);
 
+  // Update favicon helper function
+  const updateFavicon = (imageUrl) => {
+    let link = document.querySelector("link[rel*='icon']") || document.createElement('link');
+    link.type = 'image/x-icon';
+    link.rel = 'shortcut icon';
+    link.href = imageUrl;
+    document.getElementsByTagName('head')[0].appendChild(link);
+  };
+
   // Reset all family state
   const resetFamilyState = () => {
     setFamilyId(null);
     setFamilyName('');
+    setFamilyPicture(null);
     setFamilyMembers([]);
     setSelectedUser(null);
     setSurveyResponses({});
     setCompletedWeeks([]);
     setCurrentWeek(1);
+    setSurveySchedule({});
     setError(null);
+    
+    // Reset document title
+    document.title = 'ParentLoad';
+    
+    // Reset favicon
+    let link = document.querySelector("link[rel*='icon']");
+    if (link) {
+      link.href = '/favicon.ico';
+    }
   };
 
   // Select a family member
@@ -88,6 +123,64 @@ export function FamilyProvider({ children }) {
       if (selectedUser && selectedUser.id === memberId) {
         setSelectedUser({ ...selectedUser, ...data });
       }
+      
+      return true;
+    } catch (error) {
+      setError(error.message);
+      throw error;
+    }
+  };
+
+  // Update family name
+  const updateFamilyName = async (newName) => {
+    try {
+      if (!familyId) throw new Error("No family ID available");
+      
+      setFamilyName(newName);
+      
+      // Update document title
+      document.title = `${newName} Family AI Balancer`;
+      
+      // Save to Firebase
+      await DatabaseService.saveFamilyData({ familyName: newName }, familyId);
+      
+      return true;
+    } catch (error) {
+      setError(error.message);
+      throw error;
+    }
+  };
+
+  // Update family picture (favicon)
+  const updateFamilyPicture = async (imageUrl) => {
+    try {
+      if (!familyId) throw new Error("No family ID available");
+      
+      setFamilyPicture(imageUrl);
+      
+      // Update favicon
+      updateFavicon(imageUrl);
+      
+      // Save to Firebase
+      await DatabaseService.saveFamilyData({ familyPicture: imageUrl }, familyId);
+      
+      return true;
+    } catch (error) {
+      setError(error.message);
+      throw error;
+    }
+  };
+
+  // Update survey schedule
+  const updateSurveySchedule = async (weekNumber, dueDate) => {
+    try {
+      if (!familyId) throw new Error("No family ID available");
+      
+      const updatedSchedule = { ...surveySchedule, [weekNumber]: dueDate.toISOString() };
+      setSurveySchedule(updatedSchedule);
+      
+      // Save to Firebase
+      await DatabaseService.saveFamilyData({ surveySchedule: updatedSchedule }, familyId);
       
       return true;
     } catch (error) {
@@ -257,24 +350,43 @@ export function FamilyProvider({ children }) {
     }
   };
 
+  // Get individual's survey responses
+  const getMemberSurveyResponses = async (memberId, surveyType) => {
+    try {
+      if (!familyId) throw new Error("No family ID available");
+      
+      const responses = await DatabaseService.loadMemberSurveyResponses(familyId, memberId, surveyType);
+      return responses;
+    } catch (error) {
+      setError(error.message);
+      throw error;
+    }
+  };
+
   // Context value
   const value = {
     familyId,
     familyName,
+    familyPicture,
     familyMembers,
     selectedUser,
     surveyResponses,
     completedWeeks,
     currentWeek,
+    surveySchedule,
     loading,
     error,
     selectFamilyMember,
     updateMemberProfile,
+    updateFamilyName,
+    updateFamilyPicture,
+    updateSurveySchedule,
     completeInitialSurvey,
     completeWeeklyCheckIn,
     addTaskComment,
     updateTaskCompletion,
     saveFamilyMeetingNotes,
+    getMemberSurveyResponses,
     resetFamilyState
   };
 

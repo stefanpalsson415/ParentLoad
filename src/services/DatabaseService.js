@@ -268,6 +268,23 @@ class DatabaseService {
     }
   }
 
+  // Load member survey responses
+  async loadMemberSurveyResponses(familyId, memberId, surveyType) {
+    try {
+      const docRef = doc(this.db, "surveyResponses", `${familyId}-${memberId}-${surveyType}`);
+      const docSnap = await getDoc(docRef);
+      
+      if (docSnap.exists()) {
+        return docSnap.data().responses || {};
+      } else {
+        return {};
+      }
+    } catch (error) {
+      console.error("Error loading member survey responses:", error);
+      throw error;
+    }
+  }
+
   // Add task comment
   async addTaskComment(familyId, taskId, userId, userName, text) {
     try {
@@ -435,7 +452,9 @@ class DatabaseService {
         currentWeek: 1,
         createdAt: new Date(),
         updatedAt: new Date(),
-        memberIds: parentUsers.map(user => user.uid)
+        memberIds: parentUsers.map(user => user.uid),
+        surveySchedule: {}, // Initialize empty survey schedule
+        familyPicture: null // Initialize empty family picture
       };
       
       console.log("Attempting to save family document:", familyId);
@@ -483,6 +502,47 @@ class DatabaseService {
       return downloadURL;
     } catch (error) {
       console.error("Error updating profile picture:", error);
+      throw error;
+    }
+  }
+
+  // AI Task Intelligence Engine
+  async generateAITaskRecommendations(familyId) {
+    try {
+      // In a real implementation, this would analyze survey data for "hidden" workload imbalances
+      // and generate personalized task recommendations
+      
+      // For now, we'll mock the AI recommendations
+      const hiddenTasks = [
+        {
+          id: 'ai-1',
+          assignedTo: 'Papa',
+          title: 'Emotional Check-ins',
+          description: 'Our AI detected that Mama is handling 85% of emotional support for the children. Taking time for regular emotional check-ins with each child would help balance this invisible work.',
+          isAIGenerated: true,
+          hiddenWorkloadType: 'Invisible Parental Tasks',
+          insight: 'Through pattern analysis of your family\'s survey responses, we noticed that children consistently report Mama handling emotional support discussions.',
+          completed: false,
+          comments: []
+        },
+        {
+          id: 'ai-2',
+          assignedTo: 'Mama',
+          title: 'Home Maintenance Planning',
+          description: 'Papa has been handling most home maintenance decisions. Creating a shared maintenance calendar would help balance this invisible household work.',
+          isAIGenerated: true,
+          hiddenWorkloadType: 'Invisible Household Tasks',
+          insight: 'Survey analysis shows Papa is handling 78% of home maintenance coordination, which creates mental load imbalance.',
+          completed: false,
+          comments: []
+        }
+      ];
+      
+      // In a real implementation, we would save these to the database
+      // For now, we'll just return them
+      return hiddenTasks;
+    } catch (error) {
+      console.error("Error generating AI task recommendations:", error);
       throw error;
     }
   }

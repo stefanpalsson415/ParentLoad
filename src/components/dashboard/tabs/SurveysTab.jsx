@@ -7,6 +7,7 @@ const SurveysTab = ({ onStartWeeklyCheckIn }) => {
     familyMembers, 
     currentWeek,
     completedWeeks,
+    surveySchedule,
     updateSurveySchedule
   } = useFamily();
   
@@ -38,28 +39,46 @@ const SurveysTab = ({ onStartWeeklyCheckIn }) => {
         name: 'Initial Survey',
         status: 'completed',
         date: initialDate.toLocaleDateString(),
+        scheduledDate: initialDate,
         allCompleted: true
       }
     ];
     
     // Add completed weekly check-ins
     completedWeeks.forEach(week => {
-      const weekDate = new Date(initialDate);
-      weekDate.setDate(initialDate.getDate() + (week * 7)); // Each week is 7 days apart
+      let weekDate;
+      
+      // Check if we have a scheduled date for this week
+      if (surveySchedule && surveySchedule[week]) {
+        weekDate = new Date(surveySchedule[week]);
+      } else {
+        // Default to 7 days after initial survey
+        weekDate = new Date(initialDate);
+        weekDate.setDate(initialDate.getDate() + (week * 7));
+      }
       
       surveys.push({
         id: `week-${week}`,
         name: `Week ${week} Check-in`,
         status: 'completed',
         date: weekDate.toLocaleDateString(),
+        scheduledDate: weekDate,
         allCompleted: true
       });
     });
     
     // Add current week if not completed
     if (!completedWeeks.includes(currentWeek)) {
-      const currentWeekDate = new Date(initialDate);
-      currentWeekDate.setDate(initialDate.getDate() + (currentWeek * 7));
+      let currentWeekDate;
+      
+      // Check if we have a scheduled date for this week
+      if (surveySchedule && surveySchedule[currentWeek]) {
+        currentWeekDate = new Date(surveySchedule[currentWeek]);
+      } else {
+        // Default to 7 days after initial survey
+        currentWeekDate = new Date(initialDate);
+        currentWeekDate.setDate(initialDate.getDate() + (currentWeek * 7));
+      }
       
       // Check if any family members have completed this week
       const someCompleted = familyMembers.some(member => 
@@ -87,8 +106,16 @@ const SurveysTab = ({ onStartWeeklyCheckIn }) => {
     // Add next 10 upcoming weeks
     const lastWeek = Math.max(currentWeek, ...completedWeeks, 0);
     for (let week = lastWeek + 1; week <= lastWeek + 10; week++) {
-      const weekDate = new Date(initialDate);
-      weekDate.setDate(initialDate.getDate() + (week * 7));
+      let weekDate;
+      
+      // Check if we have a scheduled date for this week
+      if (surveySchedule && surveySchedule[week]) {
+        weekDate = new Date(surveySchedule[week]);
+      } else {
+        // Default to 7 days after initial survey
+        weekDate = new Date(initialDate);
+        weekDate.setDate(initialDate.getDate() + (week * 7));
+      }
       
       surveys.push({
         id: `week-${week}`,
@@ -107,7 +134,7 @@ const SurveysTab = ({ onStartWeeklyCheckIn }) => {
   
   useEffect(() => {
     setSurveyList(generateSurveyList());
-  }, [familyMembers, currentWeek, completedWeeks]);
+  }, [familyMembers, currentWeek, completedWeeks, surveySchedule]);
   
   // Start editing a survey date
   const startEditingDate = (survey) => {
@@ -141,8 +168,8 @@ const SurveysTab = ({ onStartWeeklyCheckIn }) => {
       const weekNum = parseInt(surveyId.replace('week-', ''));
       const newDate = new Date(newSurveyDate);
       
-      // In a real app, save to database
-      // await updateSurveySchedule(weekNum, newDate);
+      // Update the survey schedule in the database
+      await updateSurveySchedule(weekNum, newDate);
       
       // Update local state
       const updatedSurveys = surveyList.map(survey => {

@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
-import { Users, Calendar, AlertCircle, CheckCircle, ChevronDown, ChevronUp } from 'lucide-react';
+import { Users, Calendar, AlertCircle, CheckCircle, ChevronDown, ChevronUp, Sparkles, Brain, Info } from 'lucide-react';
 import { useFamily } from '../../../contexts/FamilyContext';
+import DatabaseService from '../../../services/DatabaseService';
 
 const TasksTab = ({ onStartWeeklyCheckIn, onOpenFamilyMeeting }) => {
   const { 
@@ -8,6 +9,7 @@ const TasksTab = ({ onStartWeeklyCheckIn, onOpenFamilyMeeting }) => {
     familyMembers,
     currentWeek,
     completedWeeks,
+    familyId,
     addTaskComment,
     updateTaskCompletion
   } = useFamily();
@@ -20,6 +22,10 @@ const TasksTab = ({ onStartWeeklyCheckIn, onOpenFamilyMeeting }) => {
   // Calculate dates
   const [checkInDueDate, setCheckInDueDate] = useState(new Date());
   const [currentDate] = useState(new Date());
+  
+  // State for AI recommendations
+  const [aiRecommendations, setAiRecommendations] = useState([]);
+  const [isLoadingAiRecommendations, setIsLoadingAiRecommendations] = useState(false);
   
   // Check if all initial surveys are complete
   useEffect(() => {
@@ -46,8 +52,26 @@ const TasksTab = ({ onStartWeeklyCheckIn, onOpenFamilyMeeting }) => {
       
       // Can start check-in if 6 days have passed since completion
       setCanStartCheckIn(diffDays <= 0);
+      
+      // Load AI-generated task recommendations
+      loadAiRecommendations();
     }
-  }, [familyMembers, currentDate]);
+  }, [familyMembers, currentDate, familyId]);
+  
+  // Load AI task recommendations
+  const loadAiRecommendations = async () => {
+    if (!familyId) return;
+    
+    setIsLoadingAiRecommendations(true);
+    try {
+      const recommendations = await DatabaseService.generateAITaskRecommendations(familyId);
+      setAiRecommendations(recommendations);
+    } catch (error) {
+      console.error("Error loading AI recommendations:", error);
+    } finally {
+      setIsLoadingAiRecommendations(false);
+    }
+  };
   
   // Generate task recommendations based on survey results
   // In a real app, this would analyze survey data to make personalized recommendations
@@ -249,7 +273,10 @@ const TasksTab = ({ onStartWeeklyCheckIn, onOpenFamilyMeeting }) => {
   const countCompletedTasks = () => {
     let count = 0;
     taskRecommendations.forEach(task => {
-      if (task.subTasks.every(subtask => subtask.completed)) {
+      if (task.subTasks && task.subTasks.every(subtask => subtask.completed)) {
+        count++;
+      } else if (task.completed) {
+        // For AI tasks without subtasks
         count++;
       }
     });
@@ -263,6 +290,9 @@ const TasksTab = ({ onStartWeeklyCheckIn, onOpenFamilyMeeting }) => {
   
   // Check if all subtasks are completed
   const areAllSubtasksComplete = (task) => {
+    if (!task.subTasks || task.subTasks.length === 0) {
+      return task.completed;
+    }
     return task.subTasks.every(subtask => subtask.completed);
   };
   
@@ -294,7 +324,7 @@ const TasksTab = ({ onStartWeeklyCheckIn, onOpenFamilyMeeting }) => {
       const result = await addTaskComment(commentTask, commentText);
       
       // Update local state
-      if (commentTask.includes('-')) {
+      if (commentTask.toString().includes('-')) {
         // It's a subtask comment
         const [taskId, subtaskId] = commentTask.split('-');
         
@@ -326,7 +356,7 @@ const TasksTab = ({ onStartWeeklyCheckIn, onOpenFamilyMeeting }) => {
       } else {
         // It's a main task comment
         const updatedTasks = taskRecommendations.map(task => {
-          if (task.id.toString() === commentTask) {
+          if (task.id.toString() === commentTask.toString()) {
             return {
               ...task,
               comments: [...(task.comments || []), {
@@ -352,6 +382,37 @@ const TasksTab = ({ onStartWeeklyCheckIn, onOpenFamilyMeeting }) => {
       alert("There was an error adding your comment. Please try again.");
     } finally {
       setIsSubmittingComment(false);
+    }
+  };
+  
+  // Handle completion of AI task
+  const handleCompleteAiTask = async (taskId, isCompleted) => {
+    const task = aiRecommendations.find(t => t.id === taskId);
+    
+    // Check permissions - only assigned parent can complete tasks
+    if (canCompleteTask(task)) {
+      try {
+        // Update local state
+        const updatedTasks = aiRecommendations.map(task => {
+          if (task.id === taskId) {
+            return {
+              ...task,
+              completed: isCompleted,
+              completedDate: isCompleted ? new Date().toISOString().split('T')[0] : null
+            };
+          }
+          return task;
+        });
+        
+        setAiRecommendations(updatedTasks);
+      } catch (error) {
+        console.error("Error updating AI task:", error);
+        alert("There was an error updating the task. Please try again.");
+      }
+    } else if (selectedUser.role !== 'parent') {
+      alert("Only parents can mark tasks as complete. Children can add comments instead.");
+    } else {
+      alert(`Only ${task.assignedTo} can mark this task as complete.`);
     }
   };
   
@@ -396,7 +457,7 @@ const TasksTab = ({ onStartWeeklyCheckIn, onOpenFamilyMeeting }) => {
     } else if (selectedUser.role !== 'parent') {
       alert("Only parents can mark tasks as complete. Children can add comments instead.");
     } else {
-      alert(`Only ${task.assignedToName} can mark this task as complete.`);
+      alert(`Only ${task.assignedTo} can mark this task as complete.`);
     }
   };
   
@@ -527,6 +588,111 @@ const TasksTab = ({ onStartWeeklyCheckIn, onOpenFamilyMeeting }) => {
             </button>
           </div>
         </div>
+        
+        {/* AI Task Intelligence Section */}
+        {aiRecommendations && aiRecommendations.length > 0 && (
+          <div className="border rounded-lg p-4 mb-6 bg-gradient-to-r from-purple-50 to-blue-50">
+            <div className="flex items-start mb-4">
+              <div className="flex-shrink-0 mr-3">
+                <div className="w-10 h-10 rounded-full bg-purple-100 flex items-center justify-center">
+                  <Brain size={20} className="text-purple-600" />
+                </div>
+              </div>
+              <div>
+                <h3 className="text-lg font-semibold flex items-center">
+                  AI Task Intelligence
+                  <Sparkles size={16} className="ml-2 text-amber-500" />
+                </h3>
+                <p className="text-sm text-gray-600">
+                  Our AI has detected hidden workload imbalances your family might not have noticed
+                </p>
+              </div>
+            </div>
+            
+            <div className="space-y-4 pl-4">
+              {aiRecommendations.map(task => (
+                <div 
+                  key={task.id} 
+                  className={`border rounded-lg ${task.completed ? 'bg-green-50' : 'bg-white'} overflow-hidden`}
+                >
+                  <div className="p-4 flex items-start">
+                    <div className={`flex-shrink-0 w-8 h-8 rounded-full flex items-center justify-center mr-3 ${
+                      task.completed ? 'bg-green-100 text-green-600' : 'bg-purple-100 text-purple-600'
+                    }`}>
+                      {task.completed ? <CheckCircle size={16} /> : <Sparkles size={16} />}
+                    </div>
+                    
+                    <div className="flex-1">
+                      <div className="flex justify-between items-start">
+                        <div>
+                          <h4 className="font-medium text-lg">{task.title}</h4>
+                          <div className="flex items-center text-xs text-purple-600 mt-1 mb-2">
+                            <Brain size={12} className="mr-1" />
+                            <span>AI-detected {task.hiddenWorkloadType} imbalance</span>
+                          </div>
+                          <p className="text-gray-600 mt-1">
+                            {task.description}
+                          </p>
+                        </div>
+                        
+                        {/* Assigned to label */}
+                        <div className="ml-4 flex-shrink-0">
+                          <span className={`px-2 py-1 text-xs rounded-full ${
+                            task.assignedTo === 'Mama' ? 'bg-purple-100 text-purple-800' : 'bg-green-100 text-green-800'
+                          }`}>
+                            For {task.assignedTo}
+                          </span>
+                        </div>
+                      </div>
+                      
+                      {/* AI Insight Box */}
+                      <div className="bg-purple-50 p-3 rounded mt-3 flex items-start">
+                        <Info size={16} className="text-purple-600 mr-2 flex-shrink-0 mt-0.5" />
+                        <div className="text-sm text-purple-800">
+                          <strong>AI Insight:</strong> {task.insight}
+                        </div>
+                      </div>
+                      
+                      {/* Comments */}
+                      {renderComments(task.comments)}
+                      
+                      {/* Comment form */}
+                      {renderCommentForm(task.id)}
+                      
+                      {/* Action buttons */}
+                      {!commentTask && (
+                        <div className="mt-4 flex justify-end space-x-2">
+                          <button
+                            className="px-3 py-1 text-sm rounded border"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleAddComment(task.id);
+                            }}
+                          >
+                            Comment
+                          </button>
+                          
+                          {canCompleteTask(task) && (
+                            <button
+                              className={`px-3 py-1 text-sm rounded ${
+                                task.completed 
+                                  ? 'bg-gray-200 text-gray-800' 
+                                  : 'bg-green-500 text-white'
+                              }`}
+                              onClick={() => handleCompleteAiTask(task.id, !task.completed)}
+                            >
+                              {task.completed ? 'Completed' : 'Mark as Done'}
+                            </button>
+                          )}
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
           
         <div className="space-y-4">
           {/* Papa's Tasks */}

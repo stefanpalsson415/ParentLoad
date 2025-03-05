@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { LogOut, Filter } from 'lucide-react';
+import { LogOut, Filter, Settings } from 'lucide-react';
 import { useFamily } from '../../contexts/FamilyContext';
 import DashboardTab from './tabs/DashboardTab';
 import TasksTab from './tabs/TasksTab';
@@ -8,6 +8,8 @@ import SurveysTab from './tabs/SurveysTab';
 import WeekHistoryTab from './tabs/WeekHistoryTab';
 import HowThisWorksScreen from '../education/HowThisWorksScreen';
 import PersonalizedApproachScreen from '../education/PersonalizedApproachScreen';
+import InitialSurveyTab from './tabs/InitialSurveyTab';
+import UserSettingsScreen from '../user/UserSettingsScreen';
 
 const DashboardScreen = ({ onOpenFamilyMeeting }) => {
   const navigate = useNavigate();
@@ -15,10 +17,12 @@ const DashboardScreen = ({ onOpenFamilyMeeting }) => {
     selectedUser, 
     familyMembers,
     completedWeeks,
-    currentWeek 
+    currentWeek,
+    familyName
   } = useFamily();
   
-  const [activeTab, setActiveTab] = useState('dashboard');
+  const [activeTab, setActiveTab] = useState('how-it-works');
+  const [showSettings, setShowSettings] = useState(false);
   
   // Redirect if no user is selected
   useEffect(() => {
@@ -38,6 +42,11 @@ const DashboardScreen = ({ onOpenFamilyMeeting }) => {
   // Start weekly check-in
   const handleStartWeeklyCheckIn = () => {
     navigate('/weekly-check-in');
+  };
+
+  // Handle settings toggle
+  const toggleSettings = () => {
+    setShowSettings(!showSettings);
   };
   
   // Generate tab content based on active tab
@@ -91,16 +100,18 @@ const DashboardScreen = ({ onOpenFamilyMeeting }) => {
     
     // Render appropriate tab content
     switch (activeTab) {
-      case 'dashboard':
-        return <DashboardTab />;
-      case 'tasks':
-        return <TasksTab onStartWeeklyCheckIn={handleStartWeeklyCheckIn} onOpenFamilyMeeting={onOpenFamilyMeeting} />;
-      case 'surveys':
-        return <SurveysTab onStartWeeklyCheckIn={handleStartWeeklyCheckIn} />;
       case 'how-it-works':
         return <HowThisWorksScreen />;
       case 'personalized':
         return <PersonalizedApproachScreen />;
+      case 'surveys':
+        return <SurveysTab onStartWeeklyCheckIn={handleStartWeeklyCheckIn} />;
+      case 'dashboard':
+        return <DashboardTab />;
+      case 'tasks':
+        return <TasksTab onStartWeeklyCheckIn={handleStartWeeklyCheckIn} onOpenFamilyMeeting={onOpenFamilyMeeting} />;
+      case 'initial-survey':
+        return <InitialSurveyTab />;
       default:
         // Handle week history tabs
         if (activeTab.startsWith('week-')) {
@@ -121,15 +132,22 @@ const DashboardScreen = ({ onOpenFamilyMeeting }) => {
   if (!selectedUser) {
     return <div className="flex items-center justify-center h-screen">Loading...</div>;
   }
+
+  // Format family name for display
+  const displayFamilyName = familyName || "Family";
+  const formattedFamilyName = `${displayFamilyName} Family AI Balancer`;
   
   return (
     <div className="min-h-screen bg-gray-50 flex flex-col">
       {/* Header */}
       <div className="bg-blue-600 text-white p-4">
         <div className="container mx-auto flex justify-between items-center">
-          <h1 className="text-xl font-bold">ParentLoad</h1>
+          <h1 className="text-xl font-bold">{formattedFamilyName}</h1>
           <div className="flex items-center">
-            <div className="w-8 h-8 rounded-full overflow-hidden mr-2">
+            <div 
+              className="w-8 h-8 rounded-full overflow-hidden mr-2 cursor-pointer border-2 border-white"
+              onClick={toggleSettings}
+            >
               <img 
                 src={selectedUser.profilePicture}
                 alt={selectedUser.name}
@@ -153,24 +171,6 @@ const DashboardScreen = ({ onOpenFamilyMeeting }) => {
         {/* Tabs */}
         <div className="flex border-b mb-6 overflow-x-auto">
           <button 
-            className={`px-4 py-2 font-medium whitespace-nowrap ${activeTab === 'dashboard' ? 'border-b-2 border-blue-500 text-blue-600' : 'text-gray-600'}`}
-            onClick={() => setActiveTab('dashboard')}
-          >
-            Dashboard
-          </button>
-          <button 
-            className={`px-4 py-2 font-medium whitespace-nowrap ${activeTab === 'tasks' ? 'border-b-2 border-blue-500 text-blue-600' : 'text-gray-600'}`}
-            onClick={() => setActiveTab('tasks')}
-          >
-            Tasks
-          </button>
-          <button 
-            className={`px-4 py-2 font-medium whitespace-nowrap ${activeTab === 'surveys' ? 'border-b-2 border-blue-500 text-blue-600' : 'text-gray-600'}`}
-            onClick={() => setActiveTab('surveys')}
-          >
-            Surveys
-          </button>
-          <button 
             className={`px-4 py-2 font-medium whitespace-nowrap ${activeTab === 'how-it-works' ? 'border-b-2 border-blue-500 text-blue-600' : 'text-gray-600'}`}
             onClick={() => setActiveTab('how-it-works')}
           >
@@ -181,6 +181,30 @@ const DashboardScreen = ({ onOpenFamilyMeeting }) => {
             onClick={() => setActiveTab('personalized')}
           >
             Your Personalized Approach
+          </button>
+          <button 
+            className={`px-4 py-2 font-medium whitespace-nowrap ${activeTab === 'surveys' ? 'border-b-2 border-blue-500 text-blue-600' : 'text-gray-600'}`}
+            onClick={() => setActiveTab('surveys')}
+          >
+            Surveys
+          </button>
+          <button 
+            className={`px-4 py-2 font-medium whitespace-nowrap ${activeTab === 'dashboard' ? 'border-b-2 border-blue-500 text-blue-600' : 'text-gray-600'}`}
+            onClick={() => setActiveTab('dashboard')}
+          >
+            Family Dashboard
+          </button>
+          <button 
+            className={`px-4 py-2 font-medium whitespace-nowrap ${activeTab === 'tasks' ? 'border-b-2 border-blue-500 text-blue-600' : 'text-gray-600'}`}
+            onClick={() => setActiveTab('tasks')}
+          >
+            Tasks
+          </button>
+          <button 
+            className={`px-4 py-2 font-medium whitespace-nowrap ${activeTab === 'initial-survey' ? 'border-b-2 border-blue-500 text-blue-600' : 'text-gray-600'}`}
+            onClick={() => setActiveTab('initial-survey')}
+          >
+            Initial Survey
           </button>
           
           {/* Add completed weeks as tabs */}
@@ -198,6 +222,11 @@ const DashboardScreen = ({ onOpenFamilyMeeting }) => {
         {/* Tab content */}
         {renderTabContent()}
       </div>
+
+      {/* Settings Modal */}
+      {showSettings && (
+        <UserSettingsScreen onClose={toggleSettings} />
+      )}
     </div>
   );
 };
