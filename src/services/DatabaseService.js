@@ -80,6 +80,34 @@ class DatabaseService {
     }
   }
 
+  // Upload family picture to Firebase Storage
+  async uploadFamilyPicture(familyId, file) {
+    try {
+      console.log("Starting family picture upload for family ID:", familyId);
+      
+      // Create a reference to Firebase Storage
+      const storageRef = ref(this.storage, `family-pictures/${familyId}_${Date.now()}`);
+      
+      // Upload the file
+      console.log("Uploading file to Firebase Storage...");
+      const snapshot = await uploadBytes(storageRef, file);
+      
+      // Get the download URL
+      console.log("Getting download URL...");
+      const downloadURL = await getDownloadURL(snapshot.ref);
+      
+      console.log("Family picture uploaded successfully:", downloadURL);
+      
+      // Update the family document with just the URL
+      await this.saveFamilyData({ familyPicture: downloadURL }, familyId);
+      
+      return downloadURL;
+    } catch (error) {
+      console.error("Error uploading family picture:", error);
+      throw error;
+    }
+  }
+
   // ---- Family Data Methods ----
 
   // Load family data from Firestore

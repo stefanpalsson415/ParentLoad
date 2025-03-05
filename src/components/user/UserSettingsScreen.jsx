@@ -2,12 +2,14 @@ import React, { useState } from 'react';
 import { X, Upload, Camera, User, Users, Home } from 'lucide-react';
 import { useFamily } from '../../contexts/FamilyContext';
 import { useAuth } from '../../contexts/AuthContext';
+import DatabaseService from '../../services/DatabaseService';
 
 const UserSettingsScreen = ({ onClose }) => {
   const { 
     selectedUser, 
     familyMembers, 
-    familyName, 
+    familyName,
+    familyId,
     updateMemberProfile, 
     updateFamilyName,
     updateFamilyPicture
@@ -19,6 +21,7 @@ const UserSettingsScreen = ({ onClose }) => {
   const [isUploading, setIsUploading] = useState(false);
   const [uploadType, setUploadType] = useState(null); // 'profile' or 'family'
   const [settingsTab, setSettingsTab] = useState('profile'); // 'profile', 'family', or 'app'
+  const [uploadError, setUploadError] = useState(null);
   
   // Handle family name update
   const handleFamilyNameUpdate = async () => {
@@ -40,24 +43,41 @@ const UserSettingsScreen = ({ onClose }) => {
     if (!file) return;
     
     setIsUploading(true);
+    setUploadError(null);
     
     try {
       if (uploadType === 'profile') {
         // Upload profile picture
+        if (file.size > 5 * 1024 * 1024) { // 5MB limit
+          throw new Error("File size exceeds 5MB limit");
+        }
+        
+        const imageUrl = await readFileAsDataURL(file);
         await updateMemberProfile(selectedUser.id, { 
-          profilePicture: await readFileAsDataURL(file) 
+          profilePicture: imageUrl 
         });
       } else if (uploadType === 'family') {
-        // Upload family picture (favicon)
-        const imageUrl = await readFileAsDataURL(file);
-        await updateFamilyPicture(imageUrl);
+        // For family picture, use Firebase Storage
+        if (!familyId) {
+          throw new Error("Family ID is required to upload family picture");
+        }
+        
+        if (file.size > 2 * 1024 * 1024) { // 2MB limit for family icons
+          throw new Error("Family icon size exceeds 2MB limit");
+        }
+        
+        // Use the dedicated method for uploading family pictures
+        const downloadURL = await DatabaseService.uploadFamilyPicture(familyId, file);
+        
+        // Update family picture in context
+        await updateFamilyPicture(downloadURL);
         
         // Update favicon
-        updateFavicon(imageUrl);
+        updateFavicon(downloadURL);
       }
     } catch (error) {
       console.error("Error uploading image:", error);
-      alert("Failed to upload image. Please try again.");
+      setUploadError(error.message || "Failed to upload image. Please try again.");
     } finally {
       setIsUploading(false);
       setUploadType(null);
@@ -362,6 +382,12 @@ const UserSettingsScreen = ({ onClose }) => {
                 {uploadType === 'profile' ? 'Update Profile Picture' : 'Update Family Picture'}
               </h3>
               
+              {uploadError && (
+                <div className="mb-4 p-3 bg-red-50 text-red-700 rounded border border-red-200">
+                  {uploadError}
+                </div>
+              )}
+              
               <div className="flex items-center justify-center mb-4">
                 {isUploading ? (
                   <div className="px-4 py-2 bg-gray-100 text-gray-700 rounded border flex items-center">
@@ -375,6 +401,10 @@ const UserSettingsScreen = ({ onClose }) => {
                   >
                     <Upload size={20} className="mb-1" />
                     <span className="text-sm">Select Photo</span>
+                    {uploadType === 'profile' 
+                      ? <span className="text-xs text-gray-500 mt-1">Maximum size: 5MB</span>
+                      : <span className="text-xs text-gray-500 mt-1">Maximum size: 2MB</span>
+                    }
                   </label>
                 )}
               </div>
@@ -382,7 +412,10 @@ const UserSettingsScreen = ({ onClose }) => {
               <div className="flex justify-end">
                 <button
                   className="px-4 py-2 text-gray-600 hover:text-gray-800"
-                  onClick={() => setUploadType(null)}
+                  onClick={() => {
+                    setUploadType(null);
+                    setUploadError(null);
+                  }}
                   disabled={isUploading}
                 >
                   Cancel

@@ -24,6 +24,7 @@ const WeeklyCheckInScreen = () => {
   const [selectedParent, setSelectedParent] = useState(null);
   const [showExplanation, setShowExplanation] = useState(false);
   const [weeklyQuestions, setWeeklyQuestions] = useState([]);
+  const [isSubmitting, setIsSubmitting] = useState(false);
   
   // Redirect if no user is selected
   useEffect(() => {
@@ -99,15 +100,31 @@ const WeeklyCheckInScreen = () => {
   
   // Handle survey completion
   const handleCompleteSurvey = async () => {
+    if (isSubmitting) return;
+    
+    setIsSubmitting(true);
+    
     try {
+      // First navigate to loading screen to show transition
+      navigate('/loading');
+      
       // Save weekly check-in responses to database
       await completeWeeklyCheckIn(selectedUser.id, currentWeek, currentSurveyResponses);
       
-      // Navigate to dashboard
-      navigate('/dashboard');
+      // Add a timeout before navigating to dashboard to ensure data is processed
+      setTimeout(() => {
+        navigate('/dashboard');
+      }, 1500);
     } catch (error) {
       console.error('Error completing weekly check-in:', error);
       alert('There was an error saving your responses. Please try again.');
+      
+      // Even on error, navigate back to dashboard after a delay
+      setTimeout(() => {
+        navigate('/dashboard');
+      }, 1000);
+    } finally {
+      setIsSubmitting(false);
     }
   };
   
@@ -285,9 +302,9 @@ const WeeklyCheckInScreen = () => {
         <div className="max-w-3xl mx-auto flex justify-between">
           <button 
             onClick={handlePrevious}
-            disabled={currentQuestionIndex === 0}
+            disabled={currentQuestionIndex === 0 || isSubmitting}
             className={`px-4 py-2 border rounded ${
-              currentQuestionIndex === 0 
+              currentQuestionIndex === 0 || isSubmitting
                 ? 'bg-gray-100 text-gray-400 cursor-not-allowed' 
                 : 'bg-white hover:bg-gray-50'
             }`}
@@ -295,14 +312,24 @@ const WeeklyCheckInScreen = () => {
             Previous
           </button>
           <button 
-            className="px-4 py-2 border rounded bg-white hover:bg-gray-50"
+            className={`px-4 py-2 border rounded ${
+              isSubmitting 
+                ? 'bg-gray-100 text-gray-400 cursor-not-allowed'
+                : 'bg-white hover:bg-gray-50'
+            }`}
             onClick={handleExit}
+            disabled={isSubmitting}
           >
             Save & Exit
           </button>
           <button 
-            className="px-4 py-2 border rounded bg-white hover:bg-gray-50"
+            className={`px-4 py-2 border rounded ${
+              isSubmitting 
+                ? 'bg-gray-100 text-gray-400 cursor-not-allowed'
+                : 'bg-white hover:bg-gray-50'
+            }`}
             onClick={handleSkip}
+            disabled={isSubmitting}
           >
             Skip
           </button>
