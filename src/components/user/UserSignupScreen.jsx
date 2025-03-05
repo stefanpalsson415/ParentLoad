@@ -91,20 +91,34 @@ const UserSignupScreen = () => {
     setIsSubmitting(true);
     
     try {
+      console.log("Starting family creation with data:", {
+        familyName,
+        parentData: parents.map(p => ({...p, password: '****'})), // Log without passwords
+        children // Fixed: using 'children' instead of 'childrenData'
+      });
+      
       // Create the family in Firebase
       const familyData = {
         familyName,
         parentData: parents,
-        childrenData: children
+        childrenData: children // Kept as is since this is the expected key format for createFamily
       };
       
-      await createFamily(familyData);
+      const result = await createFamily(familyData);
+      console.log("Family creation result:", result);
+      
+      // Store the family ID in localStorage to help with debugging
+      if (result && result.familyId) {
+        localStorage.setItem('lastCreatedFamilyId', result.familyId);
+        console.log("Stored family ID in localStorage:", result.familyId);
+      }
       
       // Navigate to family selection screen
-      navigate('/');
+      console.log("Navigating to family selection screen");
+      navigate('/'); // Fixed: removed any login-related code here
     } catch (error) {
-      console.error("Error creating family:", error);
-      alert("There was an error creating your family. Please try again.");
+      console.error("Detailed error creating family:", error);
+      alert("There was an error creating your family: " + (error.message || "Unknown error"));
     } finally {
       setIsSubmitting(false);
     }

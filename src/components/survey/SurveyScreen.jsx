@@ -30,22 +30,22 @@ const SurveyScreen = () => {
     }
   }, [selectedUser, navigate]);
   
-  // Reset survey when component mounts
+  // Reset survey when component mounts - only once!
   useEffect(() => {
     resetSurvey();
-  }, [resetSurvey]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []); // Remove resetSurvey from dependencies to prevent loop
   
-  // Parent profile images (using placeholder images for now)
+  // Parent profile images 
+  // Using data URIs for placeholder images to ensure they always work
   const parents = {
     mama: {
       name: 'Mama',
-      // In a real app, this would be the actual uploaded image
-      image: '/placeholder-profile.jpg'
+      image: 'data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAyNTYgMjU2Ij48Y2lyY2xlIGN4PSIxMjgiIGN5PSIxMjgiIHI9IjEyOCIgZmlsbD0iI2U5YjFkYSIvPjxjaXJjbGUgY3g9IjEyOCIgY3k9IjkwIiByPSI0MCIgZmlsbD0iI2ZmZiIvPjxwYXRoIGQ9Ik0yMTUsMTcyLjVjMCwzNS05NSwzNS05NSwzNXMtOTUsMC05NS0zNWMwLTIzLjMsOTUtMTAsOTUtMTBTMjE1LDE0OS4yLDIxNSwxNzIuNVoiIGZpbGw9IiNmZmYiLz48L3N2Zz4='
     },
     papa: {
       name: 'Papa',
-      // In a real app, this would be the actual uploaded image
-      image: '/placeholder-profile.jpg'
+      image: 'data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAyNTYgMjU2Ij48Y2lyY2xlIGN4PSIxMjgiIGN5PSIxMjgiIHI9IjEyOCIgZmlsbD0iIzg0YzRlMiIvPjxjaXJjbGUgY3g9IjEyOCIgY3k9IjkwIiByPSI0MCIgZmlsbD0iI2ZmZiIvPjxwYXRoIGQ9Ik0yMTUsMTcyLjVjMCwzNS05NSwzNS05NSwzNXMtOTUsMC05NS0zNWMwLTIzLjMsOTUtMTAsOTUtMTBTMjE1LDE0OS4yLDIxNSwxNzIuNVoiIGZpbGw9IiNmZmYiLz48L3N2Zz4='
     }
   };
   
@@ -79,18 +79,21 @@ const SurveyScreen = () => {
     setSelectedParent(parent);
     
     // Save response
-    updateSurveyResponse(currentQuestion.id, parent);
+    if (currentQuestion) {
+      updateSurveyResponse(currentQuestion.id, parent);
     
-    // Wait a moment to show selection before moving to next question
-    setTimeout(() => {
-      if (currentQuestionIndex < fullQuestionSet.length - 1) {
-        setCurrentQuestionIndex(currentQuestionIndex + 1);
-        setSelectedParent(null);
-      } else {
-        // Survey completed, save responses
-        handleCompleteSurvey();
-      }
-    }, 500);
+      // Wait a moment to show selection before moving to next question
+      setTimeout(() => {
+        if (currentQuestionIndex < fullQuestionSet.length - 1) {
+          // Use functional state update to ensure we're using the latest value
+          setCurrentQuestionIndex(prevIndex => prevIndex + 1);
+          setSelectedParent(null);
+        } else {
+          // Survey completed, save responses
+          handleCompleteSurvey();
+        }
+      }, 500);
+    }
   };
   
   // Handle survey completion
@@ -115,7 +118,7 @@ const SurveyScreen = () => {
   // Move to previous question
   const handlePrevious = () => {
     if (currentQuestionIndex > 0) {
-      setCurrentQuestionIndex(currentQuestionIndex - 1);
+      setCurrentQuestionIndex(prevIndex => prevIndex - 1);
       setSelectedParent(currentSurveyResponses[fullQuestionSet[currentQuestionIndex - 1].id] || null);
     }
   };
@@ -135,7 +138,7 @@ const SurveyScreen = () => {
   // Skip question
   const handleSkip = () => {
     if (currentQuestionIndex < fullQuestionSet.length - 1) {
-      setCurrentQuestionIndex(currentQuestionIndex + 1);
+      setCurrentQuestionIndex(prevIndex => prevIndex + 1);
       setSelectedParent(null);
     } else {
       // Survey completed, move to dashboard

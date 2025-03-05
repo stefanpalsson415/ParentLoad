@@ -32,23 +32,22 @@ const WeeklyCheckInScreen = () => {
     }
   }, [selectedUser, navigate]);
   
-  // Initialize weekly questions and reset survey
+  // Initialize weekly questions and reset survey - only once
   useEffect(() => {
     setWeeklyQuestions(generateWeeklyQuestions(currentWeek));
     resetSurvey();
-  }, [currentWeek, generateWeeklyQuestions, resetSurvey]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [currentWeek]); // Only depend on currentWeek, not resetSurvey
   
-  // Parent profile images (using placeholder images for now)
+  // Parent profile images using data URIs for placeholders
   const parents = {
     mama: {
       name: 'Mama',
-      // In a real app, this would be the actual uploaded image
-      image: '/placeholder-profile.jpg'
+      image: 'data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAyNTYgMjU2Ij48Y2lyY2xlIGN4PSIxMjgiIGN5PSIxMjgiIHI9IjEyOCIgZmlsbD0iI2U5YjFkYSIvPjxjaXJjbGUgY3g9IjEyOCIgY3k9IjkwIiByPSI0MCIgZmlsbD0iI2ZmZiIvPjxwYXRoIGQ9Ik0yMTUsMTcyLjVjMCwzNS05NSwzNS05NSwzNXMtOTUsMC05NS0zNWMwLTIzLjMsOTUtMTAsOTUtMTBTMjE1LDE0OS4yLDIxNSwxNzIuNVoiIGZpbGw9IiNmZmYiLz48L3N2Zz4='
     },
     papa: {
       name: 'Papa',
-      // In a real app, this would be the actual uploaded image
-      image: '/placeholder-profile.jpg'
+      image: 'data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAyNTYgMjU2Ij48Y2lyY2xlIGN4PSIxMjgiIGN5PSIxMjgiIHI9IjEyOCIgZmlsbD0iIzg0YzRlMiIvPjxjaXJjbGUgY3g9IjEyOCIgY3k9IjkwIiByPSI0MCIgZmlsbD0iI2ZmZiIvPjxwYXRoIGQ9Ik0yMTUsMTcyLjVjMCwzNS05NSwzNS05NSwzNXMtOTUsMC05NS0zNWMwLTIzLjMsOTUtMTAsOTUtMTBTMjE1LDE0OS4yLDIxNSwxNzIuNVoiIGZpbGw9IiNmZmYiLz48L3N2Zz4='
     }
   };
   
@@ -86,7 +85,8 @@ const WeeklyCheckInScreen = () => {
       // Wait a moment to show selection before moving to next question
       setTimeout(() => {
         if (currentQuestionIndex < weeklyQuestions.length - 1) {
-          setCurrentQuestionIndex(currentQuestionIndex + 1);
+          // Use functional state update to ensure we're using the latest value
+          setCurrentQuestionIndex(prevIndex => prevIndex + 1);
           setSelectedParent(null);
           setShowExplanation(false);
         } else {
@@ -114,7 +114,7 @@ const WeeklyCheckInScreen = () => {
   // Move to previous question
   const handlePrevious = () => {
     if (currentQuestionIndex > 0) {
-      setCurrentQuestionIndex(currentQuestionIndex - 1);
+      setCurrentQuestionIndex(prevIndex => prevIndex - 1);
       
       if (weeklyQuestions[currentQuestionIndex - 1]) {
         setSelectedParent(currentSurveyResponses[weeklyQuestions[currentQuestionIndex - 1].id] || null);
@@ -127,7 +127,7 @@ const WeeklyCheckInScreen = () => {
   // Skip question
   const handleSkip = () => {
     if (currentQuestionIndex < weeklyQuestions.length - 1) {
-      setCurrentQuestionIndex(currentQuestionIndex + 1);
+      setCurrentQuestionIndex(prevIndex => prevIndex + 1);
       setSelectedParent(null);
       setShowExplanation(false);
     } else {

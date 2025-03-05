@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { LogOut, Filter } from 'lucide-react';
 import { useFamily } from '../../contexts/FamilyContext';
@@ -6,8 +6,10 @@ import DashboardTab from './tabs/DashboardTab';
 import TasksTab from './tabs/TasksTab';
 import SurveysTab from './tabs/SurveysTab';
 import WeekHistoryTab from './tabs/WeekHistoryTab';
+import HowThisWorksScreen from '../education/HowThisWorksScreen';
+import PersonalizedApproachScreen from '../education/PersonalizedApproachScreen';
 
-const DashboardScreen = () => {
+const DashboardScreen = ({ onOpenFamilyMeeting }) => {
   const navigate = useNavigate();
   const { 
     selectedUser, 
@@ -19,7 +21,7 @@ const DashboardScreen = () => {
   const [activeTab, setActiveTab] = useState('dashboard');
   
   // Redirect if no user is selected
-  React.useEffect(() => {
+  useEffect(() => {
     if (!selectedUser) {
       navigate('/');
     }
@@ -92,9 +94,13 @@ const DashboardScreen = () => {
       case 'dashboard':
         return <DashboardTab />;
       case 'tasks':
-        return <TasksTab onStartWeeklyCheckIn={handleStartWeeklyCheckIn} />;
+        return <TasksTab onStartWeeklyCheckIn={handleStartWeeklyCheckIn} onOpenFamilyMeeting={onOpenFamilyMeeting} />;
       case 'surveys':
         return <SurveysTab onStartWeeklyCheckIn={handleStartWeeklyCheckIn} />;
+      case 'how-it-works':
+        return <HowThisWorksScreen />;
+      case 'personalized':
+        return <PersonalizedApproachScreen />;
       default:
         // Handle week history tabs
         if (activeTab.startsWith('week-')) {
@@ -163,6 +169,18 @@ const DashboardScreen = () => {
             onClick={() => setActiveTab('surveys')}
           >
             Surveys
+          </button>
+          <button 
+            className={`px-4 py-2 font-medium whitespace-nowrap ${activeTab === 'how-it-works' ? 'border-b-2 border-blue-500 text-blue-600' : 'text-gray-600'}`}
+            onClick={() => setActiveTab('how-it-works')}
+          >
+            How This Works?
+          </button>
+          <button 
+            className={`px-4 py-2 font-medium whitespace-nowrap ${activeTab === 'personalized' ? 'border-b-2 border-blue-500 text-blue-600' : 'text-gray-600'}`}
+            onClick={() => setActiveTab('personalized')}
+          >
+            Your Personalized Approach
           </button>
           
           {/* Add completed weeks as tabs */}

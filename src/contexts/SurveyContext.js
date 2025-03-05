@@ -159,12 +159,12 @@ export function SurveyProvider({ children }) {
   const fullQuestionSet = generateFullQuestionSet();
   
   // State for temporary survey progress
-  const [currentSurveyResponses, setCurrentSurveyResponses] = useState({});
+  const [currentSurveyResponsesState, setCurrentSurveyResponsesState] = useState({});
   const [completedQuestions, setCompletedQuestions] = useState([]);
 
   // Add or update a survey response
   const updateSurveyResponse = (questionId, answer) => {
-    setCurrentSurveyResponses(prev => ({
+    setCurrentSurveyResponsesState(prev => ({
       ...prev,
       [questionId]: answer
     }));
@@ -176,7 +176,7 @@ export function SurveyProvider({ children }) {
 
   // Reset survey progress
   const resetSurvey = () => {
-    setCurrentSurveyResponses({});
+    setCurrentSurveyResponsesState({});
     setCompletedQuestions([]);
   };
 
@@ -184,16 +184,26 @@ export function SurveyProvider({ children }) {
   const getSurveyProgress = (totalQuestions) => {
     return (completedQuestions.length / totalQuestions) * 100;
   };
+  
+  // Set survey responses from outside (like when loading saved responses)
+  const setCurrentSurveyResponses = (responses) => {
+    setCurrentSurveyResponsesState(responses);
+    
+    // Update completedQuestions state based on the responses
+    const questionIds = Object.keys(responses);
+    setCompletedQuestions(questionIds);
+  };
 
   // Context value
   const value = {
     fullQuestionSet,
     generateWeeklyQuestions,
-    currentSurveyResponses,
+    currentSurveyResponses: currentSurveyResponsesState,
     completedQuestions,
     updateSurveyResponse,
     resetSurvey,
-    getSurveyProgress
+    getSurveyProgress,
+    setCurrentSurveyResponses
   };
 
   return (

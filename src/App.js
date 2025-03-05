@@ -11,11 +11,8 @@ import DashboardScreen from './components/dashboard/DashboardScreen';
 import WeeklyCheckInScreen from './components/survey/WeeklyCheckInScreen';
 import LoadingScreen from './components/common/LoadingScreen';
 import UserSignupScreen from './components/user/UserSignupScreen';
-import FamilyMeetingScreen from './components/meeting/FamilyMeetingScreen';
 
 function App() {
-  const [showFamilyMeeting, setShowFamilyMeeting] = useState(false);
-  
   return (
     <Router>
       <AuthProvider>
@@ -26,16 +23,11 @@ function App() {
                 <Route path="/" element={<FamilySelectionScreen />} />
                 <Route path="/signup" element={<UserSignupScreen />} />
                 <Route path="/survey" element={<SurveyScreen />} />
-                <Route path="/dashboard" element={<DashboardScreen onOpenFamilyMeeting={() => setShowFamilyMeeting(true)} />} />
+                <Route path="/dashboard" element={<DashboardScreen />} />
                 <Route path="/weekly-check-in" element={<WeeklyCheckInScreen />} />
                 <Route path="/loading" element={<LoadingScreen />} />
                 <Route path="*" element={<Navigate to="/" />} />
               </Routes>
-              
-              {/* Family Meeting Modal */}
-              {showFamilyMeeting && (
-                <FamilyMeetingScreen onClose={() => setShowFamilyMeeting(false)} />
-              )}
             </div>
           </SurveyProvider>
         </FamilyProvider>

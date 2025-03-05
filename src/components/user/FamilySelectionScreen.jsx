@@ -3,6 +3,8 @@ import { useNavigate } from 'react-router-dom';
 import { Camera, PlusCircle, CheckCircle, AlertCircle, Upload, Calendar } from 'lucide-react';
 import { useAuth } from '../../contexts/AuthContext';
 import { useFamily } from '../../contexts/FamilyContext';
+import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
+import { storage } from '../../services/firebase';
 
 export const FamilySelectionScreen = () => {
   const { currentUser } = useAuth();
@@ -17,6 +19,7 @@ export const FamilySelectionScreen = () => {
   
   const [showProfileUpload, setShowProfileUpload] = useState(false);
   const [uploadForMember, setUploadForMember] = useState(null);
+  const [isUploading, setIsUploading] = useState(false);
   
   const handleSelectForUpload = (member, e) => {
     e.stopPropagation();
@@ -24,14 +27,49 @@ export const FamilySelectionScreen = () => {
     setShowProfileUpload(true);
   };
   
-  const handleImageUpload = (e) => {
+  const handleImageUpload = async (e) => {
     const file = e.target.files[0];
     if (file && uploadForMember) {
-      // In a real app with Firebase Storage, you would upload the file
-      // For this demo, we'll use a local URL
-      const imageUrl = URL.createObjectURL(file);
-      updateMemberProfile(uploadForMember.id, { profilePicture: imageUrl });
-      setShowProfileUpload(false);
+      setIsUploading(true);
+      try {
+        console.log("Starting upload for file:", file.name, "size:", file.size);
+        
+        // Create a reference to the file location in Firebase Storage
+        const storageRef = ref(storage, `profiles/${uploadForMember.id}/${Date.now()}_${file.name}`);
+        console.log("Storage reference created");
+        
+        // Upload the file
+        console.log("Beginning upload to Firebase Storage...");
+        const snapshot = await uploadBytes(storageRef, file);
+        console.log("Upload completed successfully:", snapshot);
+        
+        // Get the download URL
+        console.log("Retrieving download URL...");
+        const imageUrl = await getDownloadURL(snapshot.ref);
+        console.log("Download URL received:", imageUrl);
+        
+        // Update the profile with the URL from Firebase
+        await updateMemberProfile(uploadForMember.id, { profilePicture: imageUrl });
+        console.log("Profile updated with new image URL");
+        
+        setShowProfileUpload(false);
+      } catch (error) {
+        console.error("Error uploading image:", error);
+        // Show a more specific error message based on the error
+        let errorMessage = "Failed to upload image. Please try again.";
+        
+        if (error.code === 'storage/unauthorized') {
+          errorMessage = "You don't have permission to upload files.";
+        } else if (error.code === 'storage/canceled') {
+          errorMessage = "Upload was canceled.";
+        } else if (error.code === 'storage/unknown') {
+          errorMessage = "An unknown error occurred during upload.";
+        }
+        
+        alert(errorMessage);
+      } finally {
+        setIsUploading(false);
+      }
     }
   };
 
@@ -219,22 +257,31 @@ export const FamilySelectionScreen = () => {
             </div>
               
             <div className="flex items-center justify-center mb-4">
-              <label className="flex flex-col items-center px-4 py-2 bg-blue-50 text-blue-700 rounded cursor-pointer border border-blue-300">
-                <Upload size={18} className="mb-1" />
-                <span className="text-sm">Select Photo</span>
-                <input
-                  type="file"
-                  className="hidden"
-                  accept="image/*"
-                  onChange={handleImageUpload}
-                />
-              </label>
+              {isUploading ? (
+                <div className="px-4 py-2 bg-gray-100 text-gray-700 rounded border border-gray-300 flex items-center">
+                  <div className="w-4 h-4 border-2 border-t-transparent border-blue-600 rounded-full animate-spin mr-2"></div>
+                  <span className="text-sm">Uploading...</span>
+                </div>
+              ) : (
+                <label className="flex flex-col items-center px-4 py-2 bg-blue-50 text-blue-700 rounded cursor-pointer border border-blue-300 hover:bg-blue-100">
+                  <Upload size={18} className="mb-1" />
+                  <span className="text-sm">Select Photo</span>
+                  <input
+                    type="file"
+                    className="hidden"
+                    accept="image/*"
+                    onChange={handleImageUpload}
+                    disabled={isUploading}
+                  />
+                </label>
+              )}
             </div>
               
             <div className="flex justify-end">
               <button
                 className="px-4 py-2 text-gray-600 hover:text-gray-800"
                 onClick={() => setShowProfileUpload(false)}
+                disabled={isUploading}
               >
                 Cancel
               </button>

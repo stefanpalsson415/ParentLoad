@@ -9,12 +9,14 @@ import {
   signInWithEmailAndPassword, 
   signOut 
 } from 'firebase/auth';
-import { db, auth } from './firebase';
+import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
+import { db, auth, storage } from './firebase';
 
-export class DatabaseService {
+class DatabaseService {
   constructor() {
     this.db = db;
     this.auth = auth;
+    this.storage = storage;
   }
 
   // ---- Authentication Methods ----
@@ -57,6 +59,27 @@ export class DatabaseService {
     return this.auth.currentUser;
   }
 
+  // ---- Storage Methods ----
+
+  // Upload image to Firebase Storage
+  async uploadProfileImage(userId, file) {
+    try {
+      // Create a unique path for the file
+      const storageRef = ref(this.storage, `profile-pictures/${userId}_${Date.now()}`);
+      
+      // Upload the file to Firebase Storage
+      const snapshot = await uploadBytes(storageRef, file);
+      
+      // Get the download URL
+      const downloadURL = await getDownloadURL(snapshot.ref);
+      
+      return downloadURL;
+    } catch (error) {
+      console.error("Error uploading image:", error);
+      throw error;
+    }
+  }
+
   // ---- Family Data Methods ----
 
   // Load family data from Firestore
@@ -66,7 +89,27 @@ export class DatabaseService {
       const docSnap = await getDoc(docRef);
       
       if (docSnap.exists()) {
-        return docSnap.data();
+        // Get survey responses for this family
+        const surveyResponsesQuery = query(
+          collection(this.db, "surveyResponses"), 
+          where("familyId", "==", familyId)
+        );
+        const surveyResponsesSnapshot = await getDocs(surveyResponsesQuery);
+        
+        // Process survey responses
+        const surveyResponses = {};
+        surveyResponsesSnapshot.forEach((doc) => {
+          const data = doc.data();
+          if (data.responses) {
+            // Merge all responses together
+            Object.assign(surveyResponses, data.responses);
+          }
+        });
+        
+        return {
+          ...docSnap.data(),
+          surveyResponses: surveyResponses
+        };
       } else {
         console.log("No such family document!");
         return null;
@@ -84,9 +127,30 @@ export class DatabaseService {
       const querySnapshot = await getDocs(q);
       
       if (!querySnapshot.empty) {
+        const familyId = querySnapshot.docs[0].id;
+        const familyData = querySnapshot.docs[0].data();
+        
+        // Get survey responses for this family
+        const surveyResponsesQuery = query(
+          collection(this.db, "surveyResponses"), 
+          where("familyId", "==", familyId)
+        );
+        const surveyResponsesSnapshot = await getDocs(surveyResponsesQuery);
+        
+        // Process survey responses
+        const surveyResponses = {};
+        surveyResponsesSnapshot.forEach((doc) => {
+          const data = doc.data();
+          if (data.responses) {
+            // Merge all responses together
+            Object.assign(surveyResponses, data.responses);
+          }
+        });
+        
         return {
-          ...querySnapshot.docs[0].data(),
-          familyId: querySnapshot.docs[0].id
+          ...familyData,
+          familyId: familyId,
+          surveyResponses: surveyResponses
         };
       } else {
         console.log("No family found for this user!");
@@ -342,7 +406,7 @@ export class DatabaseService {
             completed: false,
             completedDate: null,
             weeklyCompleted: [],
-            profilePicture: '/placeholder-profile.jpg'
+            profilePicture: '/api/placeholder/150/150' // Default placeholder
           };
         }),
         ...childrenData.map(child => {
@@ -356,7 +420,7 @@ export class DatabaseService {
             completed: false,
             completedDate: null,
             weeklyCompleted: [],
-            profilePicture: '/placeholder-profile.jpg'
+            profilePicture: '/api/placeholder/150/150' // Default placeholder
           };
         })
       ];
@@ -383,6 +447,42 @@ export class DatabaseService {
       return familyDoc;
     } catch (error) {
       console.error("Error in createFamily:", error);
+      throw error;
+    }
+  }
+
+  // Update family member profile picture
+  async updateMemberProfilePicture(familyId, memberId, file) {
+    try {
+      // Upload the image to Firebase Storage
+      const downloadURL = await this.uploadProfileImage(memberId, file);
+      
+      // Update the family member's profile picture URL in Firestore
+      const docRef = doc(this.db, "families", familyId);
+      const familyData = await getDoc(docRef);
+      
+      if (!familyData.exists()) {
+        throw new Error("Family not found");
+      }
+      
+      const updatedMembers = familyData.data().familyMembers.map(member => {
+        if (member.id === memberId) {
+          return {
+            ...member,
+            profilePicture: downloadURL
+          };
+        }
+        return member;
+      });
+      
+      await updateDoc(docRef, {
+        familyMembers: updatedMembers,
+        updatedAt: serverTimestamp()
+      });
+      
+      return downloadURL;
+    } catch (error) {
+      console.error("Error updating profile picture:", error);
       throw error;
     }
   }

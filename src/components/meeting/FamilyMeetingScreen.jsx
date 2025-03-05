@@ -1,9 +1,17 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Clock, Download, X, ChevronDown, ChevronUp } from 'lucide-react';
 import { useFamily } from '../../contexts/FamilyContext';
+import { useSurvey } from '../../contexts/SurveyContext';
 
 const FamilyMeetingScreen = ({ onClose }) => {
-  const { currentWeek, saveFamilyMeetingNotes } = useFamily();
+  const { 
+    currentWeek, 
+    saveFamilyMeetingNotes, 
+    familyMembers, 
+    surveyResponses 
+  } = useFamily();
+  
+  const { fullQuestionSet } = useSurvey();
   
   const [meetingNotes, setMeetingNotes] = useState({
     taskCompletion: '',
@@ -11,64 +19,122 @@ const FamilyMeetingScreen = ({ onClose }) => {
     nextWeekGoals: '',
     additionalNotes: ''
   });
-  const [expandedSection, setExpandedSection] = useState(null);
+  const [expandedSection, setExpandedSection] = useState('taskCompletion'); // Default expanded section
   const [viewMode, setViewMode] = useState('agenda'); // 'agenda' or 'report'
   const [isSaving, setIsSaving] = useState(false);
   
-  // Simulate meeting topics and data
-  const agendaTopics = [
-    {
-      id: 'taskCompletion',
-      title: 'Review Task Completion',
-      duration: '10 min',
-      description: 'Discuss which tasks were completed and how they went',
-      guideQuestions: [
-        'Which tasks did each parent complete this week?',
-        'Were there any challenges in completing the tasks?',
-        'How did completing these tasks affect the family balance?'
-      ]
-    },
-    {
-      id: 'surveyResults',
-      title: 'Survey Results Discussion',
-      duration: '10 min',
-      description: 'Review this week\'s survey results and notable changes',
-      guideQuestions: [
-        'What areas showed the most improvement?',
-        'Are there any tasks that one parent is doing significantly more than the other?',
-        'How do the children\'s perceptions compare to the parents\' perceptions?'
-      ]
-    },
-    {
-      id: 'nextWeekGoals',
-      title: 'Next Week\'s Goals',
-      duration: '10 min',
-      description: 'Set intentions for the coming week and discuss new tasks',
-      guideQuestions: [
-        'What specific tasks will each parent focus on next week?',
-        'Are there any upcoming events that require special planning?',
-        'How can we better support each other in the coming week?'
-      ]
-    }
-  ];
-  
-  // Sample weekly report data
-  const weeklyReport = {
-    balanceScore: 65, // Mama's percentage
-    taskCompletion: [
-      { parent: 'Mama', completed: 3, total: 3 },
-      { parent: 'Papa', completed: 2, total: 3 }
-    ],
-    surveyHighlights: [
-      'Papa has taken over meal planning for the week',
-      'Visible household tasks are becoming more balanced',
-      'Children report improvement in Papa\'s involvement with homework'
-    ],
-    discrepancies: [
-      'Parents disagree on who handled doctor appointments this week',
-      'Children perceive Mama is still managing most invisible tasks'
-    ]
+  // Generate agenda topics based on family data
+  const generateAgendaTopics = () => {
+    // Analyze survey data to find insights (in a real app, this would be more sophisticated)
+    const insights = analyzeData();
+    
+    return [
+      {
+        id: 'taskCompletion',
+        title: '1. Review Task Completion',
+        duration: '10 min',
+        description: 'Discuss which tasks were completed and how they went',
+        guideQuestions: [
+          'Which tasks did each parent complete this week?',
+          'Were there any challenges in completing the tasks?',
+          'How did completing these tasks affect the family balance?'
+        ],
+        insights: insights.taskInsights
+      },
+      {
+        id: 'surveyResults',
+        title: '2. Survey Results Discussion',
+        duration: '10 min',
+        description: 'Review this week\'s survey results and notable changes',
+        guideQuestions: [
+          'What areas showed the most improvement?',
+          'Are there any tasks that one parent is doing significantly more than the other?',
+          'How do the children\'s perceptions compare to the parents\' perceptions?'
+        ],
+        insights: insights.surveyInsights
+      },
+      {
+        id: 'nextWeekGoals',
+        title: '3. Next Week\'s Goals',
+        duration: '10 min',
+        description: 'Set intentions for the coming week and discuss new tasks',
+        guideQuestions: [
+          'What specific tasks will each parent focus on next week?',
+          'Are there any upcoming events that require special planning?',
+          'How can we better support each other in the coming week?'
+        ],
+        insights: insights.goalInsights
+      }
+    ];
   };
+  
+  // Analyze family data to generate insights
+  const analyzeData = () => {
+    // In a real app, this would analyze actual survey responses to find patterns
+    return {
+      taskInsights: [
+        "Papa has completed 2 of 3 assigned tasks",
+        "Mama has completed 1 of 2 assigned tasks",
+        "The 'Meal Planning' task seems to have made the biggest impact so far"
+      ],
+      surveyInsights: [
+        "Papa has taken more responsibility for meal planning",
+        "Everyone agrees that Mama still handles most of the invisible household tasks",
+        "The children's perception of task distribution is closer to reality this week"
+      ],
+      goalInsights: [
+        "Focus on balancing the Invisible Household Tasks category",
+        "Papa should work on family calendar management next week",
+        "Mama could delegate more of the mental load tasks"
+      ]
+    };
+  };
+  
+  // Generate weekly report data
+  const generateWeeklyReport = () => {
+    // This would use actual data in a real app
+    return {
+      balanceScore: {
+        mama: 65,
+        papa: 35
+      },
+      tasks: {
+        mama: {
+          completed: 1,
+          total: 2,
+          items: [
+            { title: "Manage Home Repairs", status: 'completed' },
+            { title: "Plan Family Activities", status: 'incomplete' }
+          ]
+        },
+        papa: {
+          completed: 2,
+          total: 3,
+          items: [
+            { title: "Meal Planning", status: 'completed' },
+            { title: "Childcare Coordination", status: 'completed' },
+            { title: "Family Calendar Management", status: 'incomplete' }
+          ]
+        }
+      },
+      surveyHighlights: [
+        "Papa has taken over meal planning for the week",
+        "Visible household tasks are becoming more balanced",
+        "Children report improvement in Papa's involvement with homework"
+      ],
+      discrepancies: [
+        "Parents disagree on who handled doctor appointments this week",
+        "Children perceive Mama is still managing most invisible tasks",
+        "There's disagreement about who should coordinate school activities"
+      ]
+    };
+  };
+  
+  // Get agenda topics
+  const agendaTopics = generateAgendaTopics();
+  
+  // Get weekly report data
+  const weeklyReport = generateWeeklyReport();
   
   // Handle input changes
   const handleInputChange = (section, value) => {
@@ -155,6 +221,14 @@ const FamilyMeetingScreen = ({ onClose }) => {
         {viewMode === 'agenda' ? (
           /* Agenda View */
           <div className="p-4 space-y-4">
+            <div className="bg-blue-50 p-4 rounded mb-4">
+              <h3 className="font-medium text-blue-800">Meeting Purpose</h3>
+              <p className="text-sm mt-1">
+                This family meeting helps you discuss your progress in balancing family responsibilities 
+                and set goals for the upcoming week. Use the discussion points below for a productive conversation.
+              </p>
+            </div>
+            
             {/* Agenda Topics */}
             <div className="space-y-4">
               {agendaTopics.map(topic => (
@@ -182,6 +256,16 @@ const FamilyMeetingScreen = ({ onClose }) => {
                   
                   {expandedSection === topic.id && (
                     <div className="p-4 border-t">
+                      {/* AI-generated insights */}
+                      <div className="mb-4 bg-amber-50 p-3 rounded">
+                        <h4 className="text-sm font-medium text-amber-800 mb-2">This Week's Insights:</h4>
+                        <ul className="list-disc pl-5 space-y-1 text-sm text-amber-800">
+                          {topic.insights.map((insight, idx) => (
+                            <li key={idx}>{insight}</li>
+                          ))}
+                        </ul>
+                      </div>
+                      
                       <div className="mb-4">
                         <h4 className="text-sm font-medium mb-2">Discussion Questions:</h4>
                         <ul className="list-disc pl-5 space-y-1 text-sm text-gray-700">
@@ -253,20 +337,20 @@ const FamilyMeetingScreen = ({ onClose }) => {
               <h3 className="font-medium mb-3">Weekly Balance Score</h3>
               <div className="mb-4">
                 <div className="flex justify-between mb-1">
-                  <span className="font-medium">Mama ({weeklyReport.balanceScore}%)</span>
-                  <span className="font-medium">Papa ({100 - weeklyReport.balanceScore}%)</span>
+                  <span className="font-medium">Mama ({weeklyReport.balanceScore.mama}%)</span>
+                  <span className="font-medium">Papa ({weeklyReport.balanceScore.papa}%)</span>
                 </div>
                 <div className="h-2 bg-gray-200 rounded overflow-hidden">
                   <div 
                     className="h-full bg-blue-500" 
-                    style={{ width: `${weeklyReport.balanceScore}%` }} 
+                    style={{ width: `${weeklyReport.balanceScore.mama}%` }} 
                   />
                 </div>
               </div>
               
               <p className="text-sm text-gray-800">
-                This week's balance shows Mama handling {weeklyReport.balanceScore}% of the family tasks.
-                {weeklyReport.balanceScore > 60 
+                This week's balance shows Mama handling {weeklyReport.balanceScore.mama}% of the family tasks.
+                {weeklyReport.balanceScore.mama > 60 
                   ? " There's still room for improvement in balancing responsibilities."
                   : " Great progress on achieving a more balanced distribution!"
                 }
@@ -277,17 +361,17 @@ const FamilyMeetingScreen = ({ onClose }) => {
             <div className="border rounded-lg p-4">
               <h3 className="font-medium mb-3">Task Completion</h3>
               <div className="space-y-2">
-                {weeklyReport.taskCompletion.map((parent, idx) => (
-                  <div key={idx} className="flex justify-between items-center">
-                    <span>{parent.parent}</span>
+                {Object.entries(weeklyReport.tasks).map(([parent, data]) => (
+                  <div key={parent} className="flex justify-between items-center">
+                    <span className="capitalize">{parent}</span>
                     <div className="flex items-center">
                       <span className="mr-2">
-                        {parent.completed} of {parent.total} tasks completed
+                        {data.completed} of {data.total} tasks completed
                       </span>
                       <div className="w-32 h-2 bg-gray-200 rounded overflow-hidden">
                         <div 
                           className="h-full bg-green-500" 
-                          style={{ width: `${(parent.completed / parent.total) * 100}%` }} 
+                          style={{ width: `${(data.completed / data.total) * 100}%` }} 
                         />
                       </div>
                     </div>
