@@ -214,7 +214,7 @@ const DashboardScreen = ({ onOpenFamilyMeeting }) => {
             className={`px-4 py-2 font-medium whitespace-nowrap ${activeTab === 'tasks' ? 'border-b-2 border-blue-500 text-blue-600' : 'text-gray-600'}`}
             onClick={() => setActiveTab('tasks')}
           >
-            Tasks
+            Do Now
           </button>
           <button 
             className={`px-4 py-2 font-medium whitespace-nowrap ${activeTab === 'initial-survey' ? 'border-b-2 border-blue-500 text-blue-600' : 'text-gray-600'}`}

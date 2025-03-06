@@ -248,22 +248,27 @@ const FamilyMeetingScreen = ({ onClose }) => {
     }
   };
   
-  // Handle complete week together button
   const handleCompleteWeekTogether = async () => {
     setIsCompleting(true);
     
     try {
+      console.log(`Starting to complete Week ${currentWeek}`);
+      
       // Complete the week - this should:
       // 1. Mark the week as completed
       // 2. Create a historical record
       // 3. Advance to the next week
-      await completeWeek(currentWeek);
+      const result = await completeWeek(currentWeek);
+      
+      console.log(`Week ${currentWeek} completed successfully:`, result);
+      console.log(`Moving to Week ${currentWeek + 1}`);
       
       // Show celebration animation
       setShowCelebration(true);
       
       // Close dialog after celebration (5 seconds)
       setTimeout(() => {
+        console.log("Closing meeting dialog after completion");
         onClose();
       }, 5000);
     } catch (error) {

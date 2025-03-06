@@ -3,8 +3,7 @@ import { Users, Calendar, AlertCircle, CheckCircle, ChevronDown, ChevronUp, Spar
 import { useFamily } from '../../../contexts/FamilyContext';
 import DatabaseService from '../../../services/DatabaseService';
 
-
-// Add this function at the top of the file (after imports but before the TasksTab component)
+// Fallback task generator for when no tasks are available
 const generateTaskRecommendations = () => {
   // Generate sample tasks when no tasks are available from other sources
   const sampleTasks = [
@@ -177,8 +176,32 @@ const TasksTab = ({ onStartWeeklyCheckIn, onOpenFamilyMeeting }) => {
   const [daysUntilCheckIn, setDaysUntilCheckIn] = useState(6);
   const [canStartCheckIn, setCanStartCheckIn] = useState(false);
   
-  // Calculate dates
-  const [checkInDueDate, setCheckInDueDate] = useState(new Date());
+  // Calculate due date based on survey schedule if available
+  const calculateDueDate = () => {
+    if (surveySchedule && surveySchedule[currentWeek]) {
+      return new Date(surveySchedule[currentWeek]);
+    } else {
+      // Default to 7 days from now if no schedule
+      const date = new Date();
+      date.setDate(date.getDate() + 7);
+      return date;
+    }
+  };
+
+  // Calculate days until check-in
+  const calculateDaysUntilCheckIn = () => {
+    const today = new Date();
+    const dueDate = checkInDueDate;
+    
+    // Calculate difference in days
+    const diffTime = dueDate.getTime() - today.getTime();
+    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+    
+    return Math.max(0, diffDays);
+  };
+  
+  // State for dates
+  const [checkInDueDate, setCheckInDueDate] = useState(calculateDueDate());
   const [currentDate] = useState(new Date());
   
   // State for task recommendations
@@ -188,120 +211,145 @@ const TasksTab = ({ onStartWeeklyCheckIn, onOpenFamilyMeeting }) => {
   const [aiRecommendations, setAiRecommendations] = useState([]);
   const [isLoadingAiRecommendations, setIsLoadingAiRecommendations] = useState(false);
   
-// Load tasks when component mounts or when familyId/currentWeek changes
-useEffect(() => {
-  const loadTasks = async () => {
-    try {
-      console.log("Loading tasks for user:", selectedUser?.name);
-      
-      // Always try to load directly from Firebase first
-      let tasks = [];
-      
-      if (familyId) {
-        try {
-          // Use DatabaseService directly for the most up-to-date data
-          tasks = await DatabaseService.getTasksForWeek(familyId, currentWeek);
-          console.log("Tasks loaded directly from Firebase:", tasks?.length || 0);
-        } catch (firebaseError) {
-          console.error("Error loading from Firebase directly:", firebaseError);
+  // Task recommendations for the current week
+  const [expandedTasks, setExpandedTasks] = useState({});
+  
+  // State for comment form
+  const [commentTask, setCommentTask] = useState(null);
+  const [commentText, setCommentText] = useState('');
+  const [isSubmittingComment, setIsSubmittingComment] = useState(false);
+  
+  // Effect to update check-in status when survey schedule or current week changes
+  useEffect(() => {
+    // Update check-in due date
+    setCheckInDueDate(calculateDueDate());
+    
+    // Update days until check-in
+    setDaysUntilCheckIn(calculateDaysUntilCheckIn());
+    
+    // Determine if check-in can be started
+    // Allow check-in if it's due within 2 days
+    const canStart = calculateDaysUntilCheckIn() <= 2;
+    setCanStartCheckIn(canStart);
+    
+  }, [surveySchedule, currentWeek]); // Re-run when schedule or week changes
+  
+  // Load tasks when component mounts or when familyId/currentWeek changes
+  useEffect(() => {
+    const loadTasks = async () => {
+      try {
+        console.log(`Loading tasks for Week ${currentWeek}, user:`, selectedUser?.name);
+        
+        // Reset expanded tasks when week changes
+        setExpandedTasks({});
+        
+        // Always try to load directly from Firebase first
+        let tasks = [];
+        
+        if (familyId) {
+          try {
+            // Use DatabaseService directly for the most up-to-date data
+            tasks = await DatabaseService.getTasksForWeek(familyId, currentWeek);
+            console.log(`Tasks loaded directly from Firebase for Week ${currentWeek}:`, tasks?.length || 0);
+          } catch (firebaseError) {
+            console.error("Error loading from Firebase directly:", firebaseError);
+            
+            // Fallback to context method
+            tasks = await loadCurrentWeekTasks();
+            console.log("Tasks loaded via context method:", tasks?.length || 0);
+          }
+        }
+        
+        // If we successfully got tasks with data, use them
+        if (tasks && tasks.length > 0) {
+          console.log(`Using loaded tasks for Week ${currentWeek}`);
+          setTaskRecommendations(tasks);
+        } 
+        // Otherwise, try tasks from context
+        else if (initialTaskRecommendations && initialTaskRecommendations.length > 0) {
+          console.log(`Using tasks from context for Week ${currentWeek}:`, initialTaskRecommendations.length);
+          setTaskRecommendations(initialTaskRecommendations);
           
-          // Fallback to context method
-          tasks = await loadCurrentWeekTasks();
-          console.log("Tasks loaded via context method:", tasks?.length || 0);
-        }
-      }
-      
-      // If we successfully got tasks with data, use them
-      if (tasks && tasks.length > 0) {
-        console.log("Using loaded tasks");
-        setTaskRecommendations(tasks);
-      } 
-      // Otherwise, try tasks from context
-      else if (initialTaskRecommendations && initialTaskRecommendations.length > 0) {
-        console.log("Using tasks from context:", initialTaskRecommendations.length);
-        setTaskRecommendations(initialTaskRecommendations);
-        
-        // Also save these to Firebase for future use
-        if (familyId) {
-          try {
-            await DatabaseService.saveFamilyData({
-              tasks: initialTaskRecommendations,
-              updatedAt: new Date().toISOString()
-            }, familyId);
-            console.log("Context tasks saved to Firebase");
-          } catch (error) {
-            console.error("Error saving context tasks to Firebase:", error);
+          // Also save these to Firebase for future use
+          if (familyId) {
+            try {
+              await DatabaseService.saveFamilyData({
+                tasks: initialTaskRecommendations,
+                updatedAt: new Date().toISOString()
+              }, familyId);
+              console.log("Context tasks saved to Firebase");
+            } catch (error) {
+              console.error("Error saving context tasks to Firebase:", error);
+            }
+          }
+        } 
+        // If all else fails, generate new ones
+        else {
+          console.log(`Generating new task recommendations for Week ${currentWeek}`);
+          const newTasks = generateTaskRecommendations();
+          setTaskRecommendations(newTasks);
+          
+          // Also save these to Firebase for future use
+          if (familyId) {
+            try {
+              await DatabaseService.saveFamilyData({
+                tasks: newTasks,
+                updatedAt: new Date().toISOString()
+              }, familyId);
+              console.log("New tasks saved to Firebase");
+            } catch (error) {
+              console.error("Error saving new tasks to Firebase:", error);
+            }
           }
         }
-      } 
-      // If all else fails, generate new ones
-      else {
-        console.log("Generating new task recommendations");
-        const newTasks = generateTaskRecommendations();
-        setTaskRecommendations(newTasks);
-        
-        // Also save these to Firebase for future use
+      } catch (error) {
+        console.error(`Error in loadTasks for Week ${currentWeek}:`, error);
+        // Final fallback
+        setTaskRecommendations(generateTaskRecommendations());
+      }
+    };
+    
+    loadTasks();
+    
+  }, [familyId, currentWeek]); 
+
+  // Effect to force reload tasks when component becomes visible again
+  useEffect(() => {
+    // Function to reload tasks from Firebase
+    const reloadTasks = async () => {
+      console.log(`Reloading tasks for Week ${currentWeek} from visibility change`);
+      try {
         if (familyId) {
-          try {
-            await DatabaseService.saveFamilyData({
-              tasks: newTasks,
-              updatedAt: new Date().toISOString()
-            }, familyId);
-            console.log("New tasks saved to Firebase");
-          } catch (error) {
-            console.error("Error saving new tasks to Firebase:", error);
+          const freshTasks = await DatabaseService.getTasksForWeek(familyId, currentWeek);
+          console.log(`Fresh tasks loaded for Week ${currentWeek}:`, freshTasks?.length || 0);
+          if (freshTasks && freshTasks.length > 0) {
+            setTaskRecommendations(freshTasks);
           }
         }
+      } catch (error) {
+        console.error(`Error reloading tasks for Week ${currentWeek}:`, error);
       }
-    } catch (error) {
-      console.error("Error in loadTasks:", error);
-      // Final fallback
-      setTaskRecommendations(generateTaskRecommendations());
-    }
-  };
-  
-  loadTasks();
-  
-}, [familyId, currentWeek]); 
+    };
 
-// Add this effect to force reload tasks when component becomes visible again
-useEffect(() => {
-  // Function to reload tasks from Firebase
-  const reloadTasks = async () => {
-    console.log("Reloading tasks from visibility change");
-    try {
-      if (familyId) {
-        const freshTasks = await DatabaseService.getTasksForWeek(familyId, currentWeek);
-        console.log("Fresh tasks loaded:", freshTasks?.length || 0);
-        if (freshTasks && freshTasks.length > 0) {
-          setTaskRecommendations(freshTasks);
-        }
+    // Set up visibility change listener
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === 'visible') {
+        reloadTasks();
       }
-    } catch (error) {
-      console.error("Error reloading tasks:", error);
-    }
-  };
+    };
 
-  // Set up visibility change listener
-  const handleVisibilityChange = () => {
-    if (document.visibilityState === 'visible') {
-      reloadTasks();
-    }
-  };
+    // Add event listener
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+    
+    // Also reload when the component mounts
+    reloadTasks();
 
-  // Add event listener
-  document.addEventListener('visibilitychange', handleVisibilityChange);
+    // Clean up
+    return () => {
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
+    };
+  }, [familyId, currentWeek]);
   
-  // Also reload when the component mounts
-  reloadTasks();
-
-  // Clean up
-  return () => {
-    document.removeEventListener('visibilitychange', handleVisibilityChange);
-  };
-}, [familyId, currentWeek]);
-
-// Remove selectedUser to prevent reloading on user switch  
   // Load AI task recommendations
   const loadAiRecommendations = async () => {
     if (!familyId) return;
@@ -316,14 +364,6 @@ useEffect(() => {
       setIsLoadingAiRecommendations(false);
     }
   };
-  
-  // Task recommendations for the current week
-  const [expandedTasks, setExpandedTasks] = useState({});
-  
-  // State for comment form
-  const [commentTask, setCommentTask] = useState(null);
-  const [commentText, setCommentText] = useState('');
-  const [isSubmittingComment, setIsSubmittingComment] = useState(false);
   
   // Check if weekly check-in is completed for this week
   const weeklyCheckInCompleted = familyMembers.every(member => 
@@ -366,14 +406,13 @@ useEffect(() => {
   };
   
   // Check if user can complete a task
- // Check if user can complete a task
-const canCompleteTask = (task) => {
-  // Only a parent can complete tasks assigned to their role type (Mama or Papa)
-  return selectedUser && 
-         selectedUser.role === 'parent' && 
-         (selectedUser.name === task.assignedToName || 
-          selectedUser.roleType === task.assignedTo);
-};
+  const canCompleteTask = (task) => {
+    // Only a parent can complete tasks assigned to their role type (Mama or Papa)
+    return selectedUser && 
+           selectedUser.role === 'parent' && 
+           (selectedUser.name === task.assignedToName || 
+            selectedUser.roleType === task.assignedTo);
+  };
   
   // Handle adding a comment to a task or subtask
   const handleAddComment = (taskId, subtaskId = null) => {
@@ -496,77 +535,77 @@ const canCompleteTask = (task) => {
   };
   
   // Handle subtask completion toggle
-  // Handle subtask completion toggle
-// Handle subtask completion toggle
-const handleCompleteSubtask = async (taskId, subtaskId, isCompleted) => {
-  const task = taskRecommendations.find(t => t.id.toString() === taskId.toString());
-  
-  // Check permissions - only assigned parent can complete tasks
-  if (canCompleteTask(task)) {
-    try {
-      console.log(`Completing subtask ${subtaskId} of task ${taskId}, completed: ${isCompleted}`);
-      
-      // Create completion timestamp
-      const completedDate = isCompleted ? new Date().toISOString() : null;
-      
-      // Create a deep copy of the task array to ensure state updates properly
-      const updatedTasks = JSON.parse(JSON.stringify(taskRecommendations));
-      
-      // Find and update the specific task and subtask
-      const taskIndex = updatedTasks.findIndex(t => t.id.toString() === taskId.toString());
-      if (taskIndex !== -1) {
-        const task = updatedTasks[taskIndex];
-        const subtaskIndex = task.subTasks.findIndex(st => st.id === subtaskId);
-        
-        if (subtaskIndex !== -1) {
-          // Update the subtask
-          task.subTasks[subtaskIndex].completed = isCompleted;
-          task.subTasks[subtaskIndex].completedDate = completedDate;
-          
-          // Check if all subtasks are completed
-          const allSubtasksComplete = task.subTasks.every(st => st.completed);
-          
-          // Update main task's completion based on subtasks
-          task.completed = allSubtasksComplete;
-          task.completedDate = allSubtasksComplete ? new Date().toISOString() : null;
-        }
-      }
-      
-      // Update state with the modified copy
-      setTaskRecommendations(updatedTasks);
-      
-      // Save directly to Firebase first for immediate persistence
-      if (familyId) {
-        console.log("Saving updated tasks directly to Firebase");
-        try {
-          await DatabaseService.saveFamilyData({
-            tasks: updatedTasks,
-            updatedAt: new Date().toISOString()
-          }, familyId);
-          console.log("Tasks saved to Firebase successfully");
-        } catch (firebaseError) {
-          console.error("Error saving to Firebase directly:", firebaseError);
-        }
-      }
-      
-      // Also try to update through context
+  const handleCompleteSubtask = async (taskId, subtaskId, isCompleted) => {
+    const task = taskRecommendations.find(t => t.id.toString() === taskId.toString());
+    
+    // Check permissions - only assigned parent can complete tasks
+    if (canCompleteTask(task)) {
       try {
-        await updateSubtaskCompletion(taskId, subtaskId, isCompleted);
-        console.log("Tasks also updated via context method");
-      } catch (contextError) {
-        console.error("Error updating through context:", contextError);
+        console.log(`Completing subtask ${subtaskId} of task ${taskId}, completed: ${isCompleted} for Week ${currentWeek}`);
+        
+        // Create completion timestamp
+        const completedDate = isCompleted ? new Date().toISOString() : null;
+        
+        // Create a deep copy of the task array to ensure state updates properly
+        const updatedTasks = JSON.parse(JSON.stringify(taskRecommendations));
+        
+        // Find and update the specific task and subtask
+        const taskIndex = updatedTasks.findIndex(t => t.id.toString() === taskId.toString());
+        if (taskIndex !== -1) {
+          const task = updatedTasks[taskIndex];
+          const subtaskIndex = task.subTasks.findIndex(st => st.id === subtaskId);
+          
+          if (subtaskIndex !== -1) {
+            // Update the subtask
+            task.subTasks[subtaskIndex].completed = isCompleted;
+            task.subTasks[subtaskIndex].completedDate = completedDate;
+            
+            // Check if all subtasks are completed
+            const allSubtasksComplete = task.subTasks.every(st => st.completed);
+            
+            // Update main task's completion based on subtasks
+            task.completed = allSubtasksComplete;
+            task.completedDate = allSubtasksComplete ? new Date().toISOString() : null;
+          }
+        }
+        
+        // Update state with the modified copy
+        setTaskRecommendations(updatedTasks);
+        
+        // Save directly to Firebase first for immediate persistence
+        if (familyId) {
+          console.log(`Saving updated tasks directly to Firebase for Week ${currentWeek}`);
+          try {
+            await DatabaseService.saveFamilyData({
+              tasks: updatedTasks,
+              updatedAt: new Date().toISOString()
+            }, familyId);
+            console.log("Tasks saved to Firebase successfully");
+          } catch (firebaseError) {
+            console.error("Error saving to Firebase directly:", firebaseError);
+          }
+        }
+        
+        // Also try to update through context
+        try {
+          await updateSubtaskCompletion(taskId, subtaskId, isCompleted);
+          console.log("Tasks also updated via context method");
+        } catch (contextError) {
+          console.error("Error updating through context:", contextError);
+        }
+        
+      } catch (error) {
+        console.error("Error updating subtask:", error);
+        alert("There was an error updating the subtask. Please try again.");
       }
-      
-    } catch (error) {
-      console.error("Error updating subtask:", error);
-      alert("There was an error updating the subtask. Please try again.");
+    } else if (selectedUser.role !== 'parent') {
+      alert("Only parents can mark tasks as complete. Children can add comments instead.");
+    } else {
+      alert(`Only ${task.assignedTo} can mark this task as complete.`);
     }
-  } else if (selectedUser.role !== 'parent') {
-    alert("Only parents can mark tasks as complete. Children can add comments instead.");
-  } else {
-    alert(`Only ${task.assignedTo} can mark this task as complete.`);
-  }
-};  // Format date for display
+  };
+  
+  // Format date for display
   const formatDate = (date) => {
     if (!date) return "Not scheduled yet";
     
