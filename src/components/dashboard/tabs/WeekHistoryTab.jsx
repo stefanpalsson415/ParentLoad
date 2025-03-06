@@ -1,339 +1,915 @@
-import React, { useState } from 'react';
-import { CheckCircle, BookOpen } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import { CheckCircle, BookOpen, ChevronDown, ChevronUp, Lightbulb, Info, ArrowRight } from 'lucide-react';
 import { useFamily } from '../../../contexts/FamilyContext';
+import { useSurvey } from '../../../contexts/SurveyContext';
 import { 
   RadarChart, PolarGrid, PolarAngleAxis, PolarRadiusAxis, 
-  Radar, Legend, ResponsiveContainer
+  Radar, Legend, ResponsiveContainer 
 } from 'recharts';
 
 const WeekHistoryTab = ({ weekNumber }) => {
-  const { familyMembers } = useFamily();
-  const [activeSection, setActiveSection] = useState('summary');
+  const { 
+    familyMembers, 
+    getWeekHistoryData,
+    surveyResponses
+  } = useFamily();
   
-  // Sample week data (in a real app, this would come from the database)
-  const weekSummary = {
-    balanceScore: {
-      mama: 65,
-      papa: 35
-    },
-    tasks: {
-      mama: {
-        completed: 2,
-        total: 3,
-        items: [
-          { title: "Manage Home Repairs", status: 'completed' },
-          { title: "Plan Family Activities", status: 'completed' },
-          { title: "School Pickup Coordination", status: 'incomplete' }
-        ]
-      },
-      papa: {
-        completed: 3,
-        total: 3,
-        items: [
-          { title: "Meal Planning", status: 'completed' },
-          { title: "Childcare Coordination", status: 'completed' },
-          { title: "Family Calendar Management", status: 'completed' }
-        ]
+  const { fullQuestionSet } = useSurvey();
+  
+  // State for expanded sections and filters
+  const [expandedSections, setExpandedSections] = useState({
+    categories: true,
+    insights: true,
+    responses: false,
+    balance: true,
+    tasks: true,
+    meeting: true
+  });
+  const [selectedMember, setSelectedMember] = useState(null);
+  const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0);
+  
+  // Get week data
+  const weekData = getWeekHistoryData(weekNumber);
+  const [weeklyQuestions, setWeeklyQuestions] = useState([]);
+  
+  // Effect to process and set weekly questions when week data changes
+  useEffect(() => {
+    if (weekData && fullQuestionSet) {
+      // Filter question set to include only those answered in this week
+      const weekResponses = Object.keys(surveyResponses)
+        .filter(key => key.startsWith(`week-${weekNumber}`))
+        .reduce((obj, key) => {
+          obj[key] = surveyResponses[key];
+          return obj;
+        }, {});
+      
+      // Find questions that have responses
+      const answeredQuestionIds = Object.keys(weekResponses).map(key => {
+        // Extract question id from response key (format might be like "week-1-q1")
+        const parts = key.split('-');
+        return parts.length > 2 ? parts[2] : null;
+      }).filter(id => id);
+      
+      // Get the actual questions that were answered
+      const questions = fullQuestionSet.filter(q => 
+        answeredQuestionIds.includes(q.id)
+      );
+      
+      setWeeklyQuestions(questions);
+      
+      if (questions.length > 0) {
+        setCurrentQuestionIndex(0);
       }
-    },
-    meetingNotes: {
-      taskCompletion: "We discussed how meal planning went well for Papa. He enjoyed taking over this task and feels it's making a positive difference.",
-      surveyResults: "The survey showed improvement in Papa's involvement with household tasks. The kids noticed the change too.",
-      nextWeekGoals: "For next week, we want to focus on better sharing school-related responsibilities."
-    },
-    surveyResults: {
-      radarData: [
-        {
-          category: "Visible Household",
-          mama: 65,
-          papa: 35
-        },
-        {
-          category: "Invisible Household",
-          mama: 70,
-          papa: 30
-        },
-        {
-          category: "Visible Parental",
-          mama: 60,
-          papa: 40
-        },
-        {
-          category: "Invisible Parental",
-          mama: 65,
-          papa: 35
+    }
+  }, [weekData, fullQuestionSet, weekNumber, surveyResponses]);
+  
+  // Toggle section expansion
+  const toggleSection = (section) => {
+    setExpandedSections(prev => ({
+      ...prev,
+      [section]: !prev[section]
+    }));
+  };
+  
+  // Calculate radar data for this week
+  const getRadarData = () => {
+    // Filter responses to just this week's data
+    const weekResponses = Object.keys(surveyResponses)
+      .filter(key => key.startsWith(`week-${weekNumber}`))
+      .reduce((obj, key) => {
+        obj[key] = surveyResponses[key];
+        return obj;
+      }, {});
+    
+    // Group by category
+    const categories = {
+      "Visible Household": { mama: 0, papa: 0, total: 0 },
+      "Invisible Household": { mama: 0, papa: 0, total: 0 },
+      "Visible Parental": { mama: 0, papa: 0, total: 0 },
+      "Invisible Parental": { mama: 0, papa: 0, total: 0 }
+    };
+    
+    // Count responses in each category
+    Object.entries(weekResponses).forEach(([key, value]) => {
+      // Skip if not a valid question response (e.g., metadata)
+      if (!key.includes('q')) return;
+      
+      // Find the question in the question set
+      const questionId = key.includes('-') ? key.split('-')[2] : key;
+      const question = fullQuestionSet.find(q => q.id === questionId);
+      
+      if (!question) return;
+      
+      // Update counts
+      const category = question.category;
+      if (categories[category]) {
+        categories[category].total++;
+        if (value === 'Mama') {
+          categories[category].mama++;
+        } else if (value === 'Papa') {
+          categories[category].papa++;
         }
-      ],
-      keyHighlights: [
-        "Papa's involvement in meal planning was recognized by all family members",
-        "The children reported more balanced perception of who handles homework help",
-        "Mama still handles most of the invisible household tasks"
-      ]
+      }
+    });
+    
+    // Convert counts to percentages for radar chart
+    return Object.entries(categories).map(([category, counts]) => {
+      const total = counts.total;
+      if (total === 0) {
+        return { category, mama: 0, papa: 0 };
+      }
+      
+      return {
+        category,
+        mama: Math.round((counts.mama / total) * 100),
+        papa: Math.round((counts.papa / total) * 100)
+      };
+    });
+  };
+  
+  // Generate key insights for this week
+  const getKeyInsights = () => {
+    const radarData = getRadarData();
+    if (!radarData || radarData.every(item => item.mama === 0 && item.papa === 0)) {
+      return [
+        {
+          type: 'waiting',
+          title: 'No Data Available',
+          description: 'No survey data is available for Week ' + weekNumber,
+          icon: <Info size={20} className="text-gray-600" />
+        }
+      ];
+    }
+    
+    // Find the most imbalanced category
+    const mostImbalancedCategory = radarData.sort((a, b) => 
+      Math.abs(b.mama - b.papa) - Math.abs(a.mama - a.papa)
+    )[0];
+    
+    // Create insights based on the data
+    const insights = [];
+    
+    if (mostImbalancedCategory && Math.abs(mostImbalancedCategory.mama - mostImbalancedCategory.papa) > 20) {
+      insights.push({
+        type: 'challenge',
+        title: `${mostImbalancedCategory.category} Imbalance`,
+        description: `${mostImbalancedCategory.category} tasks showed a ${mostImbalancedCategory.mama}% vs ${mostImbalancedCategory.papa}% split in Week ${weekNumber}.`,
+        icon: <Info size={20} className="text-amber-600" />
+      });
+    }
+    
+    // Add a progress insight based on task completion
+    if (weekData && weekData.tasks) {
+      const completedTaskCount = weekData.tasks.filter(task => task.completed).length;
+      const totalTaskCount = weekData.tasks.length;
+      
+      if (completedTaskCount > 0) {
+        insights.push({
+          type: 'progress',
+          title: 'Task Completion',
+          description: `Your family completed ${completedTaskCount} of ${totalTaskCount} assigned tasks in Week ${weekNumber}.`,
+          icon: <CheckCircle size={20} className="text-green-600" />
+        });
+      }
+    }
+    
+    // Add meeting notes insight if available
+    if (weekData && weekData.meetingNotes && Object.keys(weekData.meetingNotes).length > 0) {
+      insights.push({
+        type: 'insight',
+        title: 'Family Meeting Highlights',
+        description: 'You held a successful family meeting to discuss progress and set new goals.',
+        icon: <Lightbulb size={20} className="text-blue-600" />
+      });
+    }
+    
+    // If we still don't have enough insights, add a generic one
+    if (insights.length < 2) {
+      insights.push({
+        type: 'insight',
+        title: 'Weekly Progress',
+        description: `Week ${weekNumber} helped your family make progress toward better balance.`,
+        icon: <ArrowRight size={20} className="text-purple-600" />
+      });
+    }
+    
+    return insights;
+  };
+  
+  // Get responses for the current question
+  const getResponsesForCurrentQuestion = () => {
+    if (!weeklyQuestions || weeklyQuestions.length === 0) return {};
+    
+    const questionId = weeklyQuestions[currentQuestionIndex]?.id;
+    if (!questionId) return {};
+    
+    // Get responses for this specific question in this week
+    const responses = {};
+    
+    familyMembers.forEach(member => {
+      // Try to find response with format "week-[weekNum]-[questionId]-[memberId]" or similar
+      const responseKey = Object.keys(surveyResponses).find(key => 
+        key.includes(`week-${weekNumber}`) && 
+        key.includes(questionId) && 
+        key.includes(member.id)
+      );
+      
+      if (responseKey) {
+        responses[member.id] = surveyResponses[responseKey];
+      } else {
+        // Also check format "week-[weekNum]-[memberId]-[questionId]" or similar
+        const altResponseKey = Object.keys(surveyResponses).find(key => 
+          key.startsWith(`week-${weekNumber}`) && 
+          key.includes(questionId)
+        );
+        
+        if (altResponseKey) {
+          responses[member.id] = surveyResponses[altResponseKey];
+        }
+      }
+    });
+    
+    return responses;
+  };
+  
+  // Navigate to next question
+  const nextQuestion = () => {
+    if (currentQuestionIndex < weeklyQuestions.length - 1) {
+      setCurrentQuestionIndex(currentQuestionIndex + 1);
     }
   };
   
-  // Render content based on active section
-  const renderSectionContent = () => {
-    switch(activeSection) {
-      case 'summary':
-        return (
-          <div className="space-y-4">
-            {/* Balance Score */}
-            <div className="bg-white rounded-lg p-6 border">
-              <h3 className="text-lg font-semibold mb-3">Week {weekNumber} Balance</h3>
-              <div className="mb-4">
-                <div className="flex justify-between mb-1">
-                  <span className="font-medium">Mama ({weekSummary.balanceScore.mama}%)</span>
-                  <span className="font-medium">Papa ({weekSummary.balanceScore.papa}%)</span>
-                </div>
-                <div className="h-2 bg-gray-200 rounded overflow-hidden">
-                  <div className="h-full bg-blue-500" style={{ width: `${weekSummary.balanceScore.mama}%` }} />
-                </div>
-              </div>
-              
-              <div className="flex items-center text-sm text-gray-600">
-                <span>
-                  {weekSummary.balanceScore.mama > 60
-                    ? "Still improving balance - Mama is handling more tasks than Papa"
-                    : "Great balance achieved this week!"}
-                </span>
-              </div>
-            </div>
-            
-            {/* Task Completion Summary */}
-            <div className="bg-white rounded-lg p-6 border">
-              <h3 className="text-lg font-semibold mb-3">Task Completion</h3>
-              
-              <div className="space-y-6">
-                {/* Papa's Tasks */}
-                <div>
-                  <h4 className="font-medium text-blue-800 mb-2 flex items-center">
-                    <span className="w-3 h-3 bg-blue-500 rounded-full mr-2"></span>
-                    Papa's Tasks ({weekSummary.tasks.papa.completed}/{weekSummary.tasks.papa.total})
-                  </h4>
-                  
-                  <div className="space-y-2 pl-5">
-                    {weekSummary.tasks.papa.items.map((task, index) => (
-                      <div key={index} className="flex items-center">
-                        <div className={`w-5 h-5 rounded-full flex items-center justify-center mr-2 ${
-                          task.status === 'completed' ? 'bg-green-100 text-green-600' : 'bg-gray-100 text-gray-400'
-                        }`}>
-                          {task.status === 'completed' ? '✓' : '!'}
-                        </div>
-                        <span className={task.status === 'completed' ? '' : 'text-gray-500'}>
-                          {task.title}
-                        </span>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-                
-                {/* Mama's Tasks */}
-                <div>
-                  <h4 className="font-medium text-purple-800 mb-2 flex items-center">
-                    <span className="w-3 h-3 bg-purple-500 rounded-full mr-2"></span>
-                    Mama's Tasks ({weekSummary.tasks.mama.completed}/{weekSummary.tasks.mama.total})
-                  </h4>
-                  
-                  <div className="space-y-2 pl-5">
-                    {weekSummary.tasks.mama.items.map((task, index) => (
-                      <div key={index} className="flex items-center">
-                        <div className={`w-5 h-5 rounded-full flex items-center justify-center mr-2 ${
-                          task.status === 'completed' ? 'bg-green-100 text-green-600' : 'bg-gray-100 text-gray-400'
-                        }`}>
-                          {task.status === 'completed' ? '✓' : '!'}
-                        </div>
-                        <span className={task.status === 'completed' ? '' : 'text-gray-500'}>
-                          {task.title}
-                        </span>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              </div>
-            </div>
-          </div>
-        );
-        
-      case 'meeting':
-        return (
-          <div className="bg-white rounded-lg p-6 border">
-            <div className="flex items-center mb-4">
-              <div className="w-10 h-10 rounded-full bg-amber-100 flex items-center justify-center mr-3">
-                <BookOpen size={20} className="text-amber-600" />
-              </div>
-              <div>
-                <h3 className="text-lg font-semibold">Week {weekNumber} Family Meeting</h3>
-                <p className="text-sm text-gray-600">Meeting notes and discussion summary</p>
-              </div>
-            </div>
-            
-            <div className="space-y-6 mt-6">
-              <div className="p-4 border rounded-lg bg-gray-50">
-                <h4 className="font-medium mb-2">Review Task Completion</h4>
-                <p className="text-gray-700 text-sm">{weekSummary.meetingNotes.taskCompletion}</p>
-              </div>
-              
-              <div className="p-4 border rounded-lg bg-gray-50">
-                <h4 className="font-medium mb-2">Survey Results Discussion</h4>
-                <p className="text-gray-700 text-sm">{weekSummary.meetingNotes.surveyResults}</p>
-              </div>
-              
-              <div className="p-4 border rounded-lg bg-gray-50">
-                <h4 className="font-medium mb-2">Next Week's Goals</h4>
-                <p className="text-gray-700 text-sm">{weekSummary.meetingNotes.nextWeekGoals}</p>
-              </div>
-            </div>
-          </div>
-        );
-        
-      case 'survey':
-        return (
-          <div className="space-y-4">
-            {/* Survey Category Chart */}
-            <div className="bg-white rounded-lg p-6 border">
-              <h3 className="text-lg font-semibold mb-3">Task Category Distribution</h3>
-              <p className="text-sm text-gray-600 mb-4">
-                Week {weekNumber} survey results across the four task categories
-              </p>
-              
-              <div className="h-64 w-full">
-                <ResponsiveContainer width="100%" height="100%">
-                  <RadarChart outerRadius="80%" data={weekSummary.surveyResults.radarData}>
-                    <PolarGrid />
-                    <PolarAngleAxis dataKey="category" />
-                    <PolarRadiusAxis angle={30} domain={[0, 100]} />
-                      
-                    <Radar
-                      name="Mama's Tasks"
-                      dataKey="mama"
-                      stroke="#8884d8"
-                      fill="#8884d8"
-                      fillOpacity={0.5}
-                    />
-                      
-                    <Radar
-                      name="Papa's Tasks"
-                      dataKey="papa"
-                      stroke="#82ca9d"
-                      fill="#82ca9d"
-                      fillOpacity={0.5}
-                    />
-                      
-                    <Legend />
-                  </RadarChart>
-                </ResponsiveContainer>
-              </div>
-            </div>
-            
-            {/* Survey Highlights */}
-            <div className="bg-white rounded-lg p-6 border">
-              <h3 className="text-lg font-semibold mb-3">Key Insights</h3>
-              <ul className="space-y-2">
-                {weekSummary.surveyResults.keyHighlights.map((highlight, index) => (
-                  <li key={index} className="flex items-start">
-                    <div className="flex-shrink-0 h-6 w-6 flex items-center justify-center rounded-full bg-blue-100 text-blue-600 mr-2">
-                      <CheckCircle size={14} />
-                    </div>
-                    <span className="text-gray-700">{highlight}</span>
-                  </li>
-                ))}
-              </ul>
-            </div>
-          </div>
-        );
-        
-      case 'report':
-        return (
-          <div className="bg-white rounded-lg p-6 border">
-            <div className="flex items-center mb-4">
-              <div className="w-10 h-10 rounded-full bg-blue-100 flex items-center justify-center mr-3">
-                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-6 h-6 text-blue-600">
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M19.5 14.25v-2.625a3.375 3.375 0 00-3.375-3.375h-1.5A1.125 1.125 0 0113.5 7.125v-1.5a3.375 3.375 0 00-3.375-3.375H8.25m0 12.75h7.5m-7.5 3H12M10.5 2.25H5.625c-.621 0-1.125.504-1.125 1.125v17.25c0 .621.504 1.125 1.125 1.125h12.75c.621 0 1.125-.504 1.125-1.125V11.25a9 9 0 00-9-9z" />
-                </svg>
-              </div>
-              <div>
-                <h3 className="text-lg font-semibold">Week {weekNumber} Full Report</h3>
-                <p className="text-sm text-gray-600">Comprehensive data from this week</p>
-              </div>
-            </div>
-            
-            <div className="space-y-6 mt-6">
-              <div className="p-4 border rounded-lg">
-                <h4 className="font-medium mb-2">Balance Summary</h4>
-                <p className="text-gray-700">
-                  Week {weekNumber} showed Mama handling {weekSummary.balanceScore.mama}% of family responsibilities
-                  and Papa handling {weekSummary.balanceScore.papa}%. 
-                  {weekSummary.balanceScore.papa > weekSummary.balanceScore.papa - 5 && 
-                   " This is an improvement from the previous week."}
-                </p>
-              </div>
-              
-              <div className="p-4 border rounded-lg">
-                <h4 className="font-medium mb-2">Task Completion</h4>
-                <p className="text-gray-700">
-                  Papa completed {weekSummary.tasks.papa.completed} of {weekSummary.tasks.papa.total} assigned tasks.
-                  Mama completed {weekSummary.tasks.mama.completed} of {weekSummary.tasks.mama.total} assigned tasks.
-                </p>
-              </div>
-              
-              <div className="p-4 border rounded-lg">
-                <h4 className="font-medium mb-2">Areas of Progress</h4>
-                <ul className="list-disc pl-5 space-y-1 text-gray-700">
-                  <li>Better balance in meal planning and preparation</li>
-                  <li>Improved sharing of calendar management</li>
-                  <li>Children reporting more balanced perception of responsibilities</li>
-                </ul>
-              </div>
-              
-              <div className="p-4 border rounded-lg">
-                <h4 className="font-medium mb-2">Areas for Improvement</h4>
-                <ul className="list-disc pl-5 space-y-1 text-gray-700">
-                  <li>Invisible household tasks still disproportionately handled by Mama</li>
-                  <li>School-related responsibilities need better sharing</li>
-                </ul>
-              </div>
-            </div>
-          </div>
-        );
-        
-      default:
-        return <div>Select a section</div>;
+  // Navigate to previous question
+  const prevQuestion = () => {
+    if (currentQuestionIndex > 0) {
+      setCurrentQuestionIndex(currentQuestionIndex - 1);
     }
+  };
+  
+  // Current question
+  const currentQuestion = weeklyQuestions[currentQuestionIndex];
+  
+  // Get current question responses
+  const currentResponses = getResponsesForCurrentQuestion();
+  
+  // COLORS
+  const MAMA_COLOR = '#8884d8';
+  const PAPA_COLOR = '#82ca9d';
+  
+  // Calculate overall balance for this week
+  const getWeekBalance = () => {
+    // Filter responses to just this week's data
+    const weekResponses = Object.keys(surveyResponses)
+      .filter(key => key.startsWith(`week-${weekNumber}`))
+      .reduce((obj, key) => {
+        obj[key] = surveyResponses[key];
+        return obj;
+      }, {});
+    
+    // Count Mama/Papa responses
+    let mamaCount = 0;
+    let papaCount = 0;
+    
+    Object.values(weekResponses).forEach(value => {
+      if (value === 'Mama') {
+        mamaCount++;
+      } else if (value === 'Papa') {
+        papaCount++;
+      }
+    });
+    
+    const total = mamaCount + papaCount;
+    if (total === 0) {
+      return { mama: 0, papa: 0 };
+    }
+    
+    return {
+      mama: Math.round((mamaCount / total) * 100),
+      papa: Math.round((papaCount / total) * 100)
+    };
+  };
+  
+  // Get week balance
+  const weekBalance = getWeekBalance();
+  
+  // Format date for display
+  const formatDate = (dateString) => {
+    if (!dateString) return "Unknown";
+    
+    const date = new Date(dateString);
+    return date.toLocaleDateString('en-US', { 
+      month: 'short', 
+      day: 'numeric',
+      year: 'numeric'
+    });
   };
   
   return (
-    <div className="space-y-6">
-      {/* Navigation tabs */}
-      <div className="flex border-b overflow-x-auto">
-        <button 
-          className={`px-4 py-2 font-medium ${activeSection === 'summary' ? 'border-b-2 border-blue-500 text-blue-600' : 'text-gray-600'}`}
-          onClick={() => setActiveSection('summary')}
-        >
-          Summary
-        </button>
-        <button 
-          className={`px-4 py-2 font-medium ${activeSection === 'meeting' ? 'border-b-2 border-blue-500 text-blue-600' : 'text-gray-600'}`}
-          onClick={() => setActiveSection('meeting')}
-        >
-          Family Meeting
-        </button>
-        <button 
-          className={`px-4 py-2 font-medium ${activeSection === 'survey' ? 'border-b-2 border-blue-500 text-blue-600' : 'text-gray-600'}`}
-          onClick={() => setActiveSection('survey')}
-        >
-          Survey Results
-        </button>
-        <button 
-          className={`px-4 py-2 font-medium ${activeSection === 'report' ? 'border-b-2 border-blue-500 text-blue-600' : 'text-gray-600'}`}
-          onClick={() => setActiveSection('report')}
-        >
-          Full Report
-        </button>
+    <div className="space-y-4">
+      {/* Week Summary Header */}
+      <div className="bg-white rounded-lg shadow p-6">
+        <h3 className="text-xl font-bold mb-3 text-blue-800">Week {weekNumber} Summary</h3>
+        <p className="text-gray-600">
+          {weekData ? (
+            `Completed on ${formatDate(weekData.completionDate)}`
+          ) : (
+            `Historical data from Week ${weekNumber}`
+          )}
+        </p>
+        
+        {weekData && weekData.familyMembers && (
+          <div className="mt-4 flex flex-wrap gap-3">
+            <span className="text-sm font-medium">Completed by:</span>
+            <div className="flex flex-wrap gap-2">
+              {weekData.familyMembers.map(member => (
+                <div key={member.id} className="flex items-center bg-green-50 text-green-700 text-xs rounded-full px-3 py-1">
+                  <CheckCircle size={12} className="mr-1" />
+                  {member.name}
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
       </div>
       
-      {/* Section content */}
-      {renderSectionContent()}
+      {/* Task Category Distribution */}
+      <div className="bg-white rounded-lg shadow">
+        <div 
+          className="p-4 flex justify-between items-center cursor-pointer hover:bg-gray-50"
+          onClick={() => toggleSection('categories')}
+        >
+          <h3 className="text-lg font-semibold">Week {weekNumber}: Task Category Distribution</h3>
+          {expandedSections.categories ? (
+            <ChevronUp size={20} className="text-gray-500" />
+          ) : (
+            <ChevronDown size={20} className="text-gray-500" />
+          )}
+        </div>
+        
+        {expandedSections.categories && (
+          <div className="p-6 pt-0">
+            <p className="text-sm text-gray-600 mb-4">
+              Distribution of responsibilities across the four task categories
+            </p>
+              
+            <div className="h-64 w-full">
+              <ResponsiveContainer width="100%" height="100%">
+                <RadarChart outerRadius="80%" data={getRadarData()}>
+                  <PolarGrid />
+                  <PolarAngleAxis dataKey="category" />
+                  <PolarRadiusAxis angle={30} domain={[0, 100]} />
+                    
+                  <Radar
+                    name="Mama's Tasks"
+                    dataKey="mama"
+                    stroke={MAMA_COLOR}
+                    fill={MAMA_COLOR}
+                    fillOpacity={0.5}
+                  />
+                    
+                  <Radar
+                    name="Papa's Tasks"
+                    dataKey="papa"
+                    stroke={PAPA_COLOR}
+                    fill={PAPA_COLOR}
+                    fillOpacity={0.5}
+                  />
+                    
+                  <Legend />
+                </RadarChart>
+              </ResponsiveContainer>
+            </div>
+              
+            <div className="mt-4 text-sm text-center text-gray-500">
+              The chart shows what percentage of tasks in each category were handled by Mama vs Papa in Week {weekNumber}.
+            </div>
+          </div>
+        )}
+      </div>
+        
+      {/* Key Insights */}
+      <div className="bg-white rounded-lg shadow">
+        <div 
+          className="p-4 flex justify-between items-center cursor-pointer hover:bg-gray-50"
+          onClick={() => toggleSection('insights')}
+        >
+          <h3 className="text-lg font-semibold">Week {weekNumber}: Key Insights</h3>
+          {expandedSections.insights ? (
+            <ChevronUp size={20} className="text-gray-500" />
+          ) : (
+            <ChevronDown size={20} className="text-gray-500" />
+          )}
+        </div>
+        
+        {expandedSections.insights && (
+          <div className="p-6 pt-0">
+            <p className="text-sm text-gray-600 mb-4">
+              Key insights from Week {weekNumber}'s data
+            </p>
+            
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              {getKeyInsights().map((insight, index) => (
+                <div 
+                  key={index} 
+                  className={`p-4 rounded-lg border ${
+                    insight.type === 'progress' ? 'border-green-200 bg-green-50' :
+                    insight.type === 'challenge' ? 'border-amber-200 bg-amber-50' :
+                    insight.type === 'insight' ? 'border-blue-200 bg-blue-50' :
+                    'border-gray-200 bg-gray-50'
+                  }`}
+                >
+                  <div className="flex items-start">
+                    <div className="mt-1 mr-3">
+                      {insight.icon}
+                    </div>
+                    <div>
+                      <h4 className="font-medium text-sm">{insight.title}</h4>
+                      <p className="text-sm mt-1">{insight.description}</p>
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+      </div>
+      
+      {/* Week Balance */}
+      <div className="bg-white rounded-lg shadow">
+        <div 
+          className="p-4 flex justify-between items-center cursor-pointer hover:bg-gray-50"
+          onClick={() => toggleSection('balance')}
+        >
+          <h3 className="text-lg font-semibold">Week {weekNumber} Balance</h3>
+          {expandedSections.balance ? (
+            <ChevronUp size={20} className="text-gray-500" />
+          ) : (
+            <ChevronDown size={20} className="text-gray-500" />
+          )}
+        </div>
+        
+        {expandedSections.balance && (
+          <div className="p-6 pt-0">
+            <p className="text-sm text-gray-600 mb-3">
+              Overall balance of parental responsibilities during Week {weekNumber}
+            </p>
+              
+            <div className="mb-4">
+              <div className="flex justify-between mb-1">
+                <span className="font-medium">Mama ({weekBalance.mama}%)</span>
+                <span className="font-medium">Papa ({weekBalance.papa}%)</span>
+              </div>
+              <div className="h-2 bg-gray-200 rounded overflow-hidden">
+                <div className="h-full bg-blue-500" style={{ width: `${weekBalance.mama}%` }} />
+              </div>
+            </div>
+              
+            <div className="flex items-center text-sm text-gray-600">
+              <span>
+                {weekBalance.mama > 60
+                  ? `During Week ${weekNumber}, Mama was still handling more tasks than Papa.`
+                  : weekBalance.mama < 40
+                    ? `During Week ${weekNumber}, Papa was handling more tasks than Mama.`
+                    : `During Week ${weekNumber}, your family had a good balance of responsibilities!`}
+              </span>
+            </div>
+          </div>
+        )}
+      </div>
+      
+      {/* Tasks Section */}
+      {weekData && weekData.tasks && weekData.tasks.length > 0 && (
+        <div className="bg-white rounded-lg shadow">
+          <div 
+            className="p-4 flex justify-between items-center cursor-pointer hover:bg-gray-50"
+            onClick={() => toggleSection('tasks')}
+          >
+            <h3 className="text-lg font-semibold">Week {weekNumber} Tasks</h3>
+            {expandedSections.tasks ? (
+              <ChevronUp size={20} className="text-gray-500" />
+            ) : (
+              <ChevronDown size={20} className="text-gray-500" />
+            )}
+          </div>
+          
+          {expandedSections.tasks && (
+            <div className="p-6 pt-0">
+              <p className="text-sm text-gray-600 mb-4">
+                Tasks assigned and completed during Week {weekNumber}
+              </p>
+              
+              <div className="space-y-4">
+                {/* Mama's Tasks */}
+                <div className="border-l-4 border-purple-500 p-2">
+                  <h4 className="font-medium mb-2">Mama's Tasks</h4>
+                  <div className="space-y-3">
+                    {weekData.tasks
+                      .filter(task => task.assignedTo === "Mama")
+                      .map(task => (
+                        <div key={task.id} className={`rounded-lg border ${task.completed ? 'bg-green-50' : 'bg-white'} p-4`}>
+                          <div className="flex items-start">
+                            <div className={`flex-shrink-0 w-8 h-8 rounded-full flex items-center justify-center mr-3 ${
+                              task.completed ? 'bg-green-100 text-green-600' : 'bg-purple-100 text-purple-600'
+                            }`}>
+                              {task.completed ? <CheckCircle size={16} /> : task.id}
+                            </div>
+                            
+                            <div>
+                              <h5 className="font-medium">{task.title}</h5>
+                              <p className="text-sm text-gray-600 mt-1">{task.description}</p>
+                              
+                              {task.completed && task.completedDate && (
+                                <p className="text-xs text-green-600 mt-2">
+                                  Completed on {formatDate(task.completedDate)}
+                                </p>
+                              )}
+                              
+                              {task.comments && task.comments.length > 0 && (
+                                <div className="mt-3 pt-3 border-t">
+                                  <h6 className="text-xs font-medium mb-2">Comments:</h6>
+                                  <div className="space-y-2">
+                                    {task.comments.map(comment => (
+                                      <div key={comment.id} className="bg-gray-50 p-2 rounded text-xs">
+                                        <div className="font-medium">{comment.userName}:</div>
+                                        <p>{comment.text}</p>
+                                        <div className="text-xs text-gray-500 mt-1">{comment.timestamp}</div>
+                                      </div>
+                                    ))}
+                                  </div>
+                                </div>
+                              )}
+                              
+                              {/* Show subtasks if any */}
+                              {task.subTasks && task.subTasks.length > 0 && (
+                                <div className="mt-3 pl-2">
+                                  <h6 className="text-xs font-medium mb-2">Subtasks:</h6>
+                                  <div className="space-y-2">
+                                    {task.subTasks.map(subtask => (
+                                      <div key={subtask.id} className={`p-2 rounded border ${subtask.completed ? 'bg-green-50' : 'bg-white'}`}>
+                                        <div className="flex items-start">
+                                          <div className={`w-4 h-4 rounded-full flex items-center justify-center mr-2 ${
+                                            subtask.completed ? 'bg-green-100 text-green-600' : 'bg-gray-100'
+                                          }`}>
+                                            {subtask.completed && <CheckCircle size={10} />}
+                                          </div>
+                                          <div>
+                                            <p className="text-xs font-medium">{subtask.title}</p>
+                                            {subtask.completed && subtask.completedDate && (
+                                              <p className="text-xs text-green-600">
+                                                Completed on {formatDate(subtask.completedDate)}
+                                              </p>
+                                            )}
+                                          </div>
+                                        </div>
+                                      </div>
+                                    ))}
+                                  </div>
+                                </div>
+                              )}
+                            </div>
+                          </div>
+                        </div>
+                      ))}
+                      
+                    {weekData.tasks.filter(task => task.assignedTo === "Mama").length === 0 && (
+                      <p className="text-sm text-gray-500 italic">No tasks assigned to Mama for this week</p>
+                    )}
+                  </div>
+                </div>
+                
+                {/* Papa's Tasks */}
+                <div className="border-l-4 border-blue-500 p-2">
+                  <h4 className="font-medium mb-2">Papa's Tasks</h4>
+                  <div className="space-y-3">
+                    {weekData.tasks
+                      .filter(task => task.assignedTo === "Papa")
+                      .map(task => (
+                        <div key={task.id} className={`rounded-lg border ${task.completed ? 'bg-green-50' : 'bg-white'} p-4`}>
+                          <div className="flex items-start">
+                            <div className={`flex-shrink-0 w-8 h-8 rounded-full flex items-center justify-center mr-3 ${
+                              task.completed ? 'bg-green-100 text-green-600' : 'bg-blue-100 text-blue-600'
+                            }`}>
+                              {task.completed ? <CheckCircle size={16} /> : task.id}
+                            </div>
+                            
+                            <div>
+                              <h5 className="font-medium">{task.title}</h5>
+                              <p className="text-sm text-gray-600 mt-1">{task.description}</p>
+                              
+                              {task.completed && task.completedDate && (
+                                <p className="text-xs text-green-600 mt-2">
+                                  Completed on {formatDate(task.completedDate)}
+                                </p>
+                              )}
+                              
+                              {task.comments && task.comments.length > 0 && (
+                                <div className="mt-3 pt-3 border-t">
+                                  <h6 className="text-xs font-medium mb-2">Comments:</h6>
+                                  <div className="space-y-2">
+                                    {task.comments.map(comment => (
+                                      <div key={comment.id} className="bg-gray-50 p-2 rounded text-xs">
+                                        <div className="font-medium">{comment.userName}:</div>
+                                        <p>{comment.text}</p>
+                                        <div className="text-xs text-gray-500 mt-1">{comment.timestamp}</div>
+                                      </div>
+                                    ))}
+                                  </div>
+                                </div>
+                              )}
+                              
+                              {/* Show subtasks if any */}
+                              {task.subTasks && task.subTasks.length > 0 && (
+                                <div className="mt-3 pl-2">
+                                  <h6 className="text-xs font-medium mb-2">Subtasks:</h6>
+                                  <div className="space-y-2">
+                                    {task.subTasks.map(subtask => (
+                                      <div key={subtask.id} className={`p-2 rounded border ${subtask.completed ? 'bg-green-50' : 'bg-white'}`}>
+                                        <div className="flex items-start">
+                                          <div className={`w-4 h-4 rounded-full flex items-center justify-center mr-2 ${
+                                            subtask.completed ? 'bg-green-100 text-green-600' : 'bg-gray-100'
+                                          }`}>
+                                            {subtask.completed && <CheckCircle size={10} />}
+                                          </div>
+                                          <div>
+                                            <p className="text-xs font-medium">{subtask.title}</p>
+                                            {subtask.completed && subtask.completedDate && (
+                                              <p className="text-xs text-green-600">
+                                                Completed on {formatDate(subtask.completedDate)}
+                                              </p>
+                                            )}
+                                          </div>
+                                        </div>
+                                      </div>
+                                    ))}
+                                  </div>
+                                </div>
+                              )}
+                            </div>
+                          </div>
+                        </div>
+                      ))}
+                      
+                    {weekData.tasks.filter(task => task.assignedTo === "Papa").length === 0 && (
+                      <p className="text-sm text-gray-500 italic">No tasks assigned to Papa for this week</p>
+                    )}
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
+        </div>
+      )}
+      
+      {/* Meeting Notes */}
+      {weekData && weekData.meetingNotes && Object.keys(weekData.meetingNotes).length > 0 && (
+        <div className="bg-white rounded-lg shadow">
+          <div 
+            className="p-4 flex justify-between items-center cursor-pointer hover:bg-gray-50"
+            onClick={() => toggleSection('meeting')}
+          >
+            <h3 className="text-lg font-semibold">Week {weekNumber} Family Meeting</h3>
+            {expandedSections.meeting ? (
+              <ChevronUp size={20} className="text-gray-500" />
+            ) : (
+              <ChevronDown size={20} className="text-gray-500" />
+            )}
+          </div>
+          
+          {expandedSections.meeting && (
+            <div className="p-6 pt-0">
+              <div className="flex items-center mb-4">
+                <div className="w-10 h-10 rounded-full bg-amber-100 flex items-center justify-center mr-3">
+                  <BookOpen size={20} className="text-amber-600" />
+                </div>
+                <div>
+                  <h3 className="text-lg font-semibold">Family Meeting Notes</h3>
+                  <p className="text-sm text-gray-600">Discussion summary from your Week {weekNumber} meeting</p>
+                </div>
+              </div>
+              
+              <div className="space-y-6">
+                {weekData.meetingNotes.taskCompletion && (
+                  <div className="p-4 border rounded-lg bg-gray-50">
+                    <h4 className="font-medium mb-2">Task Completion Review</h4>
+                    <p className="text-gray-700 text-sm">{weekData.meetingNotes.taskCompletion}</p>
+                  </div>
+                )}
+                
+                {weekData.meetingNotes.surveyResults && (
+                  <div className="p-4 border rounded-lg bg-gray-50">
+                    <h4 className="font-medium mb-2">Survey Results Discussion</h4>
+                    <p className="text-gray-700 text-sm">{weekData.meetingNotes.surveyResults}</p>
+                  </div>
+                )}
+                
+                {weekData.meetingNotes.nextWeekGoals && (
+                  <div className="p-4 border rounded-lg bg-gray-50">
+                    <h4 className="font-medium mb-2">Goals for Week {weekNumber + 1}</h4>
+                    <p className="text-gray-700 text-sm">{weekData.meetingNotes.nextWeekGoals}</p>
+                  </div>
+                )}
+                
+                {weekData.meetingNotes.additionalNotes && (
+                  <div className="p-4 border rounded-lg bg-gray-50">
+                    <h4 className="font-medium mb-2">Additional Notes</h4>
+                    <p className="text-gray-700 text-sm">{weekData.meetingNotes.additionalNotes}</p>
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
+        </div>
+      )}
+      
+      {/* Survey Response Explorer */}
+      <div className="bg-white rounded-lg shadow">
+        <div 
+          className="p-4 flex justify-between items-center cursor-pointer hover:bg-gray-50"
+          onClick={() => toggleSection('responses')}
+        >
+          <h3 className="text-lg font-semibold">Week {weekNumber} Survey Responses</h3>
+          {expandedSections.responses ? (
+            <ChevronUp size={20} className="text-gray-500" />
+          ) : (
+            <ChevronDown size={20} className="text-gray-500" />
+          )}
+        </div>
+        
+        {expandedSections.responses && (
+          <div className="p-6 pt-0">
+            <p className="text-sm text-gray-600 mb-4">
+              Explore how each family member responded to the Week {weekNumber} check-in
+            </p>
+            
+            {/* Family Member Selection */}
+            <div className="flex items-center overflow-x-auto mb-6 pb-2">
+              <span className="text-sm font-medium mr-3">View Responses:</span>
+              <div className="flex space-x-3">
+                {familyMembers.map(member => (
+                  <div 
+                    key={member.id}
+                    className={`flex flex-col items-center cursor-pointer transition-all ${
+                      selectedMember === member.id ? 'opacity-100 scale-110' : 'opacity-70 hover:opacity-90'
+                    }`}
+                    onClick={() => setSelectedMember(member.id === selectedMember ? null : member.id)}
+                  >
+                    <div className={`w-12 h-12 rounded-full overflow-hidden border-2 ${
+                      selectedMember === member.id ? 'border-blue-500' : 'border-transparent'
+                    }`}>
+                      <img 
+                        src={member.profilePicture} 
+                        alt={member.name}
+                        className="w-full h-full object-cover"
+                      />
+                    </div>
+                    <span className="text-xs mt-1">{member.name}</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+            
+            {weeklyQuestions.length === 0 ? (
+              <div className="text-center p-6 bg-gray-50 rounded-lg">
+                <p className="text-gray-600">
+                  No survey response data available for Week {weekNumber}
+                </p>
+              </div>
+            ) : (
+              <>
+                {/* Current Question and Responses */}
+                {currentQuestion && (
+                  <div>
+                    <div className="border rounded-lg p-4 mb-4">
+                      <h4 className="font-medium">Question {currentQuestionIndex + 1} of {weeklyQuestions.length}</h4>
+                      <p className="mt-2">{currentQuestion.text}</p>
+                      <p className="text-sm text-gray-500 mt-1">{currentQuestion.category}</p>
+                    </div>
+                    
+                    <div className="grid gap-4 grid-cols-1 md:grid-cols-2 lg:grid-cols-3 mb-6">
+                      {familyMembers.map(member => (
+                        <div 
+                          key={member.id}
+                          className={`border rounded-lg p-4 ${
+                            selectedMember === member.id ? 'bg-blue-50 border-blue-200' : 'bg-white'
+                          } ${!selectedMember || selectedMember === member.id ? 'opacity-100' : 'opacity-50'}`}
+                        >
+                          <div className="flex items-center mb-3">
+                            <div className="w-8 h-8 rounded-full overflow-hidden mr-2">
+                              <img 
+                                src={member.profilePicture} 
+                                alt={member.name}
+                                className="w-full h-full object-cover"
+                              />
+                            </div>
+                            <div>
+                              <h5 className="font-medium text-sm">{member.name}</h5>
+                              <p className="text-xs text-gray-500 capitalize">{member.role}</p>
+                            </div>
+                          </div>
+                          
+                          <div className="flex items-center justify-between">
+                            <p className="text-sm font-medium">Response:</p>
+                            <span className={`px-2 py-1 rounded text-xs font-medium ${
+                              currentResponses[member.id] === 'Mama' ? 'bg-purple-100 text-purple-700' : 
+                              currentResponses[member.id] === 'Papa' ? 'bg-green-100 text-green-700' :
+                              'bg-gray-100 text-gray-700'
+                            }`}>
+                              {currentResponses[member.id] || 'No response'}
+                            </span>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                    
+                    {/* Navigation */}
+                    <div className="flex justify-between">
+                      <button
+                        onClick={prevQuestion}
+                        disabled={currentQuestionIndex === 0}
+                        className={`px-4 py-2 rounded ${
+                          currentQuestionIndex === 0 
+                            ? 'bg-gray-100 text-gray-400 cursor-not-allowed' 
+                            : 'bg-blue-100 text-blue-600 hover:bg-blue-200'
+                        }`}
+                      >
+                        Previous Question
+                      </button>
+                      
+                      <div className="text-sm text-gray-500">
+                        Question {currentQuestionIndex + 1} of {weeklyQuestions.length}
+                      </div>
+                      
+                      <button
+                        onClick={nextQuestion}
+                        disabled={currentQuestionIndex === weeklyQuestions.length - 1}
+                        className={`px-4 py-2 rounded ${
+                          currentQuestionIndex === weeklyQuestions.length - 1
+                            ? 'bg-gray-100 text-gray-400 cursor-not-allowed' 
+                            : 'bg-blue-100 text-blue-600 hover:bg-blue-200'
+                        }`}
+                      >
+                        Next Question
+                      </button>
+                    </div>
+                  </div>
+                )}
+              </>
+            )}
+          </div>
+        )}
+      </div>
+      
+      {/* Fun Weekly Wins Section */}
+      <div className="bg-gradient-to-r from-blue-500 to-purple-600 rounded-lg shadow text-white">
+        <div className="p-6">
+          <h3 className="text-xl font-bold mb-3">Week {weekNumber} Wins! 🎉</h3>
+          <p className="mb-4 opacity-90">
+            Celebrate your family's progress and achievements from this week
+          </p>
+          
+          <div className="bg-white bg-opacity-20 rounded-lg p-4">
+            <ul className="space-y-3">
+              {weekBalance.papa > weekBalance.mama ? (
+                <li className="flex items-start">
+                  <span className="text-yellow-300 mr-2">🏆</span>
+                  <span>Papa took on more responsibilities this week!</span>
+                </li>
+              ) : weekBalance.papa > 40 ? (
+                <li className="flex items-start">
+                  <span className="text-yellow-300 mr-2">🏆</span>
+                  <span>Papa's share of tasks has improved to {weekBalance.papa}%!</span>
+                </li>
+              ) : null}
+              
+              {weekData && weekData.tasks && weekData.tasks.filter(t => t.completed).length > 0 && (
+                <li className="flex items-start">
+                  <span className="text-yellow-300 mr-2">🏆</span>
+                  <span>Your family completed {weekData.tasks.filter(t => t.completed).length} tasks this week!</span>
+                </li>
+              )}
+              
+              {getRadarData().find(category => Math.abs(category.mama - category.papa) < 20) && (
+                <li className="flex items-start">
+                  <span className="text-yellow-300 mr-2">🏆</span>
+                  <span>You achieved better balance in {getRadarData().filter(category => Math.abs(category.mama - category.papa) < 20).length} categories!</span>
+                </li>
+              )}
+              
+              {weekData && weekData.meetingNotes && Object.keys(weekData.meetingNotes).length > 0 && (
+                <li className="flex items-start">
+                  <span className="text-yellow-300 mr-2">🏆</span>
+                  <span>You held a successful family meeting!</span>
+                </li>
+              )}
+              
+              <li className="flex items-start">
+                <span className="text-yellow-300 mr-2">🏆</span>
+                <span>You're one week closer to a more balanced family life!</span>
+              </li>
+            </ul>
+          </div>
+        </div>
+      </div>
     </div>
   );
 };

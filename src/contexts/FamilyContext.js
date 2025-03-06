@@ -291,106 +291,427 @@ export function FamilyProvider({ children }) {
   };
 
   // Complete weekly check-in
-  // Complete a week (after family meeting)
-// Complete a week (after family meeting)
-const completeWeek = async (weekNumber) => {
-  try {
-    if (!familyId) throw new Error("No family ID available");
-    
-    console.log(`Starting completion process for week ${weekNumber}`);
-    
-    // Create a backup of the tasks first
-    const currentTasks = [...taskRecommendations];
-    console.log("Current tasks for backup:", currentTasks.length);
-    
-    // 1. Get meeting notes if available (use empty object if not found)
-    let meetingNotes = {};
+  const completeWeeklyCheckIn = async (memberId, weekNum, responses) => {
     try {
-      meetingNotes = await DatabaseService.getFamilyMeetingNotes(familyId, weekNumber) || {};
-      console.log("Meeting notes retrieved");
-    } catch (notesError) {
-      console.warn("Could not retrieve meeting notes, using empty object instead:", notesError);
-    }
-    
-    // 2. Create week history data
-    const weekData = {
-      weekNumber,
-      familyMembers: familyMembers.map(m => ({
-        id: m.id,
-        name: m.name,
-        role: m.role,
-        completedDate: m.weeklyCompleted?.[weekNumber-1]?.date
-      })),
-      meetingNotes: meetingNotes,
-      tasks: currentTasks,
-      completionDate: new Date().toISOString()
-    };
-    
-    console.log("Week data prepared:", weekData);
-    
-    // 3. Update week history
-    const updatedHistory = {
-      ...weekHistory,
-      [`week${weekNumber}`]: weekData
-    };
-    
-    // 4. Update week status
-    const updatedStatus = {
-      ...weekStatus,
-      [weekNumber]: {
-        ...weekStatus[weekNumber],
-        completed: true,
-        completionDate: new Date().toISOString()
+      if (!familyId) throw new Error("No family ID available");
+      
+      // Create a prefix for the responses to identify the week
+      const prefixedResponses = {};
+      Object.entries(responses).forEach(([key, value]) => {
+        prefixedResponses[`week-${weekNum}-${key}`] = value;
+      });
+      
+      // Update local state
+      setSurveyResponses({
+        ...surveyResponses,
+        ...prefixedResponses
+      });
+      
+      // Update member completion status
+      const updatedMembers = familyMembers.map(member => {
+        if (member.id === memberId) {
+          const weeklyCompleted = [...(member.weeklyCompleted || [])];
+          
+          // Make sure there's an entry for each week up to the current one
+          while (weeklyCompleted.length < weekNum) {
+            weeklyCompleted.push({
+              completed: false,
+              date: null
+            });
+          }
+          
+          // Update the current week's status
+          weeklyCompleted[weekNum - 1] = {
+            completed: true,
+            date: new Date().toISOString().split('T')[0]
+          };
+          
+          return {
+            ...member,
+            weeklyCompleted
+          };
+        }
+        return member;
+      });
+      
+      setFamilyMembers(updatedMembers);
+      
+      // Update Firebase
+      await DatabaseService.updateMemberSurveyCompletion(familyId, memberId, `weekly-${weekNum}`, true);
+      await DatabaseService.saveSurveyResponses(familyId, memberId, `weekly-${weekNum}`, responses);
+      await DatabaseService.saveFamilyData({ familyMembers: updatedMembers }, familyId);
+      
+      // Update selected user if that's the one completing the check-in
+      if (selectedUser && selectedUser.id === memberId) {
+        const weeklyCompleted = [...(selectedUser.weeklyCompleted || [])];
+        
+        while (weeklyCompleted.length < weekNum) {
+          weeklyCompleted.push({
+            completed: false,
+            date: null
+          });
+        }
+        
+        weeklyCompleted[weekNum - 1] = {
+          completed: true,
+          date: new Date().toISOString().split('T')[0]
+        };
+        
+        setSelectedUser({
+          ...selectedUser,
+          weeklyCompleted
+        });
       }
-    };
-    
-    // 5. Update completed weeks (if not already included)
-    let updatedCompletedWeeks = [...completedWeeks];
-    if (!updatedCompletedWeeks.includes(weekNumber)) {
-      updatedCompletedWeeks.push(weekNumber);
+      
+      // Check if all members have completed this week's check-in
+      const allCompleted = updatedMembers.every(member => 
+        member.weeklyCompleted && 
+        member.weeklyCompleted[weekNum - 1] && 
+        member.weeklyCompleted[weekNum - 1].completed
+      );
+      
+      if (allCompleted) {
+        // Update week status
+        const updatedStatus = {
+          ...weekStatus,
+          [weekNum]: {
+            ...weekStatus[weekNum],
+            surveysCompleted: true,
+            surveyCompletedDate: new Date().toISOString()
+          }
+        };
+        
+        setWeekStatus(updatedStatus);
+        
+        // Save to Firebase
+        await DatabaseService.saveFamilyData({
+          weekStatus: updatedStatus
+        }, familyId);
+      }
+      
+      return {
+        success: true,
+        allCompleted
+      };
+    } catch (error) {
+      setError(error.message);
+      throw error;
     }
+  };
+
+  // Complete a week (after family meeting)
+  const completeWeek = async (weekNumber) => {
+    try {
+      if (!familyId) throw new Error("No family ID available");
+      
+      console.log(`Starting completion process for week ${weekNumber}`);
+      
+      // Create a backup of the current tasks
+      const currentTasks = [...taskRecommendations];
+      console.log("Current tasks for backup:", currentTasks.length);
+      
+      // 1. Get meeting notes if available
+      let meetingNotes = {};
+      try {
+        meetingNotes = await DatabaseService.getFamilyMeetingNotes(familyId, weekNumber) || {};
+        console.log("Meeting notes retrieved");
+      } catch (notesError) {
+        console.warn("Could not retrieve meeting notes, using empty object instead:", notesError);
+      }
+      
+      // 2. Create week history data - this will be stored as a frozen snapshot
+      const weekData = {
+        weekNumber,
+        familyMembers: familyMembers.map(m => ({
+          id: m.id,
+          name: m.name,
+          role: m.role,
+          completedDate: m.weeklyCompleted?.[weekNumber-1]?.date
+        })),
+        meetingNotes: meetingNotes,
+        tasks: currentTasks,
+        completionDate: new Date().toISOString(),
+        surveyResponses: Object.keys(surveyResponses)
+          .filter(key => key.startsWith(`week-${weekNumber}`))
+          .reduce((obj, key) => {
+            obj[key] = surveyResponses[key];
+            return obj;
+          }, {})
+      };
+      
+      console.log("Week data prepared:", weekData);
+      
+      // 3. Update week history
+      const updatedHistory = {
+        ...weekHistory,
+        [`week${weekNumber}`]: weekData
+      };
+      
+      // 4. Update week status
+      const updatedStatus = {
+        ...weekStatus,
+        [weekNumber]: {
+          ...weekStatus[weekNumber],
+          completed: true,
+          completionDate: new Date().toISOString()
+        }
+      };
+      
+      // 5. Update completed weeks (if not already included)
+      let updatedCompletedWeeks = [...completedWeeks];
+      if (!updatedCompletedWeeks.includes(weekNumber)) {
+        updatedCompletedWeeks.push(weekNumber);
+      }
+      
+      // 6. Update last completed full week
+      const newLastCompletedWeek = Math.max(lastCompletedFullWeek, weekNumber);
+      
+      // 7. Calculate the next week number
+      const nextWeek = weekNumber + 1;
+      
+      // 8. Generate fresh tasks for the new week
+      const newTasks = generateNewWeekTasks(nextWeek, currentTasks, weekData.surveyResponses);
+      
+      console.log("Saving updates to Firebase...", {
+        completedWeeks: updatedCompletedWeeks,
+        currentWeek: nextWeek,
+        lastCompletedFullWeek: newLastCompletedWeek,
+        tasks: newTasks
+      });
+      
+      // 9. Save to Firebase
+      await DatabaseService.saveFamilyData({
+        weekHistory: updatedHistory,
+        weekStatus: updatedStatus,
+        lastCompletedFullWeek: newLastCompletedWeek,
+        currentWeek: nextWeek,
+        completedWeeks: updatedCompletedWeeks,
+        tasks: newTasks, // Save the new tasks for the new week
+        updatedAt: new Date().toISOString()
+      }, familyId);
+      
+      // 10. Update state only after successful Firebase update
+      setWeekHistory(updatedHistory);
+      setWeekStatus(updatedStatus);
+      setLastCompletedFullWeek(newLastCompletedWeek);
+      setCurrentWeek(nextWeek);
+      setCompletedWeeks(updatedCompletedWeeks);
+      setTaskRecommendations(newTasks); // Update tasks with the new ones
+      
+      console.log(`Week ${weekNumber} completed successfully, moving to week ${nextWeek}`);
+      
+      return true;
+    } catch (error) {
+      console.error("Error completing week:", error);
+      setError(error.message);
+      throw error;
+    }
+  };
+
+  // Helper function to generate new tasks for the next week
+  const generateNewWeekTasks = (weekNumber, previousTasks, previousResponses) => {
+    // Create a template for new tasks
+    const taskTemplates = [
+      // Papa tasks
+      {
+        id: `${weekNumber}-1`,
+        title: "Meal Planning",
+        description: "Take charge of planning family meals for the week",
+        assignedTo: "Papa",
+        assignedToName: "Papa",
+        completed: false,
+        completedDate: null,
+        comments: [],
+        subTasks: [
+          {
+            id: `${weekNumber}-1-1`,
+            title: "Create shopping list",
+            description: "Make a complete shopping list for the week's meals",
+            completed: false,
+            completedDate: null
+          },
+          {
+            id: `${weekNumber}-1-2`, 
+            title: "Schedule meal prep",
+            description: "Decide which days to prepare which meals",
+            completed: false,
+            completedDate: null
+          },
+          {
+            id: `${weekNumber}-1-3`,
+            title: "Cook together",
+            description: "Plan one meal to cook together as a family",
+            completed: false,
+            completedDate: null
+          }
+        ]
+      },
+      {
+        id: `${weekNumber}-3`,
+        title: "Family Calendar Management",
+        description: "Coordinate and maintain the family's schedule",
+        assignedTo: "Papa",
+        assignedToName: "Papa",
+        completed: false,
+        completedDate: null,
+        comments: [],
+        subTasks: [
+          {
+            id: `${weekNumber}-3-1`,
+            title: "Review upcoming events",
+            description: "Look ahead at the next two weeks of activities",
+            completed: false,
+            completedDate: null
+          },
+          {
+            id: `${weekNumber}-3-2`,
+            title: "Coordinate transportation",
+            description: "Plan who will drive to each activity",
+            completed: false,
+            completedDate: null
+          },
+          {
+            id: `${weekNumber}-3-3`,
+            title: "Share with family",
+            description: "Make sure everyone knows the schedule",
+            completed: false,
+            completedDate: null
+          }
+        ]
+      },
+      // Mama tasks
+      {
+        id: `${weekNumber}-2`,
+        title: "School Communication",
+        description: "Handle communication with schools and teachers",
+        assignedTo: "Mama",
+        assignedToName: "Mama",
+        completed: false,
+        completedDate: null,
+        comments: [],
+        subTasks: [
+          {
+            id: `${weekNumber}-2-1`,
+            title: "Check school emails",
+            description: "Review and respond to school communications",
+            completed: false,
+            completedDate: null
+          },
+          {
+            id: `${weekNumber}-2-2`,
+            title: "Update calendar",
+            description: "Add school events to the family calendar",
+            completed: false,
+            completedDate: null
+          },
+          {
+            id: `${weekNumber}-2-3`,
+            title: "Coordinate with teachers",
+            description: "Reach out to teachers with any questions",
+            completed: false,
+            completedDate: null
+          }
+        ]
+      },
+      {
+        id: `${weekNumber}-4`,
+        title: "Morning Routine Help",
+        description: "Take lead on getting kids ready in the morning",
+        assignedTo: "Mama",
+        assignedToName: "Mama",
+        completed: false,
+        completedDate: null,
+        comments: [],
+        subTasks: [
+          {
+            id: `${weekNumber}-4-1`,
+            title: "Coordinate breakfast",
+            description: "Prepare or oversee breakfast for the kids",
+            completed: false,
+            completedDate: null
+          },
+          {
+            id: `${weekNumber}-4-2`,
+            title: "Ensure backpacks are ready",
+            description: "Check that homework and supplies are packed",
+            completed: false,
+            completedDate: null
+          },
+          {
+            id: `${weekNumber}-4-3`,
+            title: "Manage departure time",
+            description: "Keep track of time to ensure on-time departure",
+            completed: false,
+            completedDate: null
+          }
+        ]
+      }
+    ];
     
-    // 6. Update last completed full week
-    const newLastCompletedWeek = Math.max(lastCompletedFullWeek, weekNumber);
+    // For future versions, analyze previous responses to intelligently suggest tasks
+    // that address the most imbalanced areas, but for now, we'll just use the template
     
-    // 7. Calculate the next week number
-    const nextWeek = weekNumber + 1;
-    
-    console.log("Saving updates to Firebase...", {
-      completedWeeks: updatedCompletedWeeks,
-      currentWeek: nextWeek,
-      lastCompletedFullWeek: newLastCompletedWeek
+    // Add week-specific adjustments to task titles or descriptions based on week number
+    const adjustedTasks = taskTemplates.map(task => {
+      if (weekNumber === 2) {
+        return {
+          ...task,
+          description: `${task.description} (Week ${weekNumber} Focus)`
+        };
+      } else if (weekNumber > 2) {
+        return {
+          ...task,
+          title: `Week ${weekNumber}: ${task.title}`,
+          description: `${task.description} (Building on previous weeks)`
+        };
+      }
+      return task;
     });
     
-    // 8. Save to Firebase
-    await DatabaseService.saveFamilyData({
-      weekHistory: updatedHistory,
-      weekStatus: updatedStatus,
-      lastCompletedFullWeek: newLastCompletedWeek,
-      currentWeek: nextWeek,
-      completedWeeks: updatedCompletedWeeks,
-      updatedAt: new Date().toISOString()
-    }, familyId);
+    // Add AI-powered task that adapts based on the week
+    const aiTask = {
+      id: `${weekNumber}-ai-1`,
+      title: `Week ${weekNumber} Balance Challenge`,
+      description: "This AI-generated task adapts to your family's unique balance needs",
+      assignedTo: weekNumber % 2 === 0 ? "Mama" : "Papa", // Alternate between parents
+      assignedToName: weekNumber % 2 === 0 ? "Mama" : "Papa",
+      isAIGenerated: true,
+      completed: false,
+      completedDate: null,
+      comments: [],
+      insight: `Your family survey data shows progress, but there's an opportunity to improve balance in ${
+        weekNumber % 2 === 0 ? "emotional support tasks" : "household planning tasks"
+      }.`,
+      subTasks: [
+        {
+          id: `${weekNumber}-ai-1-1`,
+          title: "Review your current balance",
+          description: "Look at your family dashboard to understand your current state",
+          completed: false,
+          completedDate: null
+        },
+        {
+          id: `${weekNumber}-ai-1-2`,
+          title: `Take over a specific ${weekNumber % 2 === 0 ? "parental" : "household"} task`,
+          description: "Choose an area where you can make an immediate difference",
+          completed: false,
+          completedDate: null
+        },
+        {
+          id: `${weekNumber}-ai-1-3`,
+          title: "Discuss the impact with your family",
+          description: "Share how taking on this task is affecting your family dynamic",
+          completed: false,
+          completedDate: null
+        }
+      ]
+    };
     
-    // 9. Update state only after successful Firebase update
-    setWeekHistory(updatedHistory);
-    setWeekStatus(updatedStatus);
-    setLastCompletedFullWeek(newLastCompletedWeek);
-    setCurrentWeek(nextWeek);
-    setCompletedWeeks(updatedCompletedWeeks);
-    
-    console.log(`Week ${weekNumber} completed successfully, moving to week ${nextWeek}`);
-    
-    return true;
-  } catch (error) {
-    console.error("Error completing week:", error);
-    setError(error.message);
-    throw error;
-  }
-};
+    // Add the AI task to the list
+    return [...adjustedTasks, aiTask];
+  };
 
-
-// Add comment to task
+  // Add comment to task
   const addTaskComment = async (taskId, text) => {
     try {
       if (!familyId || !selectedUser) throw new Error("No family ID or user selected");
@@ -410,44 +731,44 @@ const completeWeek = async (weekNumber) => {
     }
   };
 
-// Update task completion
-const updateTaskCompletion = async (taskId, isCompleted) => {
-  try {
-    if (!familyId) throw new Error("No family ID available");
-    
-    console.log(`Updating task ${taskId} completion to: ${isCompleted}`);
-    
-    const completedDate = isCompleted ? new Date().toISOString() : null;
-    
-    // Update the task in the database
-    await DatabaseService.updateTaskCompletion(familyId, taskId, isCompleted, completedDate);
-    
-    // Also update local state so it persists between tab switches
-    const updatedTasks = taskRecommendations.map(task => {
-      if (task.id.toString() === taskId.toString()) {
-        return {
-          ...task,
-          completed: isCompleted,
-          completedDate: completedDate
-        };
-      }
-      return task;
-    });
-    
-    setTaskRecommendations(updatedTasks);
-    
-    // Save updated tasks to Firebase to ensure they persist
-    await DatabaseService.saveFamilyData({
-      tasks: updatedTasks,
-      updatedAt: new Date().toISOString()
-    }, familyId);
-    
-    return true;
-  } catch (error) {
-    setError(error.message);
-    throw error;
-  }
-};
+  // Update task completion
+  const updateTaskCompletion = async (taskId, isCompleted) => {
+    try {
+      if (!familyId) throw new Error("No family ID available");
+      
+      console.log(`Updating task ${taskId} completion to: ${isCompleted}`);
+      
+      const completedDate = isCompleted ? new Date().toISOString() : null;
+      
+      // Update the task in the database
+      await DatabaseService.updateTaskCompletion(familyId, taskId, isCompleted, completedDate);
+      
+      // Also update local state so it persists between tab switches
+      const updatedTasks = taskRecommendations.map(task => {
+        if (task.id.toString() === taskId.toString()) {
+          return {
+            ...task,
+            completed: isCompleted,
+            completedDate: completedDate
+          };
+        }
+        return task;
+      });
+      
+      setTaskRecommendations(updatedTasks);
+      
+      // Save updated tasks to Firebase to ensure they persist
+      await DatabaseService.saveFamilyData({
+        tasks: updatedTasks,
+        updatedAt: new Date().toISOString()
+      }, familyId);
+      
+      return true;
+    } catch (error) {
+      setError(error.message);
+      throw error;
+    }
+  };
 
   // Update subtask completion
   const updateSubtaskCompletion = async (taskId, subtaskId, isCompleted) => {
@@ -529,8 +850,6 @@ const updateTaskCompletion = async (taskId, isCompleted) => {
     }
   };
 
-  // Complete a week (after family meeting)
- 
   // Get individual's survey responses
   const getMemberSurveyResponses = async (memberId, surveyType) => {
     try {
@@ -602,7 +921,7 @@ const updateTaskCompletion = async (taskId, isCompleted) => {
     updateFamilyPicture,
     updateSurveySchedule,
     completeInitialSurvey,
-    
+    completeWeeklyCheckIn,
     addTaskComment,
     updateTaskCompletion,
     updateSubtaskCompletion,
