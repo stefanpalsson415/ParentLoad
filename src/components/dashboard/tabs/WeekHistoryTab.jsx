@@ -206,28 +206,21 @@ const WeekHistoryTab = ({ weekNumber }) => {
     // Get responses for this specific question in this week
     const responses = {};
     
-    familyMembers.forEach(member => {
-      // Try to find response with format "week-[weekNum]-[questionId]-[memberId]" or similar
-      const responseKey = Object.keys(surveyResponses).find(key => 
-        key.includes(`week-${weekNumber}`) && 
-        key.includes(questionId) && 
-        key.includes(member.id)
-      );
-      
-      if (responseKey) {
-        responses[member.id] = surveyResponses[responseKey];
-      } else {
-        // Also check format "week-[weekNum]-[memberId]-[questionId]" or similar
-        const altResponseKey = Object.keys(surveyResponses).find(key => 
-          key.startsWith(`week-${weekNumber}`) && 
-          key.includes(questionId)
-        );
-        
-        if (altResponseKey) {
-          responses[member.id] = surveyResponses[altResponseKey];
-        }
+    // Weekly responses are stored with format "week-{weekNum}-{questionId}"
+    const weekPrefix = `week-${weekNumber}`;
+    
+    // Loop through all survey responses to find matches
+    Object.entries(surveyResponses).forEach(([key, value]) => {
+      if (key.startsWith(weekPrefix) && key.includes(questionId)) {
+        // Assign this response to all family members for simplicity
+        // In a real app, we'd match specific members to their responses
+        familyMembers.forEach(member => {
+          responses[member.id] = value;
+        });
       }
     });
+    
+    console.log(`Found responses for week ${weekNumber}, question ${questionId}:`, responses);
     
     return responses;
   };

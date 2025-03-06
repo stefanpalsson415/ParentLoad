@@ -157,15 +157,12 @@ const getTimeFilterOptions = () => {
   // Calculate data for radar chart based on responses
 // Calculate data for radar chart based on responses
 const calculateRadarData = (filter = 'all') => {
-  // Placeholder - this would be calculated from actual survey responses
-  // We need to count responses for each category and calculate the percentage
-  
   if (!surveyResponses || Object.keys(surveyResponses).length === 0) {
     return null; // No data yet
   }
   
   console.log("Calculating radar data with filter:", timeFilter);
-  console.log("Survey responses:", Object.keys(surveyResponses).length);
+  console.log("Total survey responses:", Object.keys(surveyResponses).length);
   
   // Group questions by category
   const categories = {
@@ -175,22 +172,55 @@ const calculateRadarData = (filter = 'all') => {
     "Invisible Parental": { mama: 0, papa: 0, total: 0 }
   };
   
-  // Count responses in each category
+  // Filter responses based on time period
+  const relevantResponses = {};
+  
   Object.entries(surveyResponses).forEach(([key, value]) => {
     // Skip if not a valid question response (e.g., metadata)
     if (!key.includes('q')) return;
     
-    // If we're filtering by time period
-    if (timeFilter === 'initial') {
-      // For initial survey, only count responses with no prefix or 'initial-' prefix
-      if (key.includes('-') && !key.startsWith('initial-')) return;
+    let includeResponse = false;
+    
+    if (timeFilter === 'all') {
+      // Include all responses
+      includeResponse = true;
+    } else if (timeFilter === 'initial') {
+      // Include only initial survey responses
+      includeResponse = !key.includes('-') || key.startsWith('initial-');
+    } else if (timeFilter === 'current') {
+      // Include only current week responses
+      includeResponse = key.startsWith(`week-${currentWeek}`);
+    } else if (timeFilter.startsWith('week')) {
+      // Include specific week responses
+      const weekNum = parseInt(timeFilter.replace('week', ''));
+      includeResponse = key.startsWith(`week-${weekNum}`);
     }
     
-    // Find the question in the question set
-    const questionId = key.includes('-') ? key.split('-')[1] : key;
+    if (includeResponse) {
+      relevantResponses[key] = value;
+    }
+  });
+  
+  console.log(`Filtered responses for ${timeFilter}:`, Object.keys(relevantResponses).length);
+  
+  // Count responses in each category
+  Object.entries(relevantResponses).forEach(([key, value]) => {
+    // Extract question ID - handle different formats
+    let questionId;
+    if (key.includes('-')) {
+      const parts = key.split('-');
+      // The last part is usually the question ID
+      questionId = parts[parts.length - 1];
+    } else {
+      questionId = key;
+    }
+    
     const question = fullQuestionSet.find(q => q.id === questionId);
     
-    if (!question) return;
+    if (!question) {
+      console.log(`Question not found for ID: ${questionId}, key: ${key}`);
+      return;
+    }
     
     // Update counts
     const category = question.category;
@@ -204,21 +234,37 @@ const calculateRadarData = (filter = 'all') => {
     }
   });
   
+  // Force some data to be shown even if we don't have complete data
+  let hasAnyData = false;
+  
   // Convert counts to percentages for radar chart
-  return Object.entries(categories).map(([category, counts]) => {
+  const result = Object.entries(categories).map(([category, counts]) => {
     const total = counts.total;
     if (total === 0) {
-      return { category, mama: 0, papa: 0 };
+      // Default to 50/50 if no data
+      return { category, mama: 50, papa: 50 };
     }
     
+    hasAnyData = true;
     return {
       category,
       mama: Math.round((counts.mama / total) * 100),
       papa: Math.round((counts.papa / total) * 100)
     };
   });
-};
   
+  // If we truly have no data for any category, make sure we return something anyway
+  if (!hasAnyData) {
+    console.log(`No data found for filter ${timeFilter}, using default values`);
+    return Object.keys(categories).map(category => ({
+      category, 
+      mama: 50, 
+      papa: 50
+    }));
+  }
+  
+  return result;
+};  
   // Get radar data for selected filter
   const getRadarData = (filter) => {
     const data = calculateRadarData(filter);

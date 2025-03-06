@@ -243,75 +243,78 @@ const TasksTab = ({ onStartWeeklyCheckIn, onOpenFamilyMeeting }) => {
         // Reset expanded tasks when week changes
         setExpandedTasks({});
         
-        // Always try to load directly from Firebase first
-        let tasks = [];
+        // Check if we're in a new week (Week 2+) that should have fresh tasks
+        const isNewUncompletedWeek = currentWeek > Math.max(...completedWeeks, 0);
         
-        if (familyId) {
-          try {
-            // Use DatabaseService directly for the most up-to-date data
-            tasks = await DatabaseService.getTasksForWeek(familyId, currentWeek);
-            console.log(`Tasks loaded directly from Firebase for Week ${currentWeek}:`, tasks?.length || 0);
-          } catch (firebaseError) {
-            console.error("Error loading from Firebase directly:", firebaseError);
-            
-            // Fallback to context method
-            tasks = await loadCurrentWeekTasks();
-            console.log("Tasks loaded via context method:", tasks?.length || 0);
-          }
-        }
-        
-        // If we successfully got tasks with data, use them
-        if (tasks && tasks.length > 0) {
-          console.log(`Using loaded tasks for Week ${currentWeek}`);
-          setTaskRecommendations(tasks);
-        } 
-        // Otherwise, try tasks from context
-        else if (initialTaskRecommendations && initialTaskRecommendations.length > 0) {
-          console.log(`Using tasks from context for Week ${currentWeek}:`, initialTaskRecommendations.length);
-          setTaskRecommendations(initialTaskRecommendations);
+        if (isNewUncompletedWeek) {
+          console.log(`Week ${currentWeek} is a new week - generating fresh tasks`);
           
-          // Also save these to Firebase for future use
-          if (familyId) {
-            try {
-              await DatabaseService.saveFamilyData({
-                tasks: initialTaskRecommendations,
-                updatedAt: new Date().toISOString()
-              }, familyId);
-              console.log("Context tasks saved to Firebase");
-            } catch (error) {
-              console.error("Error saving context tasks to Firebase:", error);
-            }
-          }
-        } 
-        // If all else fails, generate new ones
-        else {
-          console.log(`Generating new task recommendations for Week ${currentWeek}`);
-          const newTasks = generateTaskRecommendations();
+          // Generate new tasks for the current week
+          const newTasks = generateTaskRecommendations().map(task => ({
+            ...task,
+            id: `${currentWeek}-${task.id.split('-').pop()}`, // Update ID with current week
+            description: `${task.description} (Week ${currentWeek} Focus)`,
+            completed: false,
+            completedDate: null,
+            comments: [],
+            // Update subtask IDs too
+            subTasks: task.subTasks ? task.subTasks.map(subtask => ({
+              ...subtask,
+              id: `${currentWeek}-${subtask.id.split('-').pop()}`,
+              completed: false,
+              completedDate: null
+            })) : []
+          }));
+          
+          console.log("Generated fresh tasks for new week:", newTasks);
           setTaskRecommendations(newTasks);
           
-          // Also save these to Firebase for future use
+          // Save new tasks to Firebase
           if (familyId) {
             try {
               await DatabaseService.saveFamilyData({
                 tasks: newTasks,
                 updatedAt: new Date().toISOString()
               }, familyId);
-              console.log("New tasks saved to Firebase");
+              console.log("New tasks saved to Firebase for Week", currentWeek);
             } catch (error) {
               console.error("Error saving new tasks to Firebase:", error);
             }
           }
+          
+          return; // Exit early since we've generated new tasks
         }
+        
+        // For existing weeks, follow normal loading logic
+        let tasks = [];
+        
+        if (familyId) {
+          try {
+            tasks = await DatabaseService.getTasksForWeek(familyId, currentWeek);
+            console.log(`Tasks loaded from Firebase for Week ${currentWeek}:`, tasks?.length || 0);
+            
+            if (tasks && tasks.length > 0) {
+              setTaskRecommendations(tasks);
+              return; // Exit early if we found tasks
+            }
+          } catch (firebaseError) {
+            console.error("Error loading from Firebase directly:", firebaseError);
+          }
+        }
+        
+        // Fallbacks if needed
+        console.log(`Generating fallback task recommendations for Week ${currentWeek}`);
+        setTaskRecommendations(generateTaskRecommendations());
+        
       } catch (error) {
         console.error(`Error in loadTasks for Week ${currentWeek}:`, error);
-        // Final fallback
         setTaskRecommendations(generateTaskRecommendations());
       }
     };
     
     loadTasks();
     
-  }, [familyId, currentWeek]); 
+  }, [familyId, currentWeek, completedWeeks]);
 
   // Effect to force reload tasks when component becomes visible again
   useEffect(() => {
