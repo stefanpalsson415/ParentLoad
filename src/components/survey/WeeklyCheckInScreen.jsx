@@ -368,3 +368,6 @@ const WeeklyCheckInScreen = () => {
       </div>
     </div>
   );
+};
+
+export default WeeklyCheckInScreen;

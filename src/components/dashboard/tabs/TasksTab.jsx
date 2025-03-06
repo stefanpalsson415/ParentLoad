@@ -3,6 +3,159 @@ import { Users, Calendar, AlertCircle, CheckCircle, ChevronDown, ChevronUp, Spar
 import { useFamily } from '../../../contexts/FamilyContext';
 import DatabaseService from '../../../services/DatabaseService';
 
+// Add this function at the top of the file (after imports but before the TasksTab component)
+const generateTaskRecommendations = () => {
+  // Generate sample tasks when no tasks are available from other sources
+  const sampleTasks = [
+    {
+      id: "1",
+      title: "Meal Planning",
+      description: "Take charge of planning family meals for the week",
+      assignedTo: "Papa",
+      assignedToName: "Papa",
+      completed: false,
+      completedDate: null,
+      comments: [],
+      subTasks: [
+        {
+          id: "1-1",
+          title: "Create shopping list",
+          description: "Make a complete shopping list for the week's meals",
+          completed: false,
+          completedDate: null,
+          comments: []
+        },
+        {
+          id: "1-2",
+          title: "Schedule meal prep",
+          description: "Decide which days to prepare which meals",
+          completed: false,
+          completedDate: null,
+          comments: []
+        },
+        {
+          id: "1-3",
+          title: "Cook together",
+          description: "Plan one meal to cook together as a family",
+          completed: false,
+          completedDate: null,
+          comments: []
+        }
+      ]
+    },
+    {
+      id: "2",
+      title: "School Communication",
+      description: "Handle communication with schools and teachers",
+      assignedTo: "Mama",
+      assignedToName: "Mama",
+      completed: false,
+      completedDate: null,
+      comments: [],
+      subTasks: [
+        {
+          id: "2-1",
+          title: "Check school emails",
+          description: "Review and respond to school communications",
+          completed: false,
+          completedDate: null,
+          comments: []
+        },
+        {
+          id: "2-2",
+          title: "Update calendar",
+          description: "Add school events to the family calendar",
+          completed: false,
+          completedDate: null,
+          comments: []
+        },
+        {
+          id: "2-3",
+          title: "Coordinate with teachers",
+          description: "Reach out to teachers with any questions",
+          completed: false,
+          completedDate: null,
+          comments: []
+        }
+      ]
+    },
+    {
+      id: "3",
+      title: "Family Calendar Management",
+      description: "Coordinate and maintain the family's schedule",
+      assignedTo: "Papa",
+      assignedToName: "Papa",
+      completed: false,
+      completedDate: null,
+      comments: [],
+      subTasks: [
+        {
+          id: "3-1",
+          title: "Review upcoming events",
+          description: "Look ahead at the next two weeks of activities",
+          completed: false,
+          completedDate: null,
+          comments: []
+        },
+        {
+          id: "3-2",
+          title: "Coordinate transportation",
+          description: "Plan who will drive to each activity",
+          completed: false,
+          completedDate: null,
+          comments: []
+        },
+        {
+          id: "3-3",
+          title: "Share with family",
+          description: "Make sure everyone knows the schedule",
+          completed: false,
+          completedDate: null,
+          comments: []
+        }
+      ]
+    },
+    {
+      id: "4",
+      title: "Morning Routine Help",
+      description: "Take lead on getting kids ready in the morning",
+      assignedTo: "Mama",
+      assignedToName: "Mama",
+      completed: false,
+      completedDate: null,
+      comments: [],
+      subTasks: [
+        {
+          id: "4-1",
+          title: "Coordinate breakfast",
+          description: "Prepare or oversee breakfast for the kids",
+          completed: false,
+          completedDate: null,
+          comments: []
+        },
+        {
+          id: "4-2",
+          title: "Ensure backpacks are ready",
+          description: "Check that homework and supplies are packed",
+          completed: false,
+          completedDate: null,
+          comments: []
+        },
+        {
+          id: "4-3",
+          title: "Manage departure time",
+          description: "Keep track of time to ensure on-time departure",
+          completed: false,
+          completedDate: null,
+          comments: []
+        }
+      ]
+    }
+  ];
+  
+  return sampleTasks;
+};
+
 const TasksTab = ({ onStartWeeklyCheckIn, onOpenFamilyMeeting }) => {
   const { 
     selectedUser, 
@@ -164,10 +317,14 @@ const TasksTab = ({ onStartWeeklyCheckIn, onOpenFamilyMeeting }) => {
   };
   
   // Check if user can complete a task
-  const canCompleteTask = (task) => {
-    // Only a parent can complete their own assigned tasks
-    return selectedUser && selectedUser.role === 'parent' && selectedUser.name === task.assignedToName;
-  };
+ // Check if user can complete a task
+const canCompleteTask = (task) => {
+  // Only a parent can complete tasks assigned to their role type (Mama or Papa)
+  return selectedUser && 
+         selectedUser.role === 'parent' && 
+         (selectedUser.name === task.assignedToName || 
+          selectedUser.roleType === task.assignedTo);
+};
   
   // Handle adding a comment to a task or subtask
   const handleAddComment = (taskId, subtaskId = null) => {

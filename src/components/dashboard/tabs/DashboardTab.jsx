@@ -48,33 +48,49 @@ const DashboardTab = () => {
   };
   
   // Calculate time filter options based on completed weeks
-  const getTimeFilterOptions = () => {
-    const options = [
-      { id: 'all', label: 'All Time' },
-      { id: 'initial', label: 'Initial Survey' },
-      { id: 'current', label: `Week ${currentWeek}` }
-    ];
-    
-    // Add individual weeks
-    [...completedWeeks].sort((a, b) => a - b).forEach(week => {
-      options.push({ id: `week${week}`, label: `Week ${week}` });
-    });
-    
-    // Add ranges if we have enough weeks
-    if (completedWeeks.length > 1) {
-      options.push({ id: 'week1-current', label: `Week 1 to ${currentWeek}` });
-      
-      if (currentWeek >= 4) {
-        options.push({ id: 'last4', label: 'Last 4 Weeks' });
-      }
-      
-      if (currentWeek >= 8) {
-        options.push({ id: 'last8', label: 'Last 8 Weeks' });
-      }
+const getTimeFilterOptions = () => {
+  // Use a Set to track unique IDs
+  const uniqueIds = new Set();
+  const options = [];
+  
+  // Add initial options
+  options.push({ id: 'all', label: 'All Time' });
+  uniqueIds.add('all');
+  
+  options.push({ id: 'initial', label: 'Initial Survey' });
+  uniqueIds.add('initial');
+  
+  options.push({ id: 'current', label: `Week ${currentWeek}` });
+  uniqueIds.add('current');
+  
+  // Add individual weeks without duplicates
+  [...completedWeeks].sort((a, b) => a - b).forEach(week => {
+    const weekId = `week${week}`;
+    if (!uniqueIds.has(weekId)) {
+      options.push({ id: weekId, label: `Week ${week}` });
+      uniqueIds.add(weekId);
+    }
+  });
+  
+  // Add ranges if we have enough weeks
+  if (completedWeeks.length > 1) {
+    const rangeId = 'week1-current';
+    if (!uniqueIds.has(rangeId)) {
+      options.push({ id: rangeId, label: `Week 1 to ${currentWeek}` });
+      uniqueIds.add(rangeId);
     }
     
-    return options;
-  };
+    if (currentWeek >= 4) {
+      options.push({ id: 'last4', label: 'Last 4 Weeks' });
+    }
+    
+    if (currentWeek >= 8) {
+      options.push({ id: 'last8', label: 'Last 8 Weeks' });
+    }
+  }
+  
+  return options;
+};
   
   // Effect to update loading states for each section
   useEffect(() => {
@@ -139,59 +155,69 @@ const DashboardTab = () => {
   };
   
   // Calculate data for radar chart based on responses
-  const calculateRadarData = (filter = 'all') => {
-    // Placeholder - this would be calculated from actual survey responses
-    // We need to count responses for each category and calculate the percentage
+// Calculate data for radar chart based on responses
+const calculateRadarData = (filter = 'all') => {
+  // Placeholder - this would be calculated from actual survey responses
+  // We need to count responses for each category and calculate the percentage
+  
+  if (!surveyResponses || Object.keys(surveyResponses).length === 0) {
+    return null; // No data yet
+  }
+  
+  console.log("Calculating radar data with filter:", timeFilter);
+  console.log("Survey responses:", Object.keys(surveyResponses).length);
+  
+  // Group questions by category
+  const categories = {
+    "Visible Household": { mama: 0, papa: 0, total: 0 },
+    "Invisible Household": { mama: 0, papa: 0, total: 0 },
+    "Visible Parental": { mama: 0, papa: 0, total: 0 },
+    "Invisible Parental": { mama: 0, papa: 0, total: 0 }
+  };
+  
+  // Count responses in each category
+  Object.entries(surveyResponses).forEach(([key, value]) => {
+    // Skip if not a valid question response (e.g., metadata)
+    if (!key.includes('q')) return;
     
-    if (!surveyResponses || Object.keys(surveyResponses).length === 0) {
-      return null; // No data yet
+    // If we're filtering by time period
+    if (timeFilter === 'initial') {
+      // For initial survey, only count responses with no prefix or 'initial-' prefix
+      if (key.includes('-') && !key.startsWith('initial-')) return;
     }
     
-    // Group questions by category
-    const categories = {
-      "Visible Household": { mama: 0, papa: 0, total: 0 },
-      "Invisible Household": { mama: 0, papa: 0, total: 0 },
-      "Visible Parental": { mama: 0, papa: 0, total: 0 },
-      "Invisible Parental": { mama: 0, papa: 0, total: 0 }
+    // Find the question in the question set
+    const questionId = key.includes('-') ? key.split('-')[1] : key;
+    const question = fullQuestionSet.find(q => q.id === questionId);
+    
+    if (!question) return;
+    
+    // Update counts
+    const category = question.category;
+    if (categories[category]) {
+      categories[category].total++;
+      if (value === 'Mama') {
+        categories[category].mama++;
+      } else if (value === 'Papa') {
+        categories[category].papa++;
+      }
+    }
+  });
+  
+  // Convert counts to percentages for radar chart
+  return Object.entries(categories).map(([category, counts]) => {
+    const total = counts.total;
+    if (total === 0) {
+      return { category, mama: 0, papa: 0 };
+    }
+    
+    return {
+      category,
+      mama: Math.round((counts.mama / total) * 100),
+      papa: Math.round((counts.papa / total) * 100)
     };
-    
-    // Count responses in each category
-    Object.entries(surveyResponses).forEach(([key, value]) => {
-      // Skip if not a valid question response (e.g., metadata)
-      if (!key.includes('q')) return;
-      
-      // Find the question in the question set
-      const questionId = key.split('-')[1];
-      const question = fullQuestionSet.find(q => q.id === questionId);
-      
-      if (!question) return;
-      
-      // Update counts
-      const category = question.category;
-      if (categories[category]) {
-        categories[category].total++;
-        if (value === 'Mama') {
-          categories[category].mama++;
-        } else if (value === 'Papa') {
-          categories[category].papa++;
-        }
-      }
-    });
-    
-    // Convert counts to percentages for radar chart
-    return Object.entries(categories).map(([category, counts]) => {
-      const total = counts.total;
-      if (total === 0) {
-        return { category, mama: 0, papa: 0 };
-      }
-      
-      return {
-        category,
-        mama: Math.round((counts.mama / total) * 100),
-        papa: Math.round((counts.papa / total) * 100)
-      };
-    });
-  };
+  });
+};
   
   // Get radar data for selected filter
   const getRadarData = (filter) => {
@@ -270,14 +296,47 @@ const DashboardTab = () => {
   };
   
   // Get current balance percentages
-  const getCurrentBalance = () => {
-    const balance = calculateOverallBalance(timeFilter === 'initial' ? 'initial' : `week-${currentWeek}`);
-    if (!balance) {
+  // Get current balance percentages
+const getCurrentBalance = () => {
+  console.log("Getting current balance for time filter:", timeFilter);
+  
+  // If on initial survey view, calculate from initial responses
+  if (timeFilter === 'initial') {
+    let mamaCount = 0;
+    let papaCount = 0;
+    
+    Object.entries(surveyResponses).forEach(([key, value]) => {
+      // Skip if not a valid question response
+      if (!key.includes('q')) return;
+      
+      // Only count initial survey responses
+      if (key.includes('-') && !key.startsWith('initial-')) return;
+      
+      if (value === 'Mama') {
+        mamaCount++;
+      } else if (value === 'Papa') {
+        papaCount++;
+      }
+    });
+    
+    const total = mamaCount + papaCount;
+    if (total === 0) {
       return { mama: 0, papa: 0 };
     }
-    return balance;
-  };
+    
+    return {
+      mama: Math.round((mamaCount / total) * 100),
+      papa: Math.round((papaCount / total) * 100)
+    };
+  }
   
+  // Otherwise use the normal balance calculation
+  const balance = calculateOverallBalance(timeFilter === 'initial' ? 'initial' : `week-${currentWeek}`);
+  if (!balance) {
+    return { mama: 0, papa: 0 };
+  }
+  return balance;
+};
   // Historical data for line chart - filtered by time period
   const balanceHistory = filterDataByTime(calculateBalanceHistory() || []);
   
