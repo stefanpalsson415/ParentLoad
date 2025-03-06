@@ -483,6 +483,24 @@ async getTasksForWeek(familyId, weekNumber) {
   }
 }  
 
+// Get family meeting notes
+async getFamilyMeetingNotes(familyId, weekNumber) {
+  try {
+    const docRef = doc(this.db, "familyMeetings", `${familyId}-week${weekNumber}`);
+    const docSnap = await getDoc(docRef);
+    
+    if (docSnap.exists()) {
+      return docSnap.data().notes || {};
+    } else {
+      console.log("No meeting notes found");
+      return {};
+    }
+  } catch (error) {
+    console.error("Error getting family meeting notes:", error);
+    return {};
+  }
+}
+
   // Create a new family
   async createFamily(familyData) {
     try {

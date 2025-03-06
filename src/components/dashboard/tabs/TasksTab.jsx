@@ -263,6 +263,44 @@ useEffect(() => {
   loadTasks();
   
 }, [familyId, currentWeek]); 
+
+// Add this effect to force reload tasks when component becomes visible again
+useEffect(() => {
+  // Function to reload tasks from Firebase
+  const reloadTasks = async () => {
+    console.log("Reloading tasks from visibility change");
+    try {
+      if (familyId) {
+        const freshTasks = await DatabaseService.getTasksForWeek(familyId, currentWeek);
+        console.log("Fresh tasks loaded:", freshTasks?.length || 0);
+        if (freshTasks && freshTasks.length > 0) {
+          setTaskRecommendations(freshTasks);
+        }
+      }
+    } catch (error) {
+      console.error("Error reloading tasks:", error);
+    }
+  };
+
+  // Set up visibility change listener
+  const handleVisibilityChange = () => {
+    if (document.visibilityState === 'visible') {
+      reloadTasks();
+    }
+  };
+
+  // Add event listener
+  document.addEventListener('visibilitychange', handleVisibilityChange);
+  
+  // Also reload when the component mounts
+  reloadTasks();
+
+  // Clean up
+  return () => {
+    document.removeEventListener('visibilitychange', handleVisibilityChange);
+  };
+}, [familyId, currentWeek]);
+
 // Remove selectedUser to prevent reloading on user switch  
   // Load AI task recommendations
   const loadAiRecommendations = async () => {
@@ -459,12 +497,15 @@ const canCompleteTask = (task) => {
   
   // Handle subtask completion toggle
   // Handle subtask completion toggle
+// Handle subtask completion toggle
 const handleCompleteSubtask = async (taskId, subtaskId, isCompleted) => {
   const task = taskRecommendations.find(t => t.id.toString() === taskId.toString());
   
   // Check permissions - only assigned parent can complete tasks
   if (canCompleteTask(task)) {
     try {
+      console.log(`Completing subtask ${subtaskId} of task ${taskId}, completed: ${isCompleted}`);
+      
       // Create completion timestamp
       const completedDate = isCompleted ? new Date().toISOString() : null;
       
@@ -494,21 +535,26 @@ const handleCompleteSubtask = async (taskId, subtaskId, isCompleted) => {
       // Update state with the modified copy
       setTaskRecommendations(updatedTasks);
       
-      // Save to Firebase directly from this component
+      // Save directly to Firebase first for immediate persistence
       if (familyId) {
-        await DatabaseService.saveFamilyData({
-          tasks: updatedTasks,
-          updatedAt: new Date().toISOString()
-        }, familyId);
-        console.log("Updated tasks saved to Firebase");
+        console.log("Saving updated tasks directly to Firebase");
+        try {
+          await DatabaseService.saveFamilyData({
+            tasks: updatedTasks,
+            updatedAt: new Date().toISOString()
+          }, familyId);
+          console.log("Tasks saved to Firebase successfully");
+        } catch (firebaseError) {
+          console.error("Error saving to Firebase directly:", firebaseError);
+        }
       }
       
-      // Also update through the context method for consistency
+      // Also try to update through context
       try {
         await updateSubtaskCompletion(taskId, subtaskId, isCompleted);
-      } catch (error) {
-        console.error("Error updating through context:", error);
-        // Continue anyway since we already updated Firebase directly
+        console.log("Tasks also updated via context method");
+      } catch (contextError) {
+        console.error("Error updating through context:", contextError);
       }
       
     } catch (error) {
@@ -520,8 +566,7 @@ const handleCompleteSubtask = async (taskId, subtaskId, isCompleted) => {
   } else {
     alert(`Only ${task.assignedTo} can mark this task as complete.`);
   }
-};  
-  // Format date for display
+};  // Format date for display
   const formatDate = (date) => {
     if (!date) return "Not scheduled yet";
     

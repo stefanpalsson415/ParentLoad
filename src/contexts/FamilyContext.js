@@ -291,124 +291,106 @@ export function FamilyProvider({ children }) {
   };
 
   // Complete weekly check-in
-  const completeWeeklyCheckIn = async (memberId, weekNumber, responses) => {
+  // Complete a week (after family meeting)
+// Complete a week (after family meeting)
+const completeWeek = async (weekNumber) => {
+  try {
+    if (!familyId) throw new Error("No family ID available");
+    
+    console.log(`Starting completion process for week ${weekNumber}`);
+    
+    // Create a backup of the tasks first
+    const currentTasks = [...taskRecommendations];
+    console.log("Current tasks for backup:", currentTasks.length);
+    
+    // 1. Get meeting notes if available (use empty object if not found)
+    let meetingNotes = {};
     try {
-      if (!familyId) throw new Error("No family ID available");
-      
-      console.log(`Completing weekly check-in for member ${memberId}, week ${weekNumber}`);
-      
-      // Update local state
-      const updatedMembers = familyMembers.map(member => {
-        if (member.id === memberId) {
-          const updatedWeeklyCompleted = [...(member.weeklyCompleted || [])];
-          
-          // Make sure array has enough elements
-          while (updatedWeeklyCompleted.length < weekNumber) {
-            updatedWeeklyCompleted.push({
-              id: updatedWeeklyCompleted.length + 1,
-              completed: false,
-              date: null
-            });
-          }
-          
-          updatedWeeklyCompleted[weekNumber - 1] = {
-            id: weekNumber,
-            completed: true,
-            date: new Date().toISOString().split('T')[0]
-          };
-          
-          return {
-            ...member,
-            weeklyCompleted: updatedWeeklyCompleted
-          };
-        }
-        return member;
-      });
-      
-      setFamilyMembers(updatedMembers);
-      
-      // Save to Firebase
-      await DatabaseService.updateMemberSurveyCompletion(
-        familyId, 
-        memberId, 
-        `weekly-${weekNumber}`, 
-        true
-      );
-      
-      await DatabaseService.saveSurveyResponses(
-        familyId,
-        memberId,
-        `weekly-${weekNumber}`,
-        responses
-      );
-      
-      // Check if all family members have completed this week's survey
-      const allCompleted = updatedMembers.every(member => 
-        member.weeklyCompleted?.[weekNumber - 1]?.completed
-      );
-      
-      console.log(`All completed check for week ${weekNumber}:`, allCompleted);
-      
-      // If all completed and not already in completedWeeks, update
-      if (allCompleted && !completedWeeks.includes(weekNumber)) {
-        const newCompletedWeeks = [...completedWeeks, weekNumber];
-        setCompletedWeeks(newCompletedWeeks);
-        
-        // Update week status to show surveys are complete
-        const updatedStatus = {
-          ...weekStatus,
-          [weekNumber]: {
-            ...weekStatus[weekNumber],
-            surveysCompleted: true,
-            surveyCompletionDate: new Date().toISOString()
-          }
-        };
-        
-        setWeekStatus(updatedStatus);
-        
-        // Save to Firebase
-        await DatabaseService.saveFamilyData({
-          completedWeeks: newCompletedWeeks,
-          weekStatus: updatedStatus
-        }, familyId);
-        
-        console.log(`Week ${weekNumber} surveys marked as completed`);
-      }
-      
-      // Update selected user if that's the one completing the survey
-      if (selectedUser && selectedUser.id === memberId) {
-        const updatedWeeklyCompleted = [...(selectedUser.weeklyCompleted || [])];
-        
-        // Make sure array has enough elements
-        while (updatedWeeklyCompleted.length < weekNumber) {
-          updatedWeeklyCompleted.push({
-            id: updatedWeeklyCompleted.length + 1,
-            completed: false,
-            date: null
-          });
-        }
-        
-        updatedWeeklyCompleted[weekNumber - 1] = {
-          id: weekNumber,
-          completed: true,
-          date: new Date().toISOString().split('T')[0]
-        };
-        
-        setSelectedUser({
-          ...selectedUser,
-          weeklyCompleted: updatedWeeklyCompleted
-        });
-      }
-      
-      return true;
-    } catch (error) {
-      console.error("Error completing weekly check-in:", error);
-      setError(error.message);
-      throw error;
+      meetingNotes = await DatabaseService.getFamilyMeetingNotes(familyId, weekNumber) || {};
+      console.log("Meeting notes retrieved");
+    } catch (notesError) {
+      console.warn("Could not retrieve meeting notes, using empty object instead:", notesError);
     }
-  };
+    
+    // 2. Create week history data
+    const weekData = {
+      weekNumber,
+      familyMembers: familyMembers.map(m => ({
+        id: m.id,
+        name: m.name,
+        role: m.role,
+        completedDate: m.weeklyCompleted?.[weekNumber-1]?.date
+      })),
+      meetingNotes: meetingNotes,
+      tasks: currentTasks,
+      completionDate: new Date().toISOString()
+    };
+    
+    console.log("Week data prepared:", weekData);
+    
+    // 3. Update week history
+    const updatedHistory = {
+      ...weekHistory,
+      [`week${weekNumber}`]: weekData
+    };
+    
+    // 4. Update week status
+    const updatedStatus = {
+      ...weekStatus,
+      [weekNumber]: {
+        ...weekStatus[weekNumber],
+        completed: true,
+        completionDate: new Date().toISOString()
+      }
+    };
+    
+    // 5. Update completed weeks (if not already included)
+    let updatedCompletedWeeks = [...completedWeeks];
+    if (!updatedCompletedWeeks.includes(weekNumber)) {
+      updatedCompletedWeeks.push(weekNumber);
+    }
+    
+    // 6. Update last completed full week
+    const newLastCompletedWeek = Math.max(lastCompletedFullWeek, weekNumber);
+    
+    // 7. Calculate the next week number
+    const nextWeek = weekNumber + 1;
+    
+    console.log("Saving updates to Firebase...", {
+      completedWeeks: updatedCompletedWeeks,
+      currentWeek: nextWeek,
+      lastCompletedFullWeek: newLastCompletedWeek
+    });
+    
+    // 8. Save to Firebase
+    await DatabaseService.saveFamilyData({
+      weekHistory: updatedHistory,
+      weekStatus: updatedStatus,
+      lastCompletedFullWeek: newLastCompletedWeek,
+      currentWeek: nextWeek,
+      completedWeeks: updatedCompletedWeeks,
+      updatedAt: new Date().toISOString()
+    }, familyId);
+    
+    // 9. Update state only after successful Firebase update
+    setWeekHistory(updatedHistory);
+    setWeekStatus(updatedStatus);
+    setLastCompletedFullWeek(newLastCompletedWeek);
+    setCurrentWeek(nextWeek);
+    setCompletedWeeks(updatedCompletedWeeks);
+    
+    console.log(`Week ${weekNumber} completed successfully, moving to week ${nextWeek}`);
+    
+    return true;
+  } catch (error) {
+    console.error("Error completing week:", error);
+    setError(error.message);
+    throw error;
+  }
+};
 
-  // Add comment to task
+
+// Add comment to task
   const addTaskComment = async (taskId, text) => {
     try {
       if (!familyId || !selectedUser) throw new Error("No family ID or user selected");
@@ -548,77 +530,7 @@ const updateTaskCompletion = async (taskId, isCompleted) => {
   };
 
   // Complete a week (after family meeting)
-  const completeWeek = async (weekNumber) => {
-    try {
-      if (!familyId) throw new Error("No family ID available");
-      
-      console.log(`Completing week ${weekNumber}`);
-      
-      // 1. Get all data for this week
-      const weekSurveyResponses = await DatabaseService.getAllSurveyResponses(familyId, `weekly-${weekNumber}`);
-      const meetingNotes = await DatabaseService.getFamilyMeetingNotes(familyId, weekNumber);
-      const taskData = await DatabaseService.getTasksForWeek(familyId, weekNumber);
-      
-      // 2. Create week history data
-      const weekData = {
-        weekNumber,
-        responses: weekSurveyResponses,
-        meetingNotes,
-        tasks: taskData || taskRecommendations, // Use local tasks if database fetch fails
-        familyMembers: familyMembers.map(m => ({
-          id: m.id,
-          name: m.name,
-          role: m.role,
-          completedDate: m.weeklyCompleted?.[weekNumber-1]?.date
-        })),
-        completionDate: new Date().toISOString()
-      };
-      
-      // 3. Update week history
-      const updatedHistory = {
-        ...weekHistory,
-        [`week${weekNumber}`]: weekData
-      };
-      
-      setWeekHistory(updatedHistory);
-      
-      // 4. Update week status
-      const updatedStatus = {
-        ...weekStatus,
-        [weekNumber]: {
-          ...weekStatus[weekNumber],
-          completed: true,
-          completionDate: new Date().toISOString()
-        }
-      };
-      
-      setWeekStatus(updatedStatus);
-      
-      // 5. Update last completed full week
-      setLastCompletedFullWeek(weekNumber);
-      
-      // 6. Update current week to the next week
-      const nextWeek = weekNumber + 1;
-      setCurrentWeek(nextWeek);
-      
-      // 7. Save to Firebase
-      await DatabaseService.saveFamilyData({
-        weekHistory: updatedHistory,
-        weekStatus: updatedStatus,
-        lastCompletedFullWeek: weekNumber,
-        currentWeek: nextWeek
-      }, familyId);
-      
-      console.log(`Week ${weekNumber} completed, moving to week ${nextWeek}`);
-      
-      return true;
-    } catch (error) {
-      console.error("Error completing week:", error);
-      setError(error.message);
-      throw error;
-    }
-  };
-
+ 
   // Get individual's survey responses
   const getMemberSurveyResponses = async (memberId, surveyType) => {
     try {
@@ -690,7 +602,7 @@ const updateTaskCompletion = async (taskId, isCompleted) => {
     updateFamilyPicture,
     updateSurveySchedule,
     completeInitialSurvey,
-    completeWeeklyCheckIn,
+    
     addTaskComment,
     updateTaskCompletion,
     updateSubtaskCompletion,
