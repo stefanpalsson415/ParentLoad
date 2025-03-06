@@ -1,14 +1,88 @@
 import React, { useState, useEffect } from 'react';
-import { Clock, Download, X, ChevronDown, ChevronUp } from 'lucide-react';
+import { Clock, Download, X, ChevronDown, ChevronUp, Sparkles, Star, Users } from 'lucide-react';
 import { useFamily } from '../../contexts/FamilyContext';
 import { useSurvey } from '../../contexts/SurveyContext';
+
+// Confetti effect component for celebration
+const Fireworks = () => {
+  useEffect(() => {
+    // Create confetti effect
+    const createConfetti = () => {
+      const colors = ['#ff0000', '#00ff00', '#0000ff', '#ffff00', '#ff00ff', '#00ffff'];
+      
+      for (let i = 0; i < 150; i++) {
+        const confetti = document.createElement('div');
+        confetti.className = 'confetti';
+        confetti.style.left = Math.random() * 100 + 'vw';
+        confetti.style.backgroundColor = colors[Math.floor(Math.random() * colors.length)];
+        confetti.style.transform = `rotate(${Math.random() * 360}deg)`;
+        confetti.style.opacity = Math.random() + 0.5;
+        document.getElementById('confetti-container').appendChild(confetti);
+        
+        // Remove after animation completes
+        setTimeout(() => {
+          confetti.remove();
+        }, 3000);
+      }
+    };
+    
+    // Create confetti at regular intervals
+    const interval = setInterval(createConfetti, 300);
+    
+    // Play celebration sound
+    const audio = new Audio('/sounds/celebration.mp3');
+    audio.volume = 0.6;
+    audio.play().catch(e => console.log("Audio play failed:", e));
+    
+    // Cleanup
+    return () => {
+      clearInterval(interval);
+      const container = document.getElementById('confetti-container');
+      if (container) {
+        while (container.firstChild) {
+          container.removeChild(container.firstChild);
+        }
+      }
+    };
+  }, []);
+  
+  return (
+    <div 
+      id="confetti-container" 
+      className="fixed inset-0 pointer-events-none z-50"
+      style={{ perspective: '700px' }}
+    >
+      <style jsx="true">{`
+        .confetti {
+          position: absolute;
+          width: 10px;
+          height: 10px;
+          top: -10px;
+          animation: confetti-fall 3s linear forwards;
+        }
+        
+        @keyframes confetti-fall {
+          0% {
+            top: -10px;
+            transform: translateZ(0) rotate(0deg);
+          }
+          100% {
+            top: 100vh;
+            transform: translateZ(400px) rotate(720deg);
+          }
+        }
+      `}</style>
+    </div>
+  );
+};
 
 const FamilyMeetingScreen = ({ onClose }) => {
   const { 
     currentWeek, 
     saveFamilyMeetingNotes, 
     familyMembers, 
-    surveyResponses 
+    surveyResponses,
+    completeWeek
   } = useFamily();
   
   const { fullQuestionSet } = useSurvey();
@@ -22,6 +96,9 @@ const FamilyMeetingScreen = ({ onClose }) => {
   const [expandedSection, setExpandedSection] = useState('taskCompletion'); // Default expanded section
   const [viewMode, setViewMode] = useState('agenda'); // 'agenda' or 'report'
   const [isSaving, setIsSaving] = useState(false);
+  const [showConfirmation, setShowConfirmation] = useState(false);
+  const [isCompleting, setIsCompleting] = useState(false);
+  const [showCelebration, setShowCelebration] = useState(false);
   
   // Generate agenda topics based on family data
   const generateAgendaTopics = () => {
@@ -161,13 +238,38 @@ const FamilyMeetingScreen = ({ onClose }) => {
       // Save meeting notes to database
       await saveFamilyMeetingNotes(currentWeek, meetingNotes);
       
-      // Close the meeting modal
-      onClose();
+      // Show confirmation dialog
+      setShowConfirmation(true);
+      setIsSaving(false);
     } catch (error) {
       console.error("Error saving meeting notes:", error);
       alert("There was an error saving your meeting notes. Please try again.");
-    } finally {
       setIsSaving(false);
+    }
+  };
+  
+  // Handle complete week together button
+  const handleCompleteWeekTogether = async () => {
+    setIsCompleting(true);
+    
+    try {
+      // Complete the week - this should:
+      // 1. Mark the week as completed
+      // 2. Create a historical record
+      // 3. Advance to the next week
+      await completeWeek(currentWeek);
+      
+      // Show celebration animation
+      setShowCelebration(true);
+      
+      // Close dialog after celebration (5 seconds)
+      setTimeout(() => {
+        onClose();
+      }, 5000);
+    } catch (error) {
+      console.error("Error completing week:", error);
+      alert("There was an error completing the week. Please try again.");
+      setIsCompleting(false);
     }
   };
   
@@ -417,6 +519,55 @@ const FamilyMeetingScreen = ({ onClose }) => {
             </div>
           </div>
         )}
+        
+        {/* Confirmation Dialog */}
+        {showConfirmation && (
+          <div className="absolute inset-0 bg-black bg-opacity-70 flex items-center justify-center">
+            <div className="bg-white rounded-lg p-6 max-w-md w-full text-center">
+              <div className="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                <Sparkles size={24} className="text-green-600" />
+              </div>
+              
+              <h3 className="text-xl font-bold mb-2">Family Meeting Complete!</h3>
+              <p className="text-gray-600 mb-6">
+                Your family has completed the meeting for Week {currentWeek}. Ready to wrap up the week together?
+              </p>
+              
+              <button
+                onClick={handleCompleteWeekTogether}
+                className="w-full py-3 px-4 bg-gradient-to-r from-blue-500 to-purple-600 text-white rounded-md text-lg font-bold flex items-center justify-center hover:from-blue-600 hover:to-purple-700 transition-all"
+                disabled={isCompleting}
+              >
+                {isCompleting ? (
+                  <span className="flex items-center">
+                    <svg className="animate-spin -ml-1 mr-3 h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                    </svg>
+                    Processing...
+                  </span>
+                ) : (
+                  <>
+                    <Star className="mr-2" size={20} />
+                    Complete Week Together!
+                    <Users className="ml-2" size={20} />
+                  </>
+                )}
+              </button>
+              
+              <button
+                onClick={() => setShowConfirmation(false)}
+                className="mt-4 text-gray-600 hover:text-gray-800"
+                disabled={isCompleting}
+              >
+                Not yet
+              </button>
+            </div>
+          </div>
+        )}
+        
+        {/* Celebration Animation */}
+        {showCelebration && <Fireworks />}
       </div>
     </div>
   );

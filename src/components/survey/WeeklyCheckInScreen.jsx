@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { LogOut, HelpCircle } from 'lucide-react';
 import { useFamily } from '../../contexts/FamilyContext';
@@ -26,6 +26,9 @@ const WeeklyCheckInScreen = () => {
   const [weeklyQuestions, setWeeklyQuestions] = useState([]);
   const [isSubmitting, setIsSubmitting] = useState(false);
   
+  // Ref to track if keyboard listeners are initialized
+  const keyboardInitialized = useRef(false);
+  
   // Redirect if no user is selected
   useEffect(() => {
     if (!selectedUser) {
@@ -52,9 +55,11 @@ const WeeklyCheckInScreen = () => {
     }
   };
   
-  // Set up keyboard shortcuts
+  // Set up keyboard shortcuts - with a slight delay to ensure component is mounted
   useEffect(() => {
+    // Function to handle key press
     const handleKeyPress = (e) => {
+      console.log("Key pressed:", e.key);
       // 'M' key selects Mama
       if (e.key.toLowerCase() === 'm') {
         handleSelectParent('Mama');
@@ -65,18 +70,35 @@ const WeeklyCheckInScreen = () => {
       }
     };
       
-    window.addEventListener('keydown', handleKeyPress);
+    // Set a small timeout to ensure component is fully rendered
+    const timer = setTimeout(() => {
+      console.log("Setting up keyboard listeners for question", currentQuestionIndex);
       
+      // Clean up previous listeners if they exist
+      if (keyboardInitialized.current) {
+        window.removeEventListener('keydown', handleKeyPress);
+      }
+      
+      // Add new listener
+      window.addEventListener('keydown', handleKeyPress);
+      keyboardInitialized.current = true;
+    }, 200);
+      
+    // Cleanup function
     return () => {
-      window.removeEventListener('keydown', handleKeyPress);
+      clearTimeout(timer);
+      if (keyboardInitialized.current) {
+        window.removeEventListener('keydown', handleKeyPress);
+      }
     };
-  }, [currentQuestionIndex]);
+  }, [currentQuestionIndex]); // Re-run when currentQuestionIndex changes
   
   // Get current question
   const currentQuestion = weeklyQuestions[currentQuestionIndex];
   
   // Handle parent selection
   const handleSelectParent = (parent) => {
+    console.log("Parent selected:", parent);
     setSelectedParent(parent);
     
     // Save response
@@ -91,7 +113,8 @@ const WeeklyCheckInScreen = () => {
           setSelectedParent(null);
           setShowExplanation(false);
         } else {
-          // Survey completed, save responses
+          // Survey completed, save responses - works for both Mama and Papa
+          console.log("Last question answered, completing survey with parent:", parent);
           handleCompleteSurvey();
         }
       }, 500);
@@ -103,16 +126,19 @@ const WeeklyCheckInScreen = () => {
     if (isSubmitting) return;
     
     setIsSubmitting(true);
+    console.log("Starting survey completion process");
     
     try {
       // First navigate to loading screen to show transition
       navigate('/loading');
       
       // Save weekly check-in responses to database
+      console.log("Saving weekly check-in responses to database");
       await completeWeeklyCheckIn(selectedUser.id, currentWeek, currentSurveyResponses);
       
       // Add a timeout before navigating to dashboard to ensure data is processed
       setTimeout(() => {
+        console.log("Navigation to dashboard");
         navigate('/dashboard');
       }, 1500);
     } catch (error) {

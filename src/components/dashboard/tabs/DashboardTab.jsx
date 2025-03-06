@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
-import { Filter, Info, ChevronDown, ChevronUp, Calendar, TrendingUp, PieChart } from 'lucide-react';
+import { Filter, Info, ChevronDown, ChevronUp, TrendingUp, PieChart, Calendar } from 'lucide-react';
 import { useFamily } from '../../../contexts/FamilyContext';
+import { useSurvey } from '../../../contexts/SurveyContext';
 import { 
   RadarChart, PolarGrid, PolarAngleAxis, PolarRadiusAxis, 
   Radar, Legend, ResponsiveContainer, LineChart, Line, 
@@ -17,15 +18,25 @@ const DashboardTab = () => {
     surveyResponses
   } = useFamily();
   
+  const { fullQuestionSet } = useSurvey();
+  
   // State for filters and expanded sections
   const [radarFilter, setRadarFilter] = useState('all'); // 'all', 'parents', 'children'
-  const [timeFilter, setTimeFilter] = useState('all'); // 'all', 'current', 'week1', 'week1-3', etc.
+  const [timeFilter, setTimeFilter] = useState('all'); // 'all', 'initial', 'current', 'week1', 'week1-3', etc.
   const [expandedSections, setExpandedSections] = useState({
     balance: true,
     history: true,
     categories: true,
     insights: true,
     breakdown: false
+  });
+  
+  // Loading states
+  const [loading, setLoading] = useState({
+    balance: true,
+    history: true,
+    categories: true,
+    insights: true
   });
   
   // Toggle section expansion
@@ -40,6 +51,7 @@ const DashboardTab = () => {
   const getTimeFilterOptions = () => {
     const options = [
       { id: 'all', label: 'All Time' },
+      { id: 'initial', label: 'Initial Survey' },
       { id: 'current', label: `Week ${currentWeek}` }
     ];
     
@@ -64,9 +76,33 @@ const DashboardTab = () => {
     return options;
   };
   
+  // Effect to update loading states for each section
+  useEffect(() => {
+    // Simulate loading data
+    const loadData = async () => {
+      // In a real app, this would be fetching data from the database
+      await new Promise(resolve => setTimeout(resolve, 1000));
+      
+      setLoading({
+        balance: false,
+        history: false,
+        categories: false,
+        insights: false
+      });
+    };
+    
+    loadData();
+  }, [timeFilter, radarFilter]);
+  
   // Filter data based on selected time period
   const filterDataByTime = (data) => {
+    if (!data || data.length === 0) return [];
+    
     if (timeFilter === 'all') return data;
+    
+    if (timeFilter === 'initial') {
+      return data.filter(item => item.week === 'Initial');
+    }
     
     if (timeFilter === 'current') {
       return data.filter(item => item.week === `Week ${currentWeek}` || item.week === 'Current');
@@ -102,183 +138,216 @@ const DashboardTab = () => {
     return data;
   };
   
-  // Sample data for radar chart
-  const getRadarData = (filter) => {
-    // This would be calculated from actual survey responses
-    // Based on the filter, we'd show different data views
-    switch(filter) {
-      case 'parents':
-        return [
-          {
-            category: "Visible Household",
-            mama: 68,
-            papa: 32
-          },
-          {
-            category: "Invisible Household",
-            mama: 80,
-            papa: 20
-          },
-          {
-            category: "Visible Parental",
-            mama: 58,
-            papa: 42
-          },
-          {
-            category: "Invisible Parental",
-            mama: 75,
-            papa: 25
-          }
-        ];
-      case 'children':
-        return [
-          {
-            category: "Visible Household",
-            mama: 62,
-            papa: 38
-          },
-          {
-            category: "Invisible Household",
-            mama: 70,
-            papa: 30
-          },
-          {
-            category: "Visible Parental",
-            mama: 50,
-            papa: 50
-          },
-          {
-            category: "Invisible Parental",
-            mama: 65,
-            papa: 35
-          }
-        ];
-      case 'all':
-      default:
-        return [
-          {
-            category: "Visible Household",
-            mama: 65,
-            papa: 35
-          },
-          {
-            category: "Invisible Household",
-            mama: 75,
-            papa: 25
-          },
-          {
-            category: "Visible Parental",
-            mama: 55,
-            papa: 45
-          },
-          {
-            category: "Invisible Parental",
-            mama: 70,
-            papa: 30
-          }
-        ];
-    }
-  };
-  
-  // Sample historical balance data for line chart
-  // Only show up to current week
-  const getBalanceHistory = () => {
-    const baseHistory = [
-      { week: 'Initial', mama: 68, papa: 32 },
-      { week: 'Week 1', mama: 65, papa: 35 },
-      { week: 'Week 2', mama: 62, papa: 38 },
-      { week: 'Week 3', mama: 58, papa: 42 },
-      { week: 'Week 4', mama: 56, papa: 44 },
-      { week: 'Week 5', mama: 53, papa: 47 },
-      { week: 'Week 6', mama: 52, papa: 48 },
-      { week: 'Week 7', mama: 51, papa: 49 },
-      { week: 'Week 8', mama: 50, papa: 50 }
-    ];
+  // Calculate data for radar chart based on responses
+  const calculateRadarData = (filter = 'all') => {
+    // Placeholder - this would be calculated from actual survey responses
+    // We need to count responses for each category and calculate the percentage
     
-    // Only include initial survey and completed weeks
-    return baseHistory.filter((item, index) => {
-      if (item.week === 'Initial') return true;
-      const weekNum = parseInt(item.week.split(' ')[1]);
-      return completedWeeks.includes(weekNum) || weekNum <= currentWeek;
-    });
-  };
-  
-  // Get task breakdown by category
-  const getTaskBreakdown = () => {
-    return [
-      { name: 'Meal Planning', hours: 4.5, category: 'Invisible Household' },
-      { name: 'Cleaning', hours: 5.2, category: 'Visible Household' },
-      { name: 'Childcare', hours: 12.3, category: 'Visible Parental' },
-      { name: 'Calendar Management', hours: 2.1, category: 'Invisible Household' },
-      { name: 'Homework Help', hours: 3.7, category: 'Visible Parental' },
-      { name: 'Mental Load', hours: 8.2, category: 'Invisible Parental' },
-      { name: 'Cooking', hours: 7.3, category: 'Visible Household' },
-      { name: 'Doctor Appointments', hours: 1.8, category: 'Invisible Parental' },
-      { name: 'Home Repairs', hours: 2.4, category: 'Visible Household' },
-      { name: 'Shopping', hours: 3.6, category: 'Visible Household' }
-    ];
-  };
-  
-  // Get time investment data
-  const getTimeInvestmentData = () => {
-    return [
-      { name: 'Mama', visible: 22, invisible: 28 },
-      { name: 'Papa', visible: 18, invisible: 12 }
-    ];
-  };
-  
-  // Get distribution over time
-  const getDistributionOverTime = () => {
-    return [
-      { week: 'Initial', visibleMama: 65, invisibleMama: 72, visiblePapa: 35, invisiblePapa: 28 },
-      { week: 'Week 1', visibleMama: 62, invisibleMama: 70, visiblePapa: 38, invisiblePapa: 30 },
-      { week: 'Week 2', visibleMama: 60, invisibleMama: 68, visiblePapa: 40, invisiblePapa: 32 },
-      { week: 'Week 3', visibleMama: 58, invisibleMama: 65, visiblePapa: 42, invisiblePapa: 35 },
-      { week: 'Week 4', visibleMama: 56, invisibleMama: 62, visiblePapa: 44, invisiblePapa: 38 },
-      { week: 'Week 5', visibleMama: 54, invisibleMama: 58, visiblePapa: 46, invisiblePapa: 42 },
-      { week: 'Week 6', visibleMama: 52, invisibleMama: 55, visiblePapa: 48, invisiblePapa: 45 },
-      { week: 'Week 7', visibleMama: 52, invisibleMama: 52, visiblePapa: 48, invisiblePapa: 48 },
-      { week: 'Week 8', visibleMama: 50, invisibleMama: 50, visiblePapa: 50, invisiblePapa: 50 }
-    ].filter((item) => {
-      if (item.week === 'Initial') return true;
-      const weekNum = parseInt(item.week.split(' ')[1]);
-      return completedWeeks.includes(weekNum) || weekNum <= currentWeek;
-    });
-  };
-  
-  // Filter data based on time selection
-  const balanceHistory = filterDataByTime(getBalanceHistory());
-  const distributionOverTime = filterDataByTime(getDistributionOverTime());
-  
-  // Get key insights based on data
-  const getKeyInsights = () => {
-    // This would be generated based on actual data analysis
-    return [
-      {
-        type: 'progress',
-        title: 'Overall Balance Improving',
-        description: 'The workload distribution has improved by 18% since starting ParentLoad.',
-        icon: <TrendingUp size={20} className="text-green-600" />
-      },
-      {
-        type: 'challenge',
-        title: 'Invisible Tasks Need Focus',
-        description: 'Invisible household tasks still show the biggest imbalance (75% vs 25%).',
-        icon: <PieChart size={20} className="text-amber-600" />
-      },
-      {
-        type: 'insight',
-        title: 'Children See More Balance',
-        description: 'Children perceive the workload as more balanced than the parents do themselves.',
-        icon: <Info size={20} className="text-blue-600" />
-      },
-      {
-        type: 'actionable',
-        title: 'Next Steps',
-        description: 'Focus on calendar management and meal planning to address the invisible task imbalance.',
-        icon: <Calendar size={20} className="text-purple-600" />
+    if (!surveyResponses || Object.keys(surveyResponses).length === 0) {
+      return null; // No data yet
+    }
+    
+    // Group questions by category
+    const categories = {
+      "Visible Household": { mama: 0, papa: 0, total: 0 },
+      "Invisible Household": { mama: 0, papa: 0, total: 0 },
+      "Visible Parental": { mama: 0, papa: 0, total: 0 },
+      "Invisible Parental": { mama: 0, papa: 0, total: 0 }
+    };
+    
+    // Count responses in each category
+    Object.entries(surveyResponses).forEach(([key, value]) => {
+      // Skip if not a valid question response (e.g., metadata)
+      if (!key.includes('q')) return;
+      
+      // Find the question in the question set
+      const questionId = key.split('-')[1];
+      const question = fullQuestionSet.find(q => q.id === questionId);
+      
+      if (!question) return;
+      
+      // Update counts
+      const category = question.category;
+      if (categories[category]) {
+        categories[category].total++;
+        if (value === 'Mama') {
+          categories[category].mama++;
+        } else if (value === 'Papa') {
+          categories[category].papa++;
+        }
       }
+    });
+    
+    // Convert counts to percentages for radar chart
+    return Object.entries(categories).map(([category, counts]) => {
+      const total = counts.total;
+      if (total === 0) {
+        return { category, mama: 0, papa: 0 };
+      }
+      
+      return {
+        category,
+        mama: Math.round((counts.mama / total) * 100),
+        papa: Math.round((counts.papa / total) * 100)
+      };
+    });
+  };
+  
+  // Get radar data for selected filter
+  const getRadarData = (filter) => {
+    const data = calculateRadarData(filter);
+    if (!data) {
+      return [
+        { category: "Visible Household", mama: 0, papa: 0 },
+        { category: "Invisible Household", mama: 0, papa: 0 },
+        { category: "Visible Parental", mama: 0, papa: 0 },
+        { category: "Invisible Parental", mama: 0, papa: 0 }
+      ];
+    }
+    return data;
+  };
+  
+  // Calculate historical balance data based on survey responses
+  const calculateBalanceHistory = () => {
+    if (!surveyResponses || Object.keys(surveyResponses).length === 0) {
+      return null; // No data yet
+    }
+    
+    // Start with initial survey data
+    const initialData = calculateOverallBalance('initial');
+    
+    // Get data for completed weeks
+    const weeklyData = completedWeeks.map(week => {
+      const weekBalance = calculateOverallBalance(`week-${week}`);
+      return {
+        week: `Week ${week}`,
+        mama: weekBalance ? weekBalance.mama : null,
+        papa: weekBalance ? weekBalance.papa : null
+      };
+    });
+    
+    return [
+      { week: 'Initial', mama: initialData?.mama || 50, papa: initialData?.papa || 50 },
+      ...weeklyData.filter(data => data.mama !== null && data.papa !== null)
     ];
+  };
+  
+  // Calculate overall balance for a specific time period
+  const calculateOverallBalance = (period) => {
+    // Count total Mama vs Papa responses for the period
+    let mamaCount = 0;
+    let papaCount = 0;
+    
+    // Use actual survey responses
+    if (!surveyResponses || Object.keys(surveyResponses).length === 0) {
+      return null; // No data yet
+    }
+    
+    Object.entries(surveyResponses).forEach(([key, value]) => {
+      // Skip if not a valid question response
+      if (!key.includes('q')) return;
+      
+      // Check if this response is for the specified period
+      const responsePeriod = key.split('-')[0];
+      if (responsePeriod !== period) return;
+      
+      if (value === 'Mama') {
+        mamaCount++;
+      } else if (value === 'Papa') {
+        papaCount++;
+      }
+    });
+    
+    const total = mamaCount + papaCount;
+    if (total === 0) {
+      return null; // No data yet
+    }
+    
+    return {
+      mama: Math.round((mamaCount / total) * 100),
+      papa: Math.round((papaCount / total) * 100)
+    };
+  };
+  
+  // Get current balance percentages
+  const getCurrentBalance = () => {
+    const balance = calculateOverallBalance(timeFilter === 'initial' ? 'initial' : `week-${currentWeek}`);
+    if (!balance) {
+      return { mama: 0, papa: 0 };
+    }
+    return balance;
+  };
+  
+  // Historical data for line chart - filtered by time period
+  const balanceHistory = filterDataByTime(calculateBalanceHistory() || []);
+  
+  // Generate insights based on data
+  const generateInsights = () => {
+    if (!surveyResponses || Object.keys(surveyResponses).length === 0) {
+      return [
+        {
+          type: 'waiting',
+          title: 'Waiting for Survey Data',
+          description: 'Complete the initial survey and weekly check-ins to generate insights.',
+          icon: <Info size={20} className="text-blue-600" />
+        }
+      ];
+    }
+    
+    // Create insights based on actual data
+    const insights = [];
+    const balance = getCurrentBalance();
+    
+    // Add progress insight if we have history data
+    if (balanceHistory.length > 1) {
+      const initialBalance = balanceHistory[0];
+      const latestBalance = balanceHistory[balanceHistory.length - 1];
+      
+      if (initialBalance && latestBalance) {
+        const change = latestBalance.papa - initialBalance.papa;
+        
+        if (change > 0) {
+          insights.push({
+            type: 'progress',
+            title: 'Overall Balance Improving',
+            description: `The workload distribution has improved by ${change}% since starting ParentLoad.`,
+            icon: <TrendingUp size={20} className="text-green-600" />
+          });
+        }
+      }
+    }
+    
+    // Add challenge insight based on category balance
+    const categoryData = getRadarData(radarFilter);
+    const mostImbalancedCategory = categoryData.sort((a, b) => 
+      Math.abs(b.mama - b.papa) - Math.abs(a.mama - a.papa)
+    )[0];
+    
+    if (mostImbalancedCategory && Math.abs(mostImbalancedCategory.mama - mostImbalancedCategory.papa) > 20) {
+      insights.push({
+        type: 'challenge',
+        title: `${mostImbalancedCategory.category} Needs Focus`,
+        description: `${mostImbalancedCategory.category} tasks show the biggest imbalance (${mostImbalancedCategory.mama}% vs ${mostImbalancedCategory.papa}%).`,
+        icon: <PieChart size={20} className="text-amber-600" />
+      });
+    }
+    
+    // Add generic insight if we don't have enough data
+    if (insights.length < 2) {
+      insights.push({
+        type: 'insight',
+        title: 'Keep Tracking Your Progress',
+        description: 'Continue completing weekly check-ins to generate more personalized insights.',
+        icon: <Calendar size={20} className="text-blue-600" />
+      });
+    }
+    
+    return insights;
+  };
+  
+  // Get key insights for the dashboard
+  const getKeyInsights = () => {
+    return generateInsights();
   };
   
   // Custom tooltip for charts
@@ -301,6 +370,9 @@ const DashboardTab = () => {
   // COLORS
   const MAMA_COLOR = '#8884d8';
   const PAPA_COLOR = '#82ca9d';
+  
+  // Get current balance
+  const currentBalance = getCurrentBalance();
   
   return (
     <div className="space-y-4">
@@ -327,7 +399,7 @@ const DashboardTab = () => {
           className="p-4 flex justify-between items-center cursor-pointer hover:bg-gray-50"
           onClick={() => toggleSection('balance')}
         >
-          <h3 className="text-lg font-semibold">Current Family Balance</h3>
+          <h3 className="text-lg font-semibold">Family Balance</h3>
           {expandedSections.balance ? (
             <ChevronUp size={20} className="text-gray-500" />
           ) : (
@@ -337,52 +409,77 @@ const DashboardTab = () => {
         
         {expandedSections.balance && (
           <div className="p-6 pt-0">
-            <p className="text-sm text-gray-600 mb-3">
-              Current distribution of parental responsibilities
-            </p>
-              
-            <div className="mb-4">
-              <div className="flex justify-between mb-1">
-                <span className="font-medium">Mama (65%)</span>
-                <span className="font-medium">Papa (35%)</span>
+            {loading.balance ? (
+              <div className="h-48 flex items-center justify-center">
+                <div className="text-center">
+                  <div className="w-8 h-8 border-4 border-blue-500 border-t-transparent rounded-full animate-spin mx-auto mb-2"></div>
+                  <p className="text-gray-500">Loading data...</p>
+                </div>
               </div>
-              <div className="h-2 bg-gray-200 rounded overflow-hidden">
-                <div className="h-full bg-blue-500" style={{ width: '65%' }} />
+            ) : !currentBalance || (currentBalance.mama === 0 && currentBalance.papa === 0) ? (
+              <div className="h-48 flex items-center justify-center">
+                <div className="text-center p-6 bg-gray-50 rounded-lg max-w-md">
+                  <p className="text-gray-600">
+                    Not enough data to display balance information yet. Complete the initial survey and weekly check-ins to see your family balance data.
+                  </p>
+                </div>
               </div>
-            </div>
-              
-            <div className="flex items-center text-sm text-gray-600">
-              <span>
-                Mama is handling more tasks than Papa. Check the recommendations for ways to improve balance.
-              </span>
-            </div>
-            
-            {/* Pie chart of current distribution */}
-            <div className="h-64 w-full mt-4">
-              <ResponsiveContainer width="100%" height="100%">
-                <RechartPieChart>
-                  <Pie
-                    data={[
-                      { name: 'Mama', value: 65 },
-                      { name: 'Papa', value: 35 }
-                    ]}
-                    cx="50%"
-                    cy="50%"
-                    innerRadius={60}
-                    outerRadius={80}
-                    fill="#8884d8"
-                    paddingAngle={5}
-                    dataKey="value"
-                    label={({ name, percent }) => `${name}: ${(percent * 100).toFixed(0)}%`}
-                  >
-                    <Cell key="cell-0" fill={MAMA_COLOR} />
-                    <Cell key="cell-1" fill={PAPA_COLOR} />
-                  </Pie>
-                  <Tooltip />
-                  <Legend />
-                </RechartPieChart>
-              </ResponsiveContainer>
-            </div>
+            ) : (
+              <>
+                <p className="text-sm text-gray-600 mb-3">
+                  {timeFilter === 'initial' 
+                    ? 'Initial survey distribution of parental responsibilities'
+                    : 'Current distribution of parental responsibilities'}
+                </p>
+                  
+                <div className="mb-4">
+                  <div className="flex justify-between mb-1">
+                    <span className="font-medium">Mama ({currentBalance.mama}%)</span>
+                    <span className="font-medium">Papa ({currentBalance.papa}%)</span>
+                  </div>
+                  <div className="h-2 bg-gray-200 rounded overflow-hidden">
+                    <div className="h-full bg-blue-500" style={{ width: `${currentBalance.mama}%` }} />
+                  </div>
+                </div>
+                  
+                <div className="flex items-center text-sm text-gray-600">
+                  <span>
+                    {currentBalance.mama > 60
+                      ? "Mama is handling more tasks than Papa. Check the recommendations for ways to improve balance."
+                      : currentBalance.mama < 40
+                        ? "Papa is handling more tasks than Mama. Check the recommendations for ways to improve balance."
+                        : "Your family has a good balance of responsibilities!"}
+                  </span>
+                </div>
+                
+                {/* Pie chart of current distribution */}
+                <div className="h-64 w-full mt-4">
+                  <ResponsiveContainer width="100%" height="100%">
+                    <RechartPieChart>
+                      <Pie
+                        data={[
+                          { name: 'Mama', value: currentBalance.mama },
+                          { name: 'Papa', value: currentBalance.papa }
+                        ]}
+                        cx="50%"
+                        cy="50%"
+                        innerRadius={60}
+                        outerRadius={80}
+                        fill="#8884d8"
+                        paddingAngle={5}
+                        dataKey="value"
+                        label={({ name, percent }) => `${name}: ${(percent * 100).toFixed(0)}%`}
+                      >
+                        <Cell key="cell-0" fill={MAMA_COLOR} />
+                        <Cell key="cell-1" fill={PAPA_COLOR} />
+                      </Pie>
+                      <Tooltip />
+                      <Legend />
+                    </RechartPieChart>
+                  </ResponsiveContainer>
+                </div>
+              </>
+            )}
           </div>
         )}
       </div>
@@ -403,38 +500,57 @@ const DashboardTab = () => {
         
         {expandedSections.history && (
           <div className="p-6 pt-0">
-            <p className="text-sm text-gray-600 mb-4">
-              See how your family's task balance has changed over time
-            </p>
-              
-            <div className="h-64 w-full">
-              <ResponsiveContainer width="100%" height="100%">
-                <LineChart
-                  data={balanceHistory}
-                  margin={{ top: 5, right: 30, left: 20, bottom: 5 }}
-                >
-                  <CartesianGrid strokeDasharray="3 3" />
-                  <XAxis dataKey="week" />
-                  <YAxis domain={[0, 100]} />
-                  <Tooltip content={<CustomTooltip />} />
-                  <Legend />
-                  <Line type="monotone" dataKey="mama" name="Mama's Tasks" stroke={MAMA_COLOR} activeDot={{ r: 8 }} />
-                  <Line type="monotone" dataKey="papa" name="Papa's Tasks" stroke={PAPA_COLOR} />
-                </LineChart>
-              </ResponsiveContainer>
-            </div>
-              
-            <div className="mt-4 text-sm text-center text-gray-500">
-              {balanceHistory.length > 2 ? (
-                <>
-                  Your balance is improving! Papa's task share has increased by 
-                  {' '}{balanceHistory[balanceHistory.length - 1].papa - balanceHistory[0].papa}% 
-                  since the initial survey.
-                </>
-              ) : (
-                "Complete more weekly check-ins to see your progress over time."
-              )}
-            </div>
+            {loading.history ? (
+              <div className="h-48 flex items-center justify-center">
+                <div className="text-center">
+                  <div className="w-8 h-8 border-4 border-blue-500 border-t-transparent rounded-full animate-spin mx-auto mb-2"></div>
+                  <p className="text-gray-500">Loading data...</p>
+                </div>
+              </div>
+            ) : !balanceHistory || balanceHistory.length < 2 ? (
+              <div className="h-48 flex items-center justify-center">
+                <div className="text-center p-6 bg-gray-50 rounded-lg max-w-md">
+                  <p className="text-gray-600">
+                    Not enough data to display history yet. Complete at least one weekly check-in to see your progress over time.
+                  </p>
+                </div>
+              </div>
+            ) : (
+              <>
+                <p className="text-sm text-gray-600 mb-4">
+                  See how your family's task balance has changed over time
+                </p>
+                  
+                <div className="h-64 w-full">
+                  <ResponsiveContainer width="100%" height="100%">
+                    <LineChart
+                      data={balanceHistory}
+                      margin={{ top: 5, right: 30, left: 20, bottom: 5 }}
+                    >
+                      <CartesianGrid strokeDasharray="3 3" />
+                      <XAxis dataKey="week" />
+                      <YAxis domain={[0, 100]} />
+                      <Tooltip content={<CustomTooltip />} />
+                      <Legend />
+                      <Line type="monotone" dataKey="mama" name="Mama's Tasks" stroke={MAMA_COLOR} activeDot={{ r: 8 }} />
+                      <Line type="monotone" dataKey="papa" name="Papa's Tasks" stroke={PAPA_COLOR} />
+                    </LineChart>
+                  </ResponsiveContainer>
+                </div>
+                  
+                <div className="mt-4 text-sm text-center text-gray-500">
+                  {balanceHistory.length > 2 ? (
+                    <>
+                      Your balance is improving! Papa's task share has increased by 
+                      {' '}{balanceHistory[balanceHistory.length - 1].papa - balanceHistory[0].papa}% 
+                      since the initial survey.
+                    </>
+                  ) : (
+                    "Complete more weekly check-ins to see your progress over time."
+                  )}
+                </div>
+              </>
+            )}
           </div>
         )}
       </div>
@@ -455,66 +571,85 @@ const DashboardTab = () => {
         
         {expandedSections.categories && (
           <div className="p-6 pt-0">
-            <div className="flex justify-between items-center mb-4">
-              <p className="text-sm text-gray-600">
-                Distribution of responsibilities across the four task categories
-              </p>
-              <div className="flex items-center text-sm">
-                <span className="mr-2">View:</span>
-                <div className="flex border rounded overflow-hidden">
-                  <button 
-                    className={`px-2 py-1 ${radarFilter === 'all' ? 'bg-blue-100 text-blue-700' : 'bg-white'}`}
-                    onClick={() => setRadarFilter('all')}
-                  >
-                    All
-                  </button>
-                  <button 
-                    className={`px-2 py-1 border-l ${radarFilter === 'parents' ? 'bg-blue-100 text-blue-700' : 'bg-white'}`}
-                    onClick={() => setRadarFilter('parents')}
-                  >
-                    Parents
-                  </button>
-                  <button 
-                    className={`px-2 py-1 border-l ${radarFilter === 'children' ? 'bg-blue-100 text-blue-700' : 'bg-white'}`}
-                    onClick={() => setRadarFilter('children')}
-                  >
-                    Children
-                  </button>
+            {loading.categories ? (
+              <div className="h-48 flex items-center justify-center">
+                <div className="text-center">
+                  <div className="w-8 h-8 border-4 border-blue-500 border-t-transparent rounded-full animate-spin mx-auto mb-2"></div>
+                  <p className="text-gray-500">Loading data...</p>
                 </div>
               </div>
-            </div>
-              
-            <div className="h-64 w-full">
-              <ResponsiveContainer width="100%" height="100%">
-                <RadarChart outerRadius="80%" data={getRadarData(radarFilter)}>
-                  <PolarGrid />
-                  <PolarAngleAxis dataKey="category" />
-                  <PolarRadiusAxis angle={30} domain={[0, 100]} />
-                    
-                  <Radar
-                    name="Mama's Tasks"
-                    dataKey="mama"
-                    stroke={MAMA_COLOR}
-                    fill={MAMA_COLOR}
-                    fillOpacity={0.5}
-                  />
-                    
-                  <Radar
-                    name="Papa's Tasks"
-                    dataKey="papa"
-                    stroke={PAPA_COLOR}
-                    fill={PAPA_COLOR}
-                    fillOpacity={0.5}
-                  />
-                    
-                  <Legend />
-                </RadarChart>
-              </ResponsiveContainer>
-            </div>
-              
-            <div className="mt-4 text-sm text-center text-gray-500">
-              The chart shows what percentage of tasks in each category are handled by Mama vs Papa.
-            </div>
+            ) : !getRadarData(radarFilter) || getRadarData(radarFilter).every(item => item.mama === 0 && item.papa === 0) ? (
+              <div className="h-48 flex items-center justify-center">
+                <div className="text-center p-6 bg-gray-50 rounded-lg max-w-md">
+                  <p className="text-gray-600">
+                    Not enough data to display category distribution yet. Complete the initial survey to see the breakdown by task category.
+                  </p>
+                </div>
+              </div>
+            ) : (
+              <>
+                <div className="flex justify-between items-center mb-4">
+                  <p className="text-sm text-gray-600">
+                    Distribution of responsibilities across the four task categories
+                  </p>
+                  <div className="flex items-center text-sm">
+                    <span className="mr-2">View:</span>
+                    <div className="flex border rounded overflow-hidden">
+                      <button 
+                        className={`px-2 py-1 ${radarFilter === 'all' ? 'bg-blue-100 text-blue-700' : 'bg-white'}`}
+                        onClick={() => setRadarFilter('all')}
+                      >
+                        All
+                      </button>
+                      <button 
+                        className={`px-2 py-1 border-l ${radarFilter === 'parents' ? 'bg-blue-100 text-blue-700' : 'bg-white'}`}
+                        onClick={() => setRadarFilter('parents')}
+                      >
+                        Parents
+                      </button>
+                      <button 
+                        className={`px-2 py-1 border-l ${radarFilter === 'children' ? 'bg-blue-100 text-blue-700' : 'bg-white'}`}
+                        onClick={() => setRadarFilter('children')}
+                      >
+                        Children
+                      </button>
+                    </div>
+                  </div>
+                </div>
+                  
+                <div className="h-64 w-full">
+                  <ResponsiveContainer width="100%" height="100%">
+                    <RadarChart outerRadius="80%" data={getRadarData(radarFilter)}>
+                      <PolarGrid />
+                      <PolarAngleAxis dataKey="category" />
+                      <PolarRadiusAxis angle={30} domain={[0, 100]} />
+                        
+                      <Radar
+                        name="Mama's Tasks"
+                        dataKey="mama"
+                        stroke={MAMA_COLOR}
+                        fill={MAMA_COLOR}
+                        fillOpacity={0.5}
+                      />
+                        
+                      <Radar
+                        name="Papa's Tasks"
+                        dataKey="papa"
+                        stroke={PAPA_COLOR}
+                        fill={PAPA_COLOR}
+                        fillOpacity={0.5}
+                      />
+                        
+                      <Legend />
+                    </RadarChart>
+                  </ResponsiveContainer>
+                </div>
+                  
+                <div className="mt-4 text-sm text-center text-gray-500">
+                  The chart shows what percentage of tasks in each category are handled by Mama vs Papa.
+                </div>
+              </>
+            )}
           </div>
         )}
       </div>
@@ -535,38 +670,50 @@ const DashboardTab = () => {
         
         {expandedSections.insights && (
           <div className="p-6 pt-0">
-            <p className="text-sm text-gray-600 mb-4">
-              Actionable insights based on your family's data
-            </p>
-            
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              {getKeyInsights().map((insight, index) => (
-                <div 
-                  key={index} 
-                  className={`p-4 rounded-lg border ${
-                    insight.type === 'progress' ? 'border-green-200 bg-green-50' :
-                    insight.type === 'challenge' ? 'border-amber-200 bg-amber-50' :
-                    insight.type === 'insight' ? 'border-blue-200 bg-blue-50' :
-                    'border-purple-200 bg-purple-50'
-                  }`}
-                >
-                  <div className="flex items-start">
-                    <div className="mt-1 mr-3">
-                      {insight.icon}
-                    </div>
-                    <div>
-                      <h4 className="font-medium text-sm">{insight.title}</h4>
-                      <p className="text-sm mt-1">{insight.description}</p>
-                    </div>
-                  </div>
+            {loading.insights ? (
+              <div className="h-24 flex items-center justify-center">
+                <div className="text-center">
+                  <div className="w-8 h-8 border-4 border-blue-500 border-t-transparent rounded-full animate-spin mx-auto mb-2"></div>
+                  <p className="text-gray-500">Loading insights...</p>
                 </div>
-              ))}
-            </div>
+              </div>
+            ) : (
+              <>
+                <p className="text-sm text-gray-600 mb-4">
+                  Actionable insights based on your family's data
+                </p>
+                
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  {getKeyInsights().map((insight, index) => (
+                    <div 
+                      key={index} 
+                      className={`p-4 rounded-lg border ${
+                        insight.type === 'progress' ? 'border-green-200 bg-green-50' :
+                        insight.type === 'challenge' ? 'border-amber-200 bg-amber-50' :
+                        insight.type === 'insight' ? 'border-blue-200 bg-blue-50' :
+                        insight.type === 'waiting' ? 'border-gray-200 bg-gray-50' :
+                        'border-purple-200 bg-purple-50'
+                      }`}
+                    >
+                      <div className="flex items-start">
+                        <div className="mt-1 mr-3">
+                          {insight.icon}
+                        </div>
+                        <div>
+                          <h4 className="font-medium text-sm">{insight.title}</h4>
+                          <p className="text-sm mt-1">{insight.description}</p>
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </>
+            )}
           </div>
         )}
       </div>
       
-      {/* Task Breakdown */}
+      {/* Task Breakdown - Advanced section, hidden by default */}
       <div className="bg-white rounded-lg shadow">
         <div 
           className="p-4 flex justify-between items-center cursor-pointer hover:bg-gray-50"
@@ -582,67 +729,12 @@ const DashboardTab = () => {
         
         {expandedSections.breakdown && (
           <div className="p-6 pt-0">
-            <p className="text-sm text-gray-600 mb-4">
-              Detailed breakdown of task distribution and time investment
-            </p>
-            
-            {/* Task breakdown */}
-            <h4 className="font-medium text-md mt-6 mb-3">Top 10 Tasks by Time Investment</h4>
-            <div className="h-80 w-full">
-              <ResponsiveContainer width="100%" height="100%">
-                <BarChart
-                  data={getTaskBreakdown().sort((a, b) => b.hours - a.hours)}
-                  layout="vertical"
-                  margin={{ top: 5, right: 30, left: 100, bottom: 5 }}
-                >
-                  <CartesianGrid strokeDasharray="3 3" />
-                  <XAxis type="number" domain={[0, 'dataMax']} />
-                  <YAxis dataKey="name" type="category" width={90} />
-                  <Tooltip />
-                  <Legend />
-                  <Bar dataKey="hours" name="Hours per Week" fill="#8884d8" />
-                </BarChart>
-              </ResponsiveContainer>
-            </div>
-            
-            {/* Visible vs Invisible */}
-            <h4 className="font-medium text-md mt-8 mb-3">Visible vs Invisible Tasks</h4>
-            <div className="h-80 w-full">
-              <ResponsiveContainer width="100%" height="100%">
-                <BarChart
-                  data={getTimeInvestmentData()}
-                  margin={{ top: 20, right: 30, left: 20, bottom: 5 }}
-                >
-                  <CartesianGrid strokeDasharray="3 3" />
-                  <XAxis dataKey="name" />
-                  <YAxis />
-                  <Tooltip />
-                  <Legend />
-                  <Bar dataKey="visible" name="Visible Tasks (hours/week)" stackId="a" fill="#8884d8" />
-                  <Bar dataKey="invisible" name="Invisible Tasks (hours/week)" stackId="a" fill="#82ca9d" />
-                </BarChart>
-              </ResponsiveContainer>
-            </div>
-            
-            {/* Distribution over time */}
-            <h4 className="font-medium text-md mt-8 mb-3">Task Type Distribution Over Time</h4>
-            <div className="h-80 w-full">
-              <ResponsiveContainer width="100%" height="100%">
-                <ComposedChart
-                  data={distributionOverTime}
-                  margin={{ top: 20, right: 30, left: 20, bottom: 5 }}
-                >
-                  <CartesianGrid strokeDasharray="3 3" />
-                  <XAxis dataKey="week" />
-                  <YAxis />
-                  <Tooltip />
-                  <Legend />
-                  <Area type="monotone" dataKey="visibleMama" name="Mama - Visible" fill="#8884d8" stroke="#8884d8" fillOpacity={0.3} />
-                  <Area type="monotone" dataKey="invisibleMama" name="Mama - Invisible" fill="#8884d8" stroke="#8884d8" fillOpacity={0.6} />
-                  <Area type="monotone" dataKey="visiblePapa" name="Papa - Visible" fill="#82ca9d" stroke="#82ca9d" fillOpacity={0.3} />
-                  <Area type="monotone" dataKey="invisiblePapa" name="Papa - Invisible" fill="#82ca9d" stroke="#82ca9d" fillOpacity={0.6} />
-                </ComposedChart>
-              </ResponsiveContainer>
+            <div className="h-24 flex items-center justify-center">
+              <div className="text-center p-6 bg-gray-50 rounded-lg max-w-md">
+                <p className="text-gray-600">
+                  Advanced analytics will be available once you have completed more weekly check-ins.
+                </p>
+              </div>
             </div>
           </div>
         )}

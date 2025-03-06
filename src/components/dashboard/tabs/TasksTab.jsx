@@ -84,6 +84,7 @@ const TasksTab = ({ onStartWeeklyCheckIn, onOpenFamilyMeeting }) => {
         title: "Meal Planning",
         description: "Everyone in the family believes that Mama handles all the meal planning, but Papa thinks it's shared. Papa taking over this task would balance your workload.",
         completed: false,
+        completedDate: null,
         comments: [],
         subTasks: [
           {
@@ -91,6 +92,7 @@ const TasksTab = ({ onStartWeeklyCheckIn, onOpenFamilyMeeting }) => {
             title: "Create a weekly meal plan template",
             description: "Design a simple template with slots for each day's breakfast, lunch, and dinner that can be printed or shared digitally.",
             completed: false,
+            completedDate: null,
             comments: []
           },
           {
@@ -98,6 +100,7 @@ const TasksTab = ({ onStartWeeklyCheckIn, onOpenFamilyMeeting }) => {
             title: "Plan meals one week in advance",
             description: "Every Sunday, fill out the meal plan for the upcoming week and share it with the family for input.",
             completed: false,
+            completedDate: null,
             comments: []
           },
           {
@@ -105,6 +108,7 @@ const TasksTab = ({ onStartWeeklyCheckIn, onOpenFamilyMeeting }) => {
             title: "Create a shared grocery list",
             description: "Based on the meal plan, create a grocery list and coordinate shopping responsibilities.",
             completed: false,
+            completedDate: null,
             comments: []
           }
         ]
@@ -116,6 +120,7 @@ const TasksTab = ({ onStartWeeklyCheckIn, onOpenFamilyMeeting }) => {
         title: "Childcare Coordination",
         description: "Looking at your survey, we noticed that Mama coordinates all childcare arrangements. This is an invisible task that Papa could help with.",
         completed: false,
+        completedDate: null,
         comments: [],
         subTasks: [
           {
@@ -123,6 +128,7 @@ const TasksTab = ({ onStartWeeklyCheckIn, onOpenFamilyMeeting }) => {
             title: "Create a childcare contact list",
             description: "Compile all contact information for babysitters, daycare, after-school programs, and other childcare providers.",
             completed: false,
+            completedDate: null,
             comments: []
           },
           {
@@ -130,6 +136,7 @@ const TasksTab = ({ onStartWeeklyCheckIn, onOpenFamilyMeeting }) => {
             title: "Schedule and confirm regular childcare",
             description: "Take over the task of scheduling and confirming regular childcare arrangements for the next month.",
             completed: false,
+            completedDate: null,
             comments: []
           },
           {
@@ -137,6 +144,7 @@ const TasksTab = ({ onStartWeeklyCheckIn, onOpenFamilyMeeting }) => {
             title: "Handle emergency backup planning",
             description: "Create a backup plan for childcare when regular arrangements fall through and communicate this to all family members.",
             completed: false,
+            completedDate: null,
             comments: []
           }
         ]
@@ -148,6 +156,7 @@ const TasksTab = ({ onStartWeeklyCheckIn, onOpenFamilyMeeting }) => {
         title: "Family Calendar Management",
         description: "Calendar management is one of those invisible tasks that takes mental energy. Having Papa share this responsibility would make a big difference.",
         completed: false,
+        completedDate: null,
         comments: [],
         subTasks: [
           {
@@ -155,6 +164,7 @@ const TasksTab = ({ onStartWeeklyCheckIn, onOpenFamilyMeeting }) => {
             title: "Set up a shared digital calendar",
             description: "Create or optimize a shared digital calendar that all family members can access and update.",
             completed: false,
+            completedDate: null,
             comments: []
           },
           {
@@ -162,6 +172,7 @@ const TasksTab = ({ onStartWeeklyCheckIn, onOpenFamilyMeeting }) => {
             title: "Schedule upcoming family events",
             description: "Add all upcoming family events, appointments, and activities to the calendar for the next two months.",
             completed: false,
+            completedDate: null,
             comments: []
           },
           {
@@ -169,6 +180,7 @@ const TasksTab = ({ onStartWeeklyCheckIn, onOpenFamilyMeeting }) => {
             title: "Send weekly calendar briefings",
             description: "Each Sunday, review the upcoming week's schedule and send a summary to all family members.",
             completed: false,
+            completedDate: null,
             comments: []
           }
         ]
@@ -180,6 +192,7 @@ const TasksTab = ({ onStartWeeklyCheckIn, onOpenFamilyMeeting }) => {
         title: "Manage Home Repairs",
         description: "Papa has been handling most of the home repairs. This is an area where Mama could take on more responsibility to help balance the workload.",
         completed: false,
+        completedDate: null,
         comments: [],
         subTasks: [
           {
@@ -187,6 +200,7 @@ const TasksTab = ({ onStartWeeklyCheckIn, onOpenFamilyMeeting }) => {
             title: "Create a home maintenance inventory",
             description: "List all ongoing and upcoming home maintenance needs with priority levels and estimated timelines.",
             completed: false,
+            completedDate: null,
             comments: []
           },
           {
@@ -194,6 +208,7 @@ const TasksTab = ({ onStartWeeklyCheckIn, onOpenFamilyMeeting }) => {
             title: "Research and contact service providers",
             description: "For the next repair needed, research options, get quotes, and schedule the service.",
             completed: false,
+            completedDate: null,
             comments: []
           },
           {
@@ -201,6 +216,7 @@ const TasksTab = ({ onStartWeeklyCheckIn, onOpenFamilyMeeting }) => {
             title: "Learn a basic home repair skill",
             description: "Choose one simple home maintenance task (changing filters, fixing a leaky faucet, etc.) and learn how to do it.",
             completed: false,
+            completedDate: null,
             comments: []
           }
         ]
@@ -212,6 +228,7 @@ const TasksTab = ({ onStartWeeklyCheckIn, onOpenFamilyMeeting }) => {
         title: "Plan Family Activities",
         description: "Planning recreational activities for the family is something Papa has been doing. Mama could help balance by taking over this task.",
         completed: false,
+        completedDate: null,
         comments: [],
         subTasks: [
           {
@@ -219,6 +236,7 @@ const TasksTab = ({ onStartWeeklyCheckIn, onOpenFamilyMeeting }) => {
             title: "Create a family activity wish list",
             description: "Ask each family member for activity ideas and compile them into a master list that can be referenced when planning.",
             completed: false,
+            completedDate: null,
             comments: []
           },
           {
@@ -226,6 +244,7 @@ const TasksTab = ({ onStartWeeklyCheckIn, onOpenFamilyMeeting }) => {
             title: "Plan a weekend family outing",
             description: "Research, plan, and organize all details for an upcoming family outing or day trip.",
             completed: false,
+            completedDate: null,
             comments: []
           },
           {
@@ -233,6 +252,7 @@ const TasksTab = ({ onStartWeeklyCheckIn, onOpenFamilyMeeting }) => {
             title: "Establish a regular family activity night",
             description: "Choose a regular time slot for weekly family activities and plan the first month of activities.",
             completed: false,
+            completedDate: null,
             comments: []
           }
         ]
@@ -258,7 +278,7 @@ const TasksTab = ({ onStartWeeklyCheckIn, onOpenFamilyMeeting }) => {
   
   // Check if weekly check-in is completed for this week
   const weeklyCheckInCompleted = familyMembers.every(member => 
-    member.weeklyCompleted?.[currentWeek-1]?.completed
+    member.weeklyCompleted && member.weeklyCompleted[currentWeek-1]?.completed
   );
   
   // Toggle task expansion
@@ -392,13 +412,19 @@ const TasksTab = ({ onStartWeeklyCheckIn, onOpenFamilyMeeting }) => {
     // Check permissions - only assigned parent can complete tasks
     if (canCompleteTask(task)) {
       try {
+        // Prepare updated task with completion status and timestamp
+        const completedDate = isCompleted ? new Date().toISOString() : null;
+        
+        // Update task in database
+        await DatabaseService.updateTaskCompletion(familyId, taskId, isCompleted, completedDate);
+        
         // Update local state
         const updatedTasks = aiRecommendations.map(task => {
           if (task.id === taskId) {
             return {
               ...task,
               completed: isCompleted,
-              completedDate: isCompleted ? new Date().toISOString().split('T')[0] : null
+              completedDate: completedDate
             };
           }
           return task;
@@ -423,27 +449,37 @@ const TasksTab = ({ onStartWeeklyCheckIn, onOpenFamilyMeeting }) => {
     // Check permissions - only assigned parent can complete tasks
     if (canCompleteTask(task)) {
       try {
+        // Create completion timestamp
+        const completedDate = isCompleted ? new Date().toISOString() : null;
+        
         // In a real app, this would update the subtask in database
-        // await updateSubtaskCompletion(taskId, subtaskId, isCompleted);
+        const subtaskDbId = `${taskId}-${subtaskId}`;
+        await DatabaseService.updateSubtaskCompletion(familyId, taskId, subtaskId, isCompleted, completedDate);
         
         // Update local state
         const updatedTasks = taskRecommendations.map(task => {
           if (task.id.toString() === taskId.toString()) {
+            // Check if all subtasks will be completed after this update
+            const updatedSubtasks = task.subTasks.map(subtask => {
+              if (subtask.id === subtaskId) {
+                return {
+                  ...subtask,
+                  completed: isCompleted,
+                  completedDate: completedDate
+                };
+              }
+              return subtask;
+            });
+            
+            // Determine if main task should be marked complete
+            const allSubtasksComplete = updatedSubtasks.every(st => st.completed);
+            
             return {
               ...task,
-              subTasks: task.subTasks.map(subtask => {
-                if (subtask.id === subtaskId) {
-                  return {
-                    ...subtask,
-                    completed: isCompleted
-                  };
-                }
-                return subtask;
-              }),
+              subTasks: updatedSubtasks,
               // Update the main task's completion based on subtasks
-              completed: isCompleted ? 
-                task.subTasks.filter(st => st.id !== subtaskId).every(st => st.completed) && isCompleted : 
-                false
+              completed: allSubtasksComplete,
+              completedDate: allSubtasksComplete ? new Date().toISOString() : null
             };
           }
           return task;
@@ -463,7 +499,11 @@ const TasksTab = ({ onStartWeeklyCheckIn, onOpenFamilyMeeting }) => {
   
   // Format date for display
   const formatDate = (date) => {
-    return date.toLocaleDateString('en-US', { 
+    if (!date) return "Not scheduled yet";
+    
+    const dateObj = typeof date === 'string' ? new Date(date) : date;
+    
+    return dateObj.toLocaleDateString('en-US', { 
       weekday: 'short',
       month: 'short', 
       day: 'numeric'
@@ -563,11 +603,11 @@ const TasksTab = ({ onStartWeeklyCheckIn, onOpenFamilyMeeting }) => {
                   <div 
                     key={member.id} 
                     className={`w-8 h-8 rounded-full flex items-center justify-center text-xs ${
-                      member.weeklyCompleted?.[currentWeek-1]?.completed ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-400'
+                      member.weeklyCompleted && member.weeklyCompleted[currentWeek-1]?.completed ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-400'
                     }`}
-                    title={`${member.name}: ${member.weeklyCompleted?.[currentWeek-1]?.completed ? 'Completed' : 'Not completed'}`}
+                    title={`${member.name}: ${member.weeklyCompleted && member.weeklyCompleted[currentWeek-1]?.completed ? 'Completed' : 'Not completed'}`}
                   >
-                    {member.weeklyCompleted?.[currentWeek-1]?.completed ? '✓' : member.name.charAt(0)}
+                    {member.weeklyCompleted && member.weeklyCompleted[currentWeek-1]?.completed ? '✓' : member.name.charAt(0)}
                   </div>
                 ))}
               </div>
@@ -633,6 +673,13 @@ const TasksTab = ({ onStartWeeklyCheckIn, onOpenFamilyMeeting }) => {
                           <p className="text-gray-600 mt-1">
                             {task.description}
                           </p>
+                          
+                          {/* Show completion date if task is completed */}
+                          {task.completed && task.completedDate && (
+                            <p className="text-sm text-green-600 mt-2">
+                              Completed on {formatDate(task.completedDate)}
+                            </p>
+                          )}
                         </div>
                         
                         {/* Assigned to label */}
@@ -730,6 +777,13 @@ const TasksTab = ({ onStartWeeklyCheckIn, onOpenFamilyMeeting }) => {
                           <p className="text-gray-600">
                             {task.description}
                           </p>
+                          
+                          {/* Show completion date if task is completed */}
+                          {task.completed && task.completedDate && (
+                            <p className="text-sm text-green-600 mt-2">
+                              Completed on {formatDate(task.completedDate)}
+                            </p>
+                          )}
                         </div>
                         
                         {/* Main task comments */}
@@ -790,6 +844,13 @@ const TasksTab = ({ onStartWeeklyCheckIn, onOpenFamilyMeeting }) => {
                                   <div className="flex-1">
                                     <h6 className="font-medium text-sm">{subtask.title}</h6>
                                     <p className="text-sm text-gray-600 mt-1">{subtask.description}</p>
+                                    
+                                    {/* Show completion date if subtask is completed */}
+                                    {subtask.completed && subtask.completedDate && (
+                                      <p className="text-xs text-green-600 mt-2">
+                                        Completed on {formatDate(subtask.completedDate)}
+                                      </p>
+                                    )}
                                     
                                     {/* Subtask comments */}
                                     {renderComments(subtask.comments)}
@@ -859,6 +920,13 @@ const TasksTab = ({ onStartWeeklyCheckIn, onOpenFamilyMeeting }) => {
                           <p className="text-gray-600">
                             {task.description}
                           </p>
+                          
+                          {/* Show completion date if task is completed */}
+                          {task.completed && task.completedDate && (
+                            <p className="text-sm text-green-600 mt-2">
+                              Completed on {formatDate(task.completedDate)}
+                            </p>
+                          )}
                         </div>
                         
                         {/* Main task comments */}
@@ -919,6 +987,13 @@ const TasksTab = ({ onStartWeeklyCheckIn, onOpenFamilyMeeting }) => {
                                   <div className="flex-1">
                                     <h6 className="font-medium text-sm">{subtask.title}</h6>
                                     <p className="text-sm text-gray-600 mt-1">{subtask.description}</p>
+                                    
+                                    {/* Show completion date if subtask is completed */}
+                                    {subtask.completed && subtask.completedDate && (
+                                      <p className="text-xs text-green-600 mt-2">
+                                        Completed on {formatDate(subtask.completedDate)}
+                                      </p>
+                                    )}
                                     
                                     {/* Subtask comments */}
                                     {renderComments(subtask.comments)}

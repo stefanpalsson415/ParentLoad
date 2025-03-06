@@ -354,9 +354,11 @@ class DatabaseService {
     }
   }
 
-  // Update task completion
-  async updateTaskCompletion(familyId, taskId, isCompleted) {
+  // Update task completion - now with timestamp
+  async updateTaskCompletion(familyId, taskId, isCompleted, completedDate) {
     try {
+      console.log(`Updating task ${taskId} completion to: ${isCompleted} with date: ${completedDate}`);
+      
       const docRef = doc(this.db, "families", familyId);
       const familyData = await getDoc(docRef);
       
@@ -367,7 +369,7 @@ class DatabaseService {
             return {
               ...task,
               completed: isCompleted,
-              completedDate: isCompleted ? new Date().toISOString().split('T')[0] : null
+              completedDate: completedDate
             };
           }
           return task;
@@ -378,12 +380,67 @@ class DatabaseService {
           updatedAt: serverTimestamp()
         });
         
+        console.log(`Task ${taskId} completion successfully updated`);
         return true;
       } else {
         throw new Error("Family not found");
       }
     } catch (error) {
       console.error("Error updating task completion:", error);
+      throw error;
+    }
+  }
+
+  // NEW: Update subtask completion with timestamp
+  async updateSubtaskCompletion(familyId, taskId, subtaskId, isCompleted, completedDate) {
+    try {
+      console.log(`Updating subtask ${subtaskId} of task ${taskId} completion to: ${isCompleted} with date: ${completedDate}`);
+      
+      const docRef = doc(this.db, "families", familyId);
+      const familyData = await getDoc(docRef);
+      
+      if (familyData.exists()) {
+        const taskData = familyData.data().tasks || [];
+        const updatedTasks = taskData.map(task => {
+          if (task.id.toString() === taskId.toString()) {
+            // Update the specific subtask
+            const updatedSubtasks = (task.subTasks || []).map(subtask => {
+              if (subtask.id === subtaskId) {
+                return {
+                  ...subtask,
+                  completed: isCompleted,
+                  completedDate: completedDate
+                };
+              }
+              return subtask;
+            });
+            
+            // Check if all subtasks are completed
+            const allSubtasksComplete = updatedSubtasks.every(st => st.completed);
+            
+            return {
+              ...task,
+              subTasks: updatedSubtasks,
+              // Update the main task's completion status based on subtasks
+              completed: allSubtasksComplete,
+              completedDate: allSubtasksComplete ? new Date().toISOString() : null
+            };
+          }
+          return task;
+        });
+        
+        await updateDoc(docRef, {
+          tasks: updatedTasks,
+          updatedAt: serverTimestamp()
+        });
+        
+        console.log(`Subtask ${subtaskId} of task ${taskId} completion successfully updated`);
+        return true;
+      } else {
+        throw new Error("Family not found");
+      }
+    } catch (error) {
+      console.error("Error updating subtask completion:", error);
       throw error;
     }
   }
@@ -545,23 +602,27 @@ class DatabaseService {
         {
           id: 'ai-1',
           assignedTo: 'Papa',
+          assignedToName: 'Stefan',
           title: 'Emotional Check-ins',
           description: 'Our AI detected that Mama is handling 85% of emotional support for the children. Taking time for regular emotional check-ins with each child would help balance this invisible work.',
           isAIGenerated: true,
           hiddenWorkloadType: 'Invisible Parental Tasks',
           insight: 'Through pattern analysis of your family\'s survey responses, we noticed that children consistently report Mama handling emotional support discussions.',
           completed: false,
+          completedDate: null,
           comments: []
         },
         {
           id: 'ai-2',
           assignedTo: 'Mama',
+          assignedToName: 'Kimberly',
           title: 'Home Maintenance Planning',
           description: 'Papa has been handling most home maintenance decisions. Creating a shared maintenance calendar would help balance this invisible household work.',
           isAIGenerated: true,
           hiddenWorkloadType: 'Invisible Household Tasks',
           insight: 'Survey analysis shows Papa is handling 78% of home maintenance coordination, which creates mental load imbalance.',
           completed: false,
+          completedDate: null,
           comments: []
         }
       ];

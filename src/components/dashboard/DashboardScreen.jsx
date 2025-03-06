@@ -10,6 +10,7 @@ import HowThisWorksScreen from '../education/HowThisWorksScreen';
 import PersonalizedApproachScreen from '../education/PersonalizedApproachScreen';
 import InitialSurveyTab from './tabs/InitialSurveyTab';
 import UserSettingsScreen from '../user/UserSettingsScreen';
+import FamilyMeetingScreen from '../meeting/FamilyMeetingScreen';
 
 const DashboardScreen = ({ onOpenFamilyMeeting }) => {
   const navigate = useNavigate();
@@ -21,8 +22,9 @@ const DashboardScreen = ({ onOpenFamilyMeeting }) => {
     familyName
   } = useFamily();
   
-  const [activeTab, setActiveTab] = useState('how-it-works');
+  const [activeTab, setActiveTab] = useState('dashboard');
   const [showSettings, setShowSettings] = useState(false);
+  const [showFamilyMeeting, setShowFamilyMeeting] = useState(false);
   
   // Redirect if no user is selected
   useEffect(() => {
@@ -47,6 +49,17 @@ const DashboardScreen = ({ onOpenFamilyMeeting }) => {
   // Handle settings toggle
   const toggleSettings = () => {
     setShowSettings(!showSettings);
+  };
+  
+  // Handle Family Meeting open/close
+  const handleOpenFamilyMeeting = () => {
+    console.log("Opening family meeting dialog");
+    setShowFamilyMeeting(true);
+  };
+  
+  const handleCloseFamilyMeeting = () => {
+    console.log("Closing family meeting dialog");
+    setShowFamilyMeeting(false);
   };
   
   // Generate tab content based on active tab
@@ -109,7 +122,10 @@ const DashboardScreen = ({ onOpenFamilyMeeting }) => {
       case 'dashboard':
         return <DashboardTab />;
       case 'tasks':
-        return <TasksTab onStartWeeklyCheckIn={handleStartWeeklyCheckIn} onOpenFamilyMeeting={onOpenFamilyMeeting} />;
+        return <TasksTab 
+          onStartWeeklyCheckIn={handleStartWeeklyCheckIn} 
+          onOpenFamilyMeeting={handleOpenFamilyMeeting} 
+        />;
       case 'initial-survey':
         return <InitialSurveyTab />;
       default:
@@ -226,6 +242,11 @@ const DashboardScreen = ({ onOpenFamilyMeeting }) => {
       {/* Settings Modal */}
       {showSettings && (
         <UserSettingsScreen onClose={toggleSettings} />
+      )}
+
+      {/* Family Meeting Modal */}
+      {showFamilyMeeting && (
+        <FamilyMeetingScreen onClose={handleCloseFamilyMeeting} />
       )}
     </div>
   );
