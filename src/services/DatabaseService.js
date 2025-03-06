@@ -462,6 +462,27 @@ class DatabaseService {
     }
   }
 
+// Get tasks for the current week
+async getTasksForWeek(familyId, weekNumber) {
+  try {
+    if (!familyId) throw new Error("No family ID available");
+    
+    const docRef = doc(this.db, "families", familyId);
+    const docSnap = await getDoc(docRef);
+    
+    if (docSnap.exists()) {
+      // Return the tasks array from the family document
+      return docSnap.data().tasks || [];
+    } else {
+      console.log("No family document found");
+      return [];
+    }
+  } catch (error) {
+    console.error("Error loading tasks:", error);
+    throw error;
+  }
+}  
+
   // Create a new family
   async createFamily(familyData) {
     try {

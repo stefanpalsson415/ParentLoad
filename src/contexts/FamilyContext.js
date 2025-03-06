@@ -428,42 +428,44 @@ export function FamilyProvider({ children }) {
     }
   };
 
-  // Update task completion
-  const updateTaskCompletion = async (taskId, isCompleted) => {
-    try {
-      if (!familyId) throw new Error("No family ID available");
-      
-      const completedDate = isCompleted ? new Date().toISOString() : null;
-      
-      // Update the task in the database
-      await DatabaseService.updateTaskCompletion(familyId, taskId, isCompleted, completedDate);
-      
-      // Also update local state so it persists between tab switches
-      const updatedTasks = taskRecommendations.map(task => {
-        if (task.id.toString() === taskId.toString()) {
-          return {
-            ...task,
-            completed: isCompleted,
-            completedDate: completedDate
-          };
-        }
-        return task;
-      });
-      
-      setTaskRecommendations(updatedTasks);
-      
-      // Save updated tasks to Firebase to ensure they persist
-      await DatabaseService.saveFamilyData({
-        tasks: updatedTasks,
-        updatedAt: new Date().toISOString()
-      }, familyId);
-      
-      return true;
-    } catch (error) {
-      setError(error.message);
-      throw error;
-    }
-  };
+// Update task completion
+const updateTaskCompletion = async (taskId, isCompleted) => {
+  try {
+    if (!familyId) throw new Error("No family ID available");
+    
+    console.log(`Updating task ${taskId} completion to: ${isCompleted}`);
+    
+    const completedDate = isCompleted ? new Date().toISOString() : null;
+    
+    // Update the task in the database
+    await DatabaseService.updateTaskCompletion(familyId, taskId, isCompleted, completedDate);
+    
+    // Also update local state so it persists between tab switches
+    const updatedTasks = taskRecommendations.map(task => {
+      if (task.id.toString() === taskId.toString()) {
+        return {
+          ...task,
+          completed: isCompleted,
+          completedDate: completedDate
+        };
+      }
+      return task;
+    });
+    
+    setTaskRecommendations(updatedTasks);
+    
+    // Save updated tasks to Firebase to ensure they persist
+    await DatabaseService.saveFamilyData({
+      tasks: updatedTasks,
+      updatedAt: new Date().toISOString()
+    }, familyId);
+    
+    return true;
+  } catch (error) {
+    setError(error.message);
+    throw error;
+  }
+};
 
   // Update subtask completion
   const updateSubtaskCompletion = async (taskId, subtaskId, isCompleted) => {
