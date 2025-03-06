@@ -8,6 +8,7 @@ const WeeklyCheckInScreen = () => {
   const navigate = useNavigate();
   const { 
     selectedUser,
+    familyMembers,
     completeWeeklyCheckIn,
     currentWeek
   } = useFamily();
@@ -43,15 +44,19 @@ const WeeklyCheckInScreen = () => {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [currentWeek]); // Only depend on currentWeek, not resetSurvey
   
-  // Parent profile images using data URIs for placeholders
+  // Find Mama and Papa users from family members
+  const mamaUser = familyMembers.find(m => m.roleType === 'Mama' || m.name === 'Mama');
+  const papaUser = familyMembers.find(m => m.roleType === 'Papa' || m.name === 'Papa');
+  
+  // Parent profile images with fallbacks
   const parents = {
     mama: {
-      name: 'Mama',
-      image: 'data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAyNTYgMjU2Ij48Y2lyY2xlIGN4PSIxMjgiIGN5PSIxMjgiIHI9IjEyOCIgZmlsbD0iI2U5YjFkYSIvPjxjaXJjbGUgY3g9IjEyOCIgY3k9IjkwIiByPSI0MCIgZmlsbD0iI2ZmZiIvPjxwYXRoIGQ9Ik0yMTUsMTcyLjVjMCwzNS05NSwzNS05NSwzNXMtOTUsMC05NS0zNWMwLTIzLjMsOTUtMTAsOTUtMTBTMjE1LDE0OS4yLDIxNSwxNzIuNVoiIGZpbGw9IiNmZmYiLz48L3N2Zz4='
+      name: mamaUser?.name || 'Mama',
+      image: mamaUser?.profilePicture || 'data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAyNTYgMjU2Ij48Y2lyY2xlIGN4PSIxMjgiIGN5PSIxMjgiIHI9IjEyOCIgZmlsbD0iI2U5YjFkYSIvPjxjaXJjbGUgY3g9IjEyOCIgY3k9IjkwIiByPSI0MCIgZmlsbD0iI2ZmZiIvPjxwYXRoIGQ9Ik0yMTUsMTcyLjVjMCwzNS05NSwzNS05NSwzNXMtOTUsMC05NS0zNWMwLTIzLjMsOTUtMTAsOTUtMTBTMjE1LDE0OS4yLDIxNSwxNzIuNVoiIGZpbGw9IiNmZmYiLz48L3N2Zz4='
     },
     papa: {
-      name: 'Papa',
-      image: 'data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAyNTYgMjU2Ij48Y2lyY2xlIGN4PSIxMjgiIGN5PSIxMjgiIHI9IjEyOCIgZmlsbD0iIzg0YzRlMiIvPjxjaXJjbGUgY3g9IjEyOCIgY3k9IjkwIiByPSI0MCIgZmlsbD0iI2ZmZiIvPjxwYXRoIGQ9Ik0yMTUsMTcyLjVjMCwzNS05NSwzNS05NSwzNXMtOTUsMC05NS0zNWMwLTIzLjMsOTUtMTAsOTUtMTBTMjE1LDE0OS4yLDIxNSwxNzIuNVoiIGZpbGw9IiNmZmYiLz48L3N2Zz4='
+      name: papaUser?.name || 'Papa',
+      image: papaUser?.profilePicture || 'data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAyNTYgMjU2Ij48Y2lyY2xlIGN4PSIxMjgiIGN5PSIxMjgiIHI9IjEyOCIgZmlsbD0iIzg0YzRlMiIvPjxjaXJjbGUgY3g9IjEyOCIgY3k9IjkwIiByPSI0MCIgZmlsbD0iI2ZmZiIvPjxwYXRoIGQ9Ik0yMTUsMTcyLjVjMCwzNS05NSwzNS05NSwzNXMtOTUsMC05NS0zNWMwLTIzLjMsOTUtMTAsOTUtMTBTMjE1LDE0OS4yLDIxNSwxNzIuNVoiIGZpbGw9IiNmZmYiLz48L3N2Zz4='
     }
   };
   
@@ -281,7 +286,7 @@ const WeeklyCheckInScreen = () => {
                     className="w-full h-full object-cover"
                   />
                 </button>
-                <p className="mt-2 font-medium">Mama</p>
+                <p className="mt-2 font-medium">{parents.mama.name}</p>
                 <p className="text-xs text-gray-500">(press 'M' key)</p>
               </div>
                 
@@ -302,7 +307,7 @@ const WeeklyCheckInScreen = () => {
                     className="w-full h-full object-cover"
                   />
                 </button>
-                <p className="mt-2 font-medium">Papa</p>
+                <p className="mt-2 font-medium">{parents.papa.name}</p>
                 <p className="text-xs text-gray-500">(press 'P' key)</p>
               </div>
             </div>
@@ -363,6 +368,3 @@ const WeeklyCheckInScreen = () => {
       </div>
     </div>
   );
-};
-
-export default WeeklyCheckInScreen;

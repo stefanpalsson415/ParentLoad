@@ -416,7 +416,9 @@ const DashboardTab = () => {
                   <p className="text-gray-500">Loading data...</p>
                 </div>
               </div>
-            ) : !currentBalance || (currentBalance.mama === 0 && currentBalance.papa === 0) ? (
+            ) : !currentBalance || 
+            ((currentBalance.mama === 0 && currentBalance.papa === 0) && 
+             !(timeFilter === 'all' || timeFilter === 'initial')) ? (
               <div className="h-48 flex items-center justify-center">
                 <div className="text-center p-6 bg-gray-50 rounded-lg max-w-md">
                   <p className="text-gray-600">

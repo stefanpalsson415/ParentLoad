@@ -11,7 +11,11 @@ const TasksTab = ({ onStartWeeklyCheckIn, onOpenFamilyMeeting }) => {
     completedWeeks,
     familyId,
     addTaskComment,
-    updateTaskCompletion
+    updateTaskCompletion,
+    updateSubtaskCompletion,
+    surveySchedule,
+    taskRecommendations: initialTaskRecommendations,
+    loadCurrentWeekTasks
   } = useFamily();
   
   // State to track when everyone completed initial survey
@@ -23,9 +27,39 @@ const TasksTab = ({ onStartWeeklyCheckIn, onOpenFamilyMeeting }) => {
   const [checkInDueDate, setCheckInDueDate] = useState(new Date());
   const [currentDate] = useState(new Date());
   
+  // State for task recommendations
+  const [taskRecommendations, setTaskRecommendations] = useState([]);
+  
   // State for AI recommendations
   const [aiRecommendations, setAiRecommendations] = useState([]);
   const [isLoadingAiRecommendations, setIsLoadingAiRecommendations] = useState(false);
+  
+  // Load tasks when component mounts
+  useEffect(() => {
+    const loadTasks = async () => {
+      try {
+        // Try to load tasks from database
+        const tasks = await loadCurrentWeekTasks();
+        
+        // If tasks were loaded successfully, use them
+        if (tasks && tasks.length > 0) {
+          setTaskRecommendations(tasks);
+        } else if (initialTaskRecommendations && initialTaskRecommendations.length > 0) {
+          // Otherwise use the tasks from context
+          setTaskRecommendations(initialTaskRecommendations);
+        } else {
+          // If no tasks anywhere, generate new ones
+          setTaskRecommendations(generateTaskRecommendations());
+        }
+      } catch (error) {
+        console.error("Error loading tasks:", error);
+        // Fallback to generated tasks
+        setTaskRecommendations(generateTaskRecommendations());
+      }
+    };
+    
+    loadTasks();
+  }, [familyId, currentWeek, initialTaskRecommendations, loadCurrentWeekTasks]);
   
   // Check if all initial surveys are complete
   useEffect(() => {
@@ -33,30 +67,38 @@ const TasksTab = ({ onStartWeeklyCheckIn, onOpenFamilyMeeting }) => {
     setAllInitialComplete(allComplete);
     
     if (allComplete) {
-      // Set the check-in due date to 7 days after the latest completion
-      const latestDate = new Date(Math.max(...familyMembers.map(m => 
-        m.completedDate ? new Date(m.completedDate).getTime() : 0
-      )));
+      let dueDate;
       
-      const dueDate = new Date(latestDate);
-      dueDate.setDate(dueDate.getDate() + 7);
+      // Check if there is a scheduled date for the current week
+      if (surveySchedule && surveySchedule[currentWeek]) {
+        dueDate = new Date(surveySchedule[currentWeek]);
+      } else {
+        // Otherwise set the check-in due date to 7 days after the latest completion
+        const latestDate = new Date(Math.max(...familyMembers.map(m => 
+          m.completedDate ? new Date(m.completedDate).getTime() : 0
+        )));
+        
+        dueDate = new Date(latestDate);
+        dueDate.setDate(dueDate.getDate() + 7);
+      }
+      
       setCheckInDueDate(dueDate);
       
-      // Calculate days until check-in becomes available (6 days after completion)
-      const availableDate = new Date(latestDate);
-      availableDate.setDate(availableDate.getDate() + 6);
+      // Calculate days until check-in becomes available (1 day before due date)
+      const availableDate = new Date(dueDate);
+      availableDate.setDate(availableDate.getDate() - 1);
       
       const diffTime = availableDate.getTime() - currentDate.getTime();
       const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
       setDaysUntilCheckIn(Math.max(0, diffDays));
       
-      // Can start check-in if 6 days have passed since completion
+      // Can start check-in if it's available now
       setCanStartCheckIn(diffDays <= 0);
       
       // Load AI-generated task recommendations
       loadAiRecommendations();
     }
-  }, [familyMembers, currentDate, familyId]);
+  }, [familyMembers, currentDate, surveySchedule, currentWeek]);
   
   // Load AI task recommendations
   const loadAiRecommendations = async () => {
@@ -73,203 +115,8 @@ const TasksTab = ({ onStartWeeklyCheckIn, onOpenFamilyMeeting }) => {
     }
   };
   
-  // Generate task recommendations based on survey results
-  // In a real app, this would analyze survey data to make personalized recommendations
-  const generateTaskRecommendations = () => {
-    return [
-      {
-        id: 1,
-        assignedTo: "Papa",
-        assignedToName: "Stefan",
-        title: "Meal Planning",
-        description: "Everyone in the family believes that Mama handles all the meal planning, but Papa thinks it's shared. Papa taking over this task would balance your workload.",
-        completed: false,
-        completedDate: null,
-        comments: [],
-        subTasks: [
-          {
-            id: "1-1",
-            title: "Create a weekly meal plan template",
-            description: "Design a simple template with slots for each day's breakfast, lunch, and dinner that can be printed or shared digitally.",
-            completed: false,
-            completedDate: null,
-            comments: []
-          },
-          {
-            id: "1-2",
-            title: "Plan meals one week in advance",
-            description: "Every Sunday, fill out the meal plan for the upcoming week and share it with the family for input.",
-            completed: false,
-            completedDate: null,
-            comments: []
-          },
-          {
-            id: "1-3",
-            title: "Create a shared grocery list",
-            description: "Based on the meal plan, create a grocery list and coordinate shopping responsibilities.",
-            completed: false,
-            completedDate: null,
-            comments: []
-          }
-        ]
-      },
-      {
-        id: 2,
-        assignedTo: "Papa",
-        assignedToName: "Stefan",
-        title: "Childcare Coordination",
-        description: "Looking at your survey, we noticed that Mama coordinates all childcare arrangements. This is an invisible task that Papa could help with.",
-        completed: false,
-        completedDate: null,
-        comments: [],
-        subTasks: [
-          {
-            id: "2-1",
-            title: "Create a childcare contact list",
-            description: "Compile all contact information for babysitters, daycare, after-school programs, and other childcare providers.",
-            completed: false,
-            completedDate: null,
-            comments: []
-          },
-          {
-            id: "2-2",
-            title: "Schedule and confirm regular childcare",
-            description: "Take over the task of scheduling and confirming regular childcare arrangements for the next month.",
-            completed: false,
-            completedDate: null,
-            comments: []
-          },
-          {
-            id: "2-3",
-            title: "Handle emergency backup planning",
-            description: "Create a backup plan for childcare when regular arrangements fall through and communicate this to all family members.",
-            completed: false,
-            completedDate: null,
-            comments: []
-          }
-        ]
-      },
-      {
-        id: 3,
-        assignedTo: "Papa",
-        assignedToName: "Stefan",
-        title: "Family Calendar Management",
-        description: "Calendar management is one of those invisible tasks that takes mental energy. Having Papa share this responsibility would make a big difference.",
-        completed: false,
-        completedDate: null,
-        comments: [],
-        subTasks: [
-          {
-            id: "3-1",
-            title: "Set up a shared digital calendar",
-            description: "Create or optimize a shared digital calendar that all family members can access and update.",
-            completed: false,
-            completedDate: null,
-            comments: []
-          },
-          {
-            id: "3-2",
-            title: "Schedule upcoming family events",
-            description: "Add all upcoming family events, appointments, and activities to the calendar for the next two months.",
-            completed: false,
-            completedDate: null,
-            comments: []
-          },
-          {
-            id: "3-3",
-            title: "Send weekly calendar briefings",
-            description: "Each Sunday, review the upcoming week's schedule and send a summary to all family members.",
-            completed: false,
-            completedDate: null,
-            comments: []
-          }
-        ]
-      },
-      {
-        id: 4,
-        assignedTo: "Mama",
-        assignedToName: "Kimberly",
-        title: "Manage Home Repairs",
-        description: "Papa has been handling most of the home repairs. This is an area where Mama could take on more responsibility to help balance the workload.",
-        completed: false,
-        completedDate: null,
-        comments: [],
-        subTasks: [
-          {
-            id: "4-1",
-            title: "Create a home maintenance inventory",
-            description: "List all ongoing and upcoming home maintenance needs with priority levels and estimated timelines.",
-            completed: false,
-            completedDate: null,
-            comments: []
-          },
-          {
-            id: "4-2",
-            title: "Research and contact service providers",
-            description: "For the next repair needed, research options, get quotes, and schedule the service.",
-            completed: false,
-            completedDate: null,
-            comments: []
-          },
-          {
-            id: "4-3",
-            title: "Learn a basic home repair skill",
-            description: "Choose one simple home maintenance task (changing filters, fixing a leaky faucet, etc.) and learn how to do it.",
-            completed: false,
-            completedDate: null,
-            comments: []
-          }
-        ]
-      },
-      {
-        id: 5,
-        assignedTo: "Mama",
-        assignedToName: "Kimberly",
-        title: "Plan Family Activities",
-        description: "Planning recreational activities for the family is something Papa has been doing. Mama could help balance by taking over this task.",
-        completed: false,
-        completedDate: null,
-        comments: [],
-        subTasks: [
-          {
-            id: "5-1",
-            title: "Create a family activity wish list",
-            description: "Ask each family member for activity ideas and compile them into a master list that can be referenced when planning.",
-            completed: false,
-            completedDate: null,
-            comments: []
-          },
-          {
-            id: "5-2",
-            title: "Plan a weekend family outing",
-            description: "Research, plan, and organize all details for an upcoming family outing or day trip.",
-            completed: false,
-            completedDate: null,
-            comments: []
-          },
-          {
-            id: "5-3",
-            title: "Establish a regular family activity night",
-            description: "Choose a regular time slot for weekly family activities and plan the first month of activities.",
-            completed: false,
-            completedDate: null,
-            comments: []
-          }
-        ]
-      }
-    ];
-  };
-  
-  // Task recommendations - will be fresh after all initial surveys complete
-  const [taskRecommendations, setTaskRecommendations] = useState(generateTaskRecommendations());
+  // Task recommendations for the current week
   const [expandedTasks, setExpandedTasks] = useState({});
-  
-  // Reset task recommendations when all surveys are complete
-  useEffect(() => {
-    if (allInitialComplete) {
-      setTaskRecommendations(generateTaskRecommendations());
-    }
-  }, [allInitialComplete]);
   
   // State for comment form
   const [commentTask, setCommentTask] = useState(null);
@@ -319,7 +166,7 @@ const TasksTab = ({ onStartWeeklyCheckIn, onOpenFamilyMeeting }) => {
   // Check if user can complete a task
   const canCompleteTask = (task) => {
     // Only a parent can complete their own assigned tasks
-    return selectedUser.role === 'parent' && selectedUser.name === task.assignedToName;
+    return selectedUser && selectedUser.role === 'parent' && selectedUser.name === task.assignedToName;
   };
   
   // Handle adding a comment to a task or subtask
@@ -452,39 +299,33 @@ const TasksTab = ({ onStartWeeklyCheckIn, onOpenFamilyMeeting }) => {
         // Create completion timestamp
         const completedDate = isCompleted ? new Date().toISOString() : null;
         
-        // In a real app, this would update the subtask in database
-        const subtaskDbId = `${taskId}-${subtaskId}`;
-        await DatabaseService.updateSubtaskCompletion(familyId, taskId, subtaskId, isCompleted, completedDate);
+        // Update subtask in database
+        await updateSubtaskCompletion(taskId, subtaskId, isCompleted);
         
-        // Update local state
-        const updatedTasks = taskRecommendations.map(task => {
-          if (task.id.toString() === taskId.toString()) {
-            // Check if all subtasks will be completed after this update
-            const updatedSubtasks = task.subTasks.map(subtask => {
-              if (subtask.id === subtaskId) {
-                return {
-                  ...subtask,
-                  completed: isCompleted,
-                  completedDate: completedDate
-                };
-              }
-              return subtask;
-            });
+        // Create a deep copy of the task array to ensure state updates properly
+        const updatedTasks = JSON.parse(JSON.stringify(taskRecommendations));
+        
+        // Find and update the specific task and subtask
+        const taskIndex = updatedTasks.findIndex(t => t.id.toString() === taskId.toString());
+        if (taskIndex !== -1) {
+          const task = updatedTasks[taskIndex];
+          const subtaskIndex = task.subTasks.findIndex(st => st.id === subtaskId);
+          
+          if (subtaskIndex !== -1) {
+            // Update the subtask
+            task.subTasks[subtaskIndex].completed = isCompleted;
+            task.subTasks[subtaskIndex].completedDate = completedDate;
             
-            // Determine if main task should be marked complete
-            const allSubtasksComplete = updatedSubtasks.every(st => st.completed);
+            // Check if all subtasks are completed
+            const allSubtasksComplete = task.subTasks.every(st => st.completed);
             
-            return {
-              ...task,
-              subTasks: updatedSubtasks,
-              // Update the main task's completion based on subtasks
-              completed: allSubtasksComplete,
-              completedDate: allSubtasksComplete ? new Date().toISOString() : null
-            };
+            // Update main task's completion based on subtasks
+            task.completed = allSubtasksComplete;
+            task.completedDate = allSubtasksComplete ? new Date().toISOString() : null;
           }
-          return task;
-        });
+        }
         
+        // Update state with the modified copy
         setTaskRecommendations(updatedTasks);
       } catch (error) {
         console.error("Error updating subtask:", error);

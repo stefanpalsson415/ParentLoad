@@ -29,6 +29,7 @@ export function FamilyProvider({ children }) {
   const [weekHistory, setWeekHistory] = useState({}); // Store historical data for each week
   const [weekStatus, setWeekStatus] = useState({}); // Status of each week (survey complete, meeting complete, etc.)
   const [lastCompletedFullWeek, setLastCompletedFullWeek] = useState(0); // Last week that was fully completed (including meeting)
+  const [taskRecommendations, setTaskRecommendations] = useState([]); // Store task recommendations
 
   // Initialize family data from auth context
   useEffect(() => {
@@ -44,6 +45,7 @@ export function FamilyProvider({ children }) {
       setWeekHistory(initialFamilyData.weekHistory || {});
       setWeekStatus(initialFamilyData.weekStatus || {});
       setLastCompletedFullWeek(initialFamilyData.lastCompletedFullWeek || 0);
+      setTaskRecommendations(initialFamilyData.tasks || []);
       
       // Set document title with family name
       if (initialFamilyData.familyName) {
@@ -96,6 +98,7 @@ export function FamilyProvider({ children }) {
     setWeekHistory({});
     setWeekStatus({});
     setLastCompletedFullWeek(0);
+    setTaskRecommendations([]);
     setError(null);
     
     // Reset document title
@@ -188,8 +191,25 @@ export function FamilyProvider({ children }) {
       const updatedSchedule = { ...surveySchedule, [weekNumber]: dueDate.toISOString() };
       setSurveySchedule(updatedSchedule);
       
+      // Also update any other related state like weekStatus
+      const updatedStatus = {...weekStatus};
+      if (updatedStatus[weekNumber]) {
+        updatedStatus[weekNumber].scheduledDate = dueDate.toISOString();
+      } else {
+        updatedStatus[weekNumber] = {
+          scheduledDate: dueDate.toISOString(),
+          surveysCompleted: false,
+          meetingNotesCompleted: false,
+          completed: false
+        };
+      }
+      setWeekStatus(updatedStatus);
+      
       // Save to Firebase
-      await DatabaseService.saveFamilyData({ surveySchedule: updatedSchedule }, familyId);
+      await DatabaseService.saveFamilyData({ 
+        surveySchedule: updatedSchedule,
+        weekStatus: updatedStatus
+      }, familyId);
       
       return true;
     } catch (error) {
@@ -413,7 +433,80 @@ export function FamilyProvider({ children }) {
     try {
       if (!familyId) throw new Error("No family ID available");
       
-      await DatabaseService.updateTaskCompletion(familyId, taskId, isCompleted);
+      const completedDate = isCompleted ? new Date().toISOString() : null;
+      
+      // Update the task in the database
+      await DatabaseService.updateTaskCompletion(familyId, taskId, isCompleted, completedDate);
+      
+      // Also update local state so it persists between tab switches
+      const updatedTasks = taskRecommendations.map(task => {
+        if (task.id.toString() === taskId.toString()) {
+          return {
+            ...task,
+            completed: isCompleted,
+            completedDate: completedDate
+          };
+        }
+        return task;
+      });
+      
+      setTaskRecommendations(updatedTasks);
+      
+      // Save updated tasks to Firebase to ensure they persist
+      await DatabaseService.saveFamilyData({
+        tasks: updatedTasks,
+        updatedAt: new Date().toISOString()
+      }, familyId);
+      
+      return true;
+    } catch (error) {
+      setError(error.message);
+      throw error;
+    }
+  };
+
+  // Update subtask completion
+  const updateSubtaskCompletion = async (taskId, subtaskId, isCompleted) => {
+    try {
+      if (!familyId) throw new Error("No family ID available");
+      
+      const completedDate = isCompleted ? new Date().toISOString() : null;
+      
+      // Update subtask in database
+      await DatabaseService.updateSubtaskCompletion(familyId, taskId, subtaskId, isCompleted, completedDate);
+      
+      // Create a deep copy of the task array to ensure state updates properly
+      const updatedTasks = JSON.parse(JSON.stringify(taskRecommendations));
+      
+      // Find and update the specific task and subtask
+      const taskIndex = updatedTasks.findIndex(t => t.id.toString() === taskId.toString());
+      if (taskIndex !== -1) {
+        const task = updatedTasks[taskIndex];
+        const subtaskIndex = task.subTasks.findIndex(st => st.id === subtaskId);
+        
+        if (subtaskIndex !== -1) {
+          // Update the subtask
+          task.subTasks[subtaskIndex].completed = isCompleted;
+          task.subTasks[subtaskIndex].completedDate = completedDate;
+          
+          // Check if all subtasks are completed
+          const allComplete = task.subTasks.every(st => st.completed);
+          
+          // Update main task status
+          task.completed = allComplete;
+          task.completedDate = allComplete ? new Date().toISOString() : null;
+        }
+      }
+      
+      // Update state with the modified copy
+      setTaskRecommendations(updatedTasks);
+      
+      // Save updated tasks to Firebase
+      await DatabaseService.saveFamilyData({
+        tasks: updatedTasks,
+        updatedAt: new Date().toISOString()
+      }, familyId);
+      
       return true;
     } catch (error) {
       setError(error.message);
@@ -469,7 +562,7 @@ export function FamilyProvider({ children }) {
         weekNumber,
         responses: weekSurveyResponses,
         meetingNotes,
-        tasks: taskData,
+        tasks: taskData || taskRecommendations, // Use local tasks if database fetch fails
         familyMembers: familyMembers.map(m => ({
           id: m.id,
           name: m.name,
@@ -537,6 +630,23 @@ export function FamilyProvider({ children }) {
     }
   };
 
+  // Load tasks for the current week
+  const loadCurrentWeekTasks = async () => {
+    try {
+      if (!familyId) throw new Error("No family ID available");
+      
+      const tasks = await DatabaseService.getTasksForWeek(familyId, currentWeek);
+      if (tasks && tasks.length > 0) {
+        setTaskRecommendations(tasks);
+      }
+      return tasks;
+    } catch (error) {
+      console.error("Error loading current week tasks:", error);
+      setError(error.message);
+      return null;
+    }
+  };
+
   // Get historical data for a specific week
   const getWeekHistoryData = (weekNumber) => {
     if (weekNumber === 0) {
@@ -569,6 +679,7 @@ export function FamilyProvider({ children }) {
     weekHistory,
     weekStatus,
     lastCompletedFullWeek,
+    taskRecommendations,
     loading,
     error,
     selectFamilyMember,
@@ -580,11 +691,13 @@ export function FamilyProvider({ children }) {
     completeWeeklyCheckIn,
     addTaskComment,
     updateTaskCompletion,
+    updateSubtaskCompletion,
     saveFamilyMeetingNotes,
     completeWeek,
     getMemberSurveyResponses,
     getWeekHistoryData,
     getWeekStatus,
+    loadCurrentWeekTasks,
     resetFamilyState
   };
 
