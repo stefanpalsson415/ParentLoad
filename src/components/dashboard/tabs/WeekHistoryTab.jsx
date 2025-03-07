@@ -11,7 +11,6 @@ const WeekHistoryTab = ({ weekNumber }) => {
   const { 
     familyMembers, 
     getWeekHistoryData,
-    surveyResponses
   } = useFamily();
   
   const { fullQuestionSet } = useSurvey();
@@ -35,13 +34,8 @@ const WeekHistoryTab = ({ weekNumber }) => {
   // Effect to process and set weekly questions when week data changes
   useEffect(() => {
     if (weekData && fullQuestionSet) {
-      // Filter question set to include only those answered in this week
-      const weekResponses = Object.keys(surveyResponses)
-        .filter(key => key.startsWith(`week-${weekNumber}`))
-        .reduce((obj, key) => {
-          obj[key] = surveyResponses[key];
-          return obj;
-        }, {});
+      // Use weekData.surveyResponses for data
+      const weekResponses = weekData.surveyResponses || {};
       
       // Find questions that have responses
       const answeredQuestionIds = Object.keys(weekResponses).map(key => {
@@ -61,7 +55,7 @@ const WeekHistoryTab = ({ weekNumber }) => {
         setCurrentQuestionIndex(0);
       }
     }
-  }, [weekData, fullQuestionSet, weekNumber, surveyResponses]);
+  }, [weekData, fullQuestionSet, weekNumber]);
   
   // Toggle section expansion
   const toggleSection = (section) => {
@@ -73,13 +67,8 @@ const WeekHistoryTab = ({ weekNumber }) => {
   
   // Calculate radar data for this week
   const getRadarData = () => {
-    // Filter responses to just this week's data
-    const weekResponses = Object.keys(surveyResponses)
-      .filter(key => key.startsWith(`week-${weekNumber}`))
-      .reduce((obj, key) => {
-        obj[key] = surveyResponses[key];
-        return obj;
-      }, {});
+    // Use weekData.surveyResponses instead of global surveyResponses
+    const weekResponses = weekData && weekData.surveyResponses ? weekData.surveyResponses : {};
     
     // Group by category
     const categories = {
@@ -207,6 +196,9 @@ const WeekHistoryTab = ({ weekNumber }) => {
     // Responses will be stored by member ID
     const responses = {};
     
+    // Get survey responses from weekData
+    const weekSurveyResponses = weekData && weekData.surveyResponses ? weekData.surveyResponses : {};
+    
     // For each family member, find their response to the current question
     familyMembers.forEach(member => {
       // Try to find a response for this week and question
@@ -214,21 +206,21 @@ const WeekHistoryTab = ({ weekNumber }) => {
       
       // First try with the correct week prefix format
       const weekPrefix = `week-${weekNumber}-`;
-      const exactKey = Object.keys(surveyResponses).find(key => 
+      const exactKey = Object.keys(weekSurveyResponses).find(key => 
         key.includes(weekPrefix) && key.includes(questionId) && key.includes(member.id)
       );
       
       if (exactKey) {
-        response = surveyResponses[exactKey];
+        response = weekSurveyResponses[exactKey];
       } else {
         // Fallback: try a more flexible search for any response that matches the week and question
-        const alternateKey = Object.keys(surveyResponses).find(key => 
+        const alternateKey = Object.keys(weekSurveyResponses).find(key => 
           (key.includes(`week-${weekNumber}`) || (weekNumber === 1 && key.includes('week1'))) && 
           key.includes(questionId)
         );
         
         if (alternateKey) {
-          response = surveyResponses[alternateKey];
+          response = weekSurveyResponses[alternateKey];
         }
       }
       
@@ -271,13 +263,8 @@ const WeekHistoryTab = ({ weekNumber }) => {
   
   // Calculate overall balance for this week
   const getWeekBalance = () => {
-    // Filter responses to just this week's data
-    const weekResponses = Object.keys(surveyResponses)
-      .filter(key => key.startsWith(`week-${weekNumber}`))
-      .reduce((obj, key) => {
-        obj[key] = surveyResponses[key];
-        return obj;
-      }, {});
+    // Use weekData.surveyResponses instead of global surveyResponses
+    const weekResponses = weekData && weekData.surveyResponses ? weekData.surveyResponses : {};
     
     // Count Mama/Papa responses
     let mamaCount = 0;
@@ -781,10 +768,16 @@ const WeekHistoryTab = ({ weekNumber }) => {
               </div>
             </div>
             
-            {weeklyQuestions.length === 0 ? (
+            {!weekData || !weekData.surveyResponses || Object.keys(weekData.surveyResponses).length === 0 ? (
               <div className="text-center p-6 bg-gray-50 rounded-lg">
                 <p className="text-gray-600">
                   No survey response data available for Week {weekNumber}
+                </p>
+              </div>
+            ) : weeklyQuestions.length === 0 ? (
+              <div className="text-center p-6 bg-gray-50 rounded-lg">
+                <p className="text-gray-600">
+                  No survey questions found for Week {weekNumber}
                 </p>
               </div>
             ) : (

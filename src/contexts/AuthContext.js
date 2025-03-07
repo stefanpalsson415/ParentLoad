@@ -17,6 +17,7 @@ export function AuthProvider({ children }) {
   const [currentUser, setCurrentUser] = useState(null);
   const [loading, setLoading] = useState(true);
   const [familyData, setFamilyData] = useState(null);
+  const [availableFamilies, setAvailableFamilies] = useState([]);
 
   // Sign up function
   async function signup(email, password) {
@@ -50,14 +51,31 @@ export function AuthProvider({ children }) {
     }
   }
 
-  // Effect for auth state changes
+  // Add this new function
+  async function loadAllFamilies(userId) {
+    try {
+      const families = await DatabaseService.getAllFamiliesByUserId(userId);
+      setAvailableFamilies(families);
+      return families;
+    } catch (error) {
+      console.error("Error loading all families:", error);
+      throw error;
+    }
+  }
+
+
+
+  // New code
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, async (user) => {
       setCurrentUser(user);
       
       if (user) {
         try {
-          // Load family data when user logs in
+          // Load all families first
+          await loadAllFamilies(user.uid);
+          
+          // Then load the primary family data
           await loadFamilyData(user.uid);
         } catch (error) {
           console.error("Error loading family data on auth change:", error);
@@ -65,6 +83,7 @@ export function AuthProvider({ children }) {
       } else {
         // Clear family data on logout
         setFamilyData(null);
+        setAvailableFamilies([]);
       }
       
       setLoading(false);
@@ -73,15 +92,20 @@ export function AuthProvider({ children }) {
     return unsubscribe;
   }, []);
 
+
+
+
   // Context value
   const value = {
     currentUser,
     familyData,
+    availableFamilies,
     signup,
     login,
     logout,
     createFamily,
     loadFamilyData,
+    loadAllFamilies,
     reload: () => loadFamilyData(currentUser?.uid)
   };
 

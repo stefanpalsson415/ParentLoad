@@ -419,7 +419,7 @@ export function FamilyProvider({ children }) {
         console.warn("Could not retrieve meeting notes, using empty object instead:", notesError);
       }
       
-      // 2. Create week history data - this will be stored as a frozen snapshot
+    
       const weekData = {
         weekNumber,
         familyMembers: familyMembers.map(m => ({
@@ -431,14 +431,32 @@ export function FamilyProvider({ children }) {
         meetingNotes: meetingNotes,
         tasks: currentTasks,
         completionDate: new Date().toISOString(),
-        surveyResponses: Object.keys(surveyResponses)
-          .filter(key => key.startsWith(`week-${weekNumber}`))
-          .reduce((obj, key) => {
-            obj[key] = surveyResponses[key];
-            return obj;
-          }, {})
+        surveyResponses: {}
       };
-      
+
+      // Get all weekly survey responses for this week
+      // They could be structured differently (with or without week prefix)
+      Object.keys(surveyResponses).forEach(key => {
+        if (key.includes(`week-${weekNumber}`) || 
+            key.includes(`weekly-${weekNumber}`) || 
+            (key.includes(`weekly`) && weekNumber === 1)) {
+          weekData.surveyResponses[key] = surveyResponses[key];
+        }
+        // Also include simple question IDs like q1, q2 from weekly surveys
+        else if (key.startsWith('q') && !key.includes('-')) {
+          // This handles the case where question IDs might be stored without prefixes
+          const weeklyDocIds = Object.keys(surveyResponses).filter(k => 
+            k.includes(`weekly-${weekNumber}`) || 
+            (k.includes('weekly') && weekNumber === 1));
+          
+          if (weeklyDocIds.length > 0) {
+            weekData.surveyResponses[key] = surveyResponses[key];
+          }
+        }
+      });
+
+
+            
       console.log("Week data prepared:", weekData);
       
       // 3. Update week history

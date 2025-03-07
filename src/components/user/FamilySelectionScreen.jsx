@@ -15,6 +15,9 @@ export const FamilySelectionScreen = () => {
     updateMemberProfile 
   } = useFamily();
   
+  const { availableFamilies, loadFamilyData, familyData } = useAuth();
+
+
   const navigate = useNavigate();
   
   const [showProfileUpload, setShowProfileUpload] = useState(false);
@@ -231,6 +234,43 @@ export const FamilySelectionScreen = () => {
           </div>
         </div>
       </div>
+
+      {/* Add family selector if multiple families exist */}
+      {availableFamilies && availableFamilies.length > 1 && (
+        <div className="w-full max-w-md mx-auto mt-6 mb-4">
+          <div className="bg-white rounded-lg shadow p-4">
+            <h3 className="text-lg font-semibold mb-3">Switch Family</h3>
+            <div className="space-y-2">
+              {availableFamilies.map((family) => (
+                <button
+                  key={family.familyId}
+                  className={`w-full p-3 text-left border rounded-lg ${
+                    familyData?.familyId === family.familyId ? 'bg-blue-50 border-blue-300' : 'hover:bg-gray-50'
+                  }`}
+                  onClick={async () => {
+                    try {
+                      await loadFamilyData(family.familyId);
+                      // Force refresh the page to update UI
+                      window.location.reload();
+                    } catch(error) {
+                      console.error("Error switching family:", error);
+                    }
+                  }}
+                >
+                  <div className="font-medium">{family.familyName || 'Unnamed Family'}</div>
+                  <div className="text-xs text-gray-500">
+                    {family.familyMembers?.length || 0} members
+                  </div>
+                </button>
+              ))}
+            </div>
+          </div>
+        </div>
+      )}
+
+
+
+
 
       {/* Footer */}
       <div className="p-4 text-center text-sm text-gray-500">

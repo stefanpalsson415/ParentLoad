@@ -190,6 +190,28 @@ class DatabaseService {
     }
   }
 
+  // Add this method to get all families for a user
+  async getAllFamiliesByUserId(userId) {
+    try {
+      const q = query(collection(this.db, "families"), where("memberIds", "array-contains", userId));
+      const querySnapshot = await getDocs(q);
+      
+      const families = [];
+      querySnapshot.forEach((doc) => {
+        families.push({
+          ...doc.data(),
+          familyId: doc.id
+        });
+      });
+      
+      return families;
+    } catch (error) {
+      console.error("Error loading all families by user:", error);
+      throw error;
+    }
+  }
+
+
   // Save family data to Firestore
   async saveFamilyData(data, familyId) {
     try {
