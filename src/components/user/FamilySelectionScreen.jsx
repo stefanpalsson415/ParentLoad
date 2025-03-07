@@ -123,8 +123,15 @@ export const FamilySelectionScreen = () => {
     
     try {
       await login(email, password);
-      // Auth state change will trigger UI update
+      // Auth state change will trigger UI update 
       setShowLoginForm(false);
+      // Force navigation to dashboard after successful login
+      if (availableFamilies && availableFamilies.length > 0) {
+        const firstFamily = availableFamilies[0];
+        console.log("Auto-selecting first family:", firstFamily.familyId);
+        await loadFamilyData(firstFamily.familyId);
+        navigate('/dashboard');
+      }
     } catch (error) {
       console.error("Login error:", error);
       setLoginError('Invalid email or password. Please try again.');
@@ -273,17 +280,31 @@ export const FamilySelectionScreen = () => {
                   <div className="space-y-2">
                     {availableFamilies.map((family) => (
                       <button
-                        key={family.familyId}
-                        className="w-full p-3 text-left border rounded-lg hover:bg-gray-50"
-                        onClick={async () => {
-                          try {
-                            await loadFamilyData(family.familyId);
-                            window.location.reload();
-                          } catch(error) {
-                            console.error("Error switching family:", error);
-                          }
-                        }}
-                      >
+                      key={family.familyId}
+                      className="w-full p-3 text-left border rounded-lg hover:bg-gray-50"
+                      onClick={async () => {
+                        try {
+                          console.log("Loading family:", family.familyId);
+                          // Add loading indicator to the button
+                          const button = event.currentTarget;
+                          const originalText = button.innerHTML;
+                          button.innerHTML = 'Loading...';
+                          button.disabled = true;
+                          
+                          const familyData = await loadFamilyData(family.familyId);
+                          console.log("Family data loaded:", familyData);
+                          
+                          // If successful, manually set window location instead of using navigate
+                          window.location.href = '/dashboard';
+                        } catch(error) {
+                          console.error("Error switching family:", error);
+                          alert("Failed to load family data: " + error.message);
+                          // Reset button text
+                          button.innerHTML = originalText;
+                          button.disabled = false;
+                        }
+                      }}
+                    >
                         <div className="font-medium">{family.familyName || 'Unnamed Family'}</div>
                         <div className="text-xs text-gray-500">
                           {family.familyMembers?.length || 0} members
