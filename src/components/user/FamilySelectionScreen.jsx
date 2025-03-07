@@ -279,32 +279,32 @@ export const FamilySelectionScreen = () => {
                   <h3 className="text-lg font-semibold mb-3">Switch Family</h3>
                   <div className="space-y-2">
                     {availableFamilies.map((family) => (
-                      <button
-                      key={family.familyId}
-                      className="w-full p-3 text-left border rounded-lg hover:bg-gray-50"
-                      onClick={async () => {
-                        try {
-                          console.log("Loading family:", family.familyId);
-                          // Add loading indicator to the button
-                          const button = event.currentTarget;
-                          const originalText = button.innerHTML;
-                          button.innerHTML = 'Loading...';
-                          button.disabled = true;
-                          
-                          const familyData = await loadFamilyData(family.familyId);
-                          console.log("Family data loaded:", familyData);
-                          
-                          // If successful, manually set window location instead of using navigate
-                          window.location.href = '/dashboard';
-                        } catch(error) {
-                          console.error("Error switching family:", error);
-                          alert("Failed to load family data: " + error.message);
-                          // Reset button text
-                          button.innerHTML = originalText;
-                          button.disabled = false;
-                        }
-                      }}
-                    >
+                     <button
+                     key={family.familyId}
+                     className="w-full p-3 text-left border rounded-lg hover:bg-gray-50"
+                     onClick={async (event) => {  // ADD event parameter here
+                       try {
+                         console.log("Loading family:", family.familyId);
+                         // Add loading indicator to the button
+                         const button = event.currentTarget;
+                         const originalText = button.innerHTML;
+                         button.innerHTML = 'Loading...';
+                         button.disabled = true;
+                         
+                         const familyData = await loadFamilyData(family.familyId);
+                         console.log("Family data loaded:", familyData);
+                         
+                         // If successful, manually set window location instead of using navigate
+                         window.location.href = '/dashboard';
+                       } catch(error) {
+                         console.error("Error switching family:", error);
+                         alert("Failed to load family data: " + error.message);
+                         // Reset button text
+                         button.innerHTML = originalText;
+                         button.disabled = false;
+                       }
+                     }}
+                   >
                         <div className="font-medium">{family.familyName || 'Unnamed Family'}</div>
                         <div className="text-xs text-gray-500">
                           {family.familyMembers?.length || 0} members
