@@ -7,8 +7,7 @@ import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
 import { storage } from '../../services/firebase';
 
 export const FamilySelectionScreen = () => {
-  const { currentUser, availableFamilies, loadFamilyData, familyData, login, logout } = useAuth();
-  const { 
+  const { currentUser, availableFamilies, loadFamilyData, familyData, login, logout, loadAllFamilies } = useAuth();  const { 
     familyMembers, 
     selectedUser, 
     selectFamilyMember, 
@@ -122,12 +121,16 @@ export const FamilySelectionScreen = () => {
     setLoginError('');
     
     try {
-      await login(email, password);
+      const user = await login(email, password);
       // Auth state change will trigger UI update 
       setShowLoginForm(false);
-      // Force navigation to dashboard after successful login
-      if (availableFamilies && availableFamilies.length > 0) {
-        const firstFamily = availableFamilies[0];
+      
+      // Explicitly load all families to make sure availableFamilies is updated
+      const families = await loadAllFamilies(user.uid);
+      
+      // Force navigation to dashboard if there's at least one family
+      if (families && families.length > 0) {
+        const firstFamily = families[0];
         console.log("Auto-selecting first family:", firstFamily.familyId);
         await loadFamilyData(firstFamily.familyId);
         navigate('/dashboard');
@@ -282,28 +285,26 @@ export const FamilySelectionScreen = () => {
                      <button
                      key={family.familyId}
                      className="w-full p-3 text-left border rounded-lg hover:bg-gray-50"
-                     onClick={async (event) => {  // ADD event parameter here
+                     onClick={async () => {
                        try {
-                         console.log("Loading family:", family.familyId);
-                         // Add loading indicator to the button
-                         const button = event.currentTarget;
-                         const originalText = button.innerHTML;
-                         button.innerHTML = 'Loading...';
-                         button.disabled = true;
+                         // First store the family ID in localStorage
+                         localStorage.setItem('selectedFamilyId', family.familyId);
                          
-                         const familyData = await loadFamilyData(family.familyId);
-                         console.log("Family data loaded:", familyData);
+                         // Show loading state on the button
+                         const button = document.querySelector(`[data-family-id="${family.familyId}"]`);
+                         if (button) button.textContent = 'Loading...';
                          
-                         // If successful, manually set window location instead of using navigate
+                         // Load the family data directly
+                         await loadFamilyData(family.familyId);
+                         
+                         // Hard redirect to dashboard without parameters
                          window.location.href = '/dashboard';
-                       } catch(error) {
-                         console.error("Error switching family:", error);
-                         alert("Failed to load family data: " + error.message);
-                         // Reset button text
-                         button.innerHTML = originalText;
-                         button.disabled = false;
+                       } catch (error) {
+                         console.error("Error loading family:", error);
+                         alert("Could not load family data. Please try again.");
                        }
                      }}
+                     data-family-id={family.familyId}
                    >
                         <div className="font-medium">{family.familyName || 'Unnamed Family'}</div>
                         <div className="text-xs text-gray-500">

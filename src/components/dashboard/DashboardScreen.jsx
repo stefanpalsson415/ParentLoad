@@ -11,6 +11,7 @@ import PersonalizedApproachScreen from '../education/PersonalizedApproachScreen'
 import InitialSurveyTab from './tabs/InitialSurveyTab';
 import UserSettingsScreen from '../user/UserSettingsScreen';
 import FamilyMeetingScreen from '../meeting/FamilyMeetingScreen';
+import { useAuth } from '../../contexts/AuthContext';
 
 const DashboardScreen = ({ onOpenFamilyMeeting }) => {
   const navigate = useNavigate();
@@ -22,10 +23,45 @@ const DashboardScreen = ({ onOpenFamilyMeeting }) => {
     familyName
   } = useFamily();
   
+  // Get loadFamilyData from Auth context
+  const { loadFamilyData } = useAuth();
+  
   const [activeTab, setActiveTab] = useState('dashboard');
   const [showSettings, setShowSettings] = useState(false);
   const [showFamilyMeeting, setShowFamilyMeeting] = useState(false);
   
+// Extract family ID from URL if present
+useEffect(() => {
+  const params = new URLSearchParams(window.location.search);
+  const familyId = params.get('family');
+  
+  if (familyId && (!selectedUser || !familyMembers || familyMembers.length === 0)) {
+    console.log("Loading family from URL parameter:", familyId);
+    loadFamilyData(familyId).then(() => {
+      console.log("Family loaded from URL parameter");
+    }).catch(error => {
+      console.error("Error loading family from URL:", error);
+    });
+  }
+}, []);
+
+// Check for selected family on load
+useEffect(() => {
+  const storedFamilyId = localStorage.getItem('selectedFamilyId');
+  
+  if (storedFamilyId && (!selectedUser || !familyMembers || familyMembers.length === 0)) {
+    console.log("Loading family from localStorage:", storedFamilyId);
+    loadFamilyData(storedFamilyId).then(() => {
+      console.log("Family loaded successfully from localStorage");
+      // Clear storage after successful load
+      localStorage.removeItem('selectedFamilyId');
+    }).catch(error => {
+      console.error("Error loading stored family:", error);
+    });
+  }
+}, []);
+
+
   // Redirect if no user is selected
   useEffect(() => {
     if (!selectedUser) {
