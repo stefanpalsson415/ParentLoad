@@ -491,25 +491,55 @@ console.log(`Collected ${Object.keys(weekData.surveyResponses).length} responses
       const nextWeek = weekNumber + 1;
       
       // 8. Generate fresh tasks for the new week
-      const newTasks = generateNewWeekTasks(nextWeek, currentTasks, weekData.surveyResponses);
-      
-      console.log("Saving updates to Firebase...", {
-        completedWeeks: updatedCompletedWeeks,
-        currentWeek: nextWeek,
-        lastCompletedFullWeek: newLastCompletedWeek,
-        tasks: newTasks
-      });
-      
-      // 9. Save to Firebase
-      await DatabaseService.saveFamilyData({
-        weekHistory: updatedHistory,
-        weekStatus: updatedStatus,
-        lastCompletedFullWeek: newLastCompletedWeek,
-        currentWeek: nextWeek,
-        completedWeeks: updatedCompletedWeeks,
-        tasks: newTasks, // Save the new tasks for the new week
-        updatedAt: new Date().toISOString()
-      }, familyId);
+// Generate new tasks for the next week
+const newTasks = generateNewWeekTasks(nextWeek, currentTasks, weekData.surveyResponses);
+
+console.log("Saving updates to Firebase...", {
+  completedWeeks: updatedCompletedWeeks,
+  currentWeek: nextWeek,
+  lastCompletedFullWeek: newLastCompletedWeek,
+  tasks: newTasks
+});
+
+// Reset weekly completion status for the new week
+const updatedMembers = familyMembers.map(member => {
+  // Ensure the weeklyCompleted array exists and has an entry for the next week
+  let weeklyCompleted = [...(member.weeklyCompleted || [])];
+  
+  // Add entries for any missing weeks including the new one
+  while (weeklyCompleted.length < nextWeek) {
+    weeklyCompleted.push({
+      completed: false,
+      date: null
+    });
+  }
+  
+  return {
+    ...member,
+    weeklyCompleted
+  };
+});
+
+// 9. Save everything to Firebase
+await DatabaseService.saveFamilyData({
+  weekHistory: updatedHistory,
+  weekStatus: updatedStatus,
+  lastCompletedFullWeek: newLastCompletedWeek,
+  currentWeek: nextWeek,
+  completedWeeks: updatedCompletedWeeks,
+  familyMembers: updatedMembers, // Update family members with reset completion status
+  tasks: newTasks, // Save the new tasks for the new week
+  updatedAt: new Date().toISOString()
+}, familyId);
+
+// 10. Update all state variables
+setWeekHistory(updatedHistory);
+setWeekStatus(updatedStatus);
+setLastCompletedFullWeek(newLastCompletedWeek);
+setCurrentWeek(nextWeek);
+setCompletedWeeks(updatedCompletedWeeks);
+setFamilyMembers(updatedMembers); // Update family members state too
+setTaskRecommendations(newTasks); // Update tasks with the new ones
       
       // 10. Update state only after successful Firebase update
       setWeekHistory(updatedHistory);

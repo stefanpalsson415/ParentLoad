@@ -71,79 +71,79 @@ const WeekHistoryTab = ({ weekNumber }) => {
     const weekResponses = weekData && weekData.surveyResponses ? weekData.surveyResponses : {};
     
     // Group by category
-const categories = {
-  "Visible Household": { mama: 0, papa: 0, total: 0 },
-  "Invisible Household": { mama: 0, papa: 0, total: 0 },
-  "Visible Parental": { mama: 0, papa: 0, total: 0 },
-  "Invisible Parental": { mama: 0, papa: 0, total: 0 }
-};
+    const categories = {
+      "Visible Household": { mama: 0, papa: 0, total: 0 },
+      "Invisible Household": { mama: 0, papa: 0, total: 0 },
+      "Visible Parental": { mama: 0, papa: 0, total: 0 },
+      "Invisible Parental": { mama: 0, papa: 0, total: 0 }
+    };
 
-console.log(`Processing ${Object.keys(weekResponses).length} week responses for radar chart`);
+    console.log(`Processing ${Object.keys(weekResponses).length} week responses for radar chart`);
 
-// Count responses in each category
-Object.entries(weekResponses).forEach(([key, value]) => {
-  let questionId;
-  
-  // Extract question ID using flexible patterns
-  if (key.includes('q')) {
-    if (key.includes('-')) {
-      // Try to extract from formats like "week-1-q1" or "member-q1"
-      const parts = key.split('-');
-      questionId = parts.find(part => part.startsWith('q'));
-    } else {
-      // Simple format like "q1"
-      questionId = key;
+    // Count responses in each category
+    Object.entries(weekResponses).forEach(([key, value]) => {
+      let questionId;
+      
+      // Extract question ID using flexible patterns
+      if (key.includes('q')) {
+        if (key.includes('-')) {
+          // Try to extract from formats like "week-1-q1" or "member-q1"
+          const parts = key.split('-');
+          questionId = parts.find(part => part.startsWith('q'));
+        } else {
+          // Simple format like "q1"
+          questionId = key;
+        }
+      }
+      
+      if (!questionId) return;
+      
+      // Find the question in the question set
+      const question = fullQuestionSet.find(q => q.id === questionId);
+      
+      if (!question) {
+        console.log(`Question not found for ID: ${questionId}`);
+        return;
+      }
+      
+      // Update counts
+      const category = question.category;
+      if (categories[category]) {
+        categories[category].total++;
+        if (value === 'Mama') {
+          categories[category].mama++;
+        } else if (value === 'Papa') {
+          categories[category].papa++;
+        }
+      }
+    });
+
+    // Add some fallback data if no valid responses found
+    let hasData = false;
+    Object.values(categories).forEach(cat => {
+      if (cat.total > 0) hasData = true;
+    });
+
+    if (!hasData && weekNumber === 1) {
+      // Add demo data for Week 1 if no data found
+      categories["Visible Household"].mama = 65;
+      categories["Visible Household"].papa = 35;
+      categories["Visible Household"].total = 100;
+      
+      categories["Invisible Household"].mama = 75;
+      categories["Invisible Household"].papa = 25;
+      categories["Invisible Household"].total = 100;
+      
+      categories["Visible Parental"].mama = 55;
+      categories["Visible Parental"].papa = 45;
+      categories["Visible Parental"].total = 100;
+      
+      categories["Invisible Parental"].mama = 70;
+      categories["Invisible Parental"].papa = 30;
+      categories["Invisible Parental"].total = 100;
+      
+      console.log("Added fallback data for Week 1");
     }
-  }
-  
-  if (!questionId) return;
-  
-  // Find the question in the question set
-  const question = fullQuestionSet.find(q => q.id === questionId);
-  
-  if (!question) {
-    console.log(`Question not found for ID: ${questionId}`);
-    return;
-  }
-  
-  // Update counts
-  const category = question.category;
-  if (categories[category]) {
-    categories[category].total++;
-    if (value === 'Mama') {
-      categories[category].mama++;
-    } else if (value === 'Papa') {
-      categories[category].papa++;
-    }
-  }
-});
-
-// Add some fallback data if no valid responses found
-let hasData = false;
-Object.values(categories).forEach(cat => {
-  if (cat.total > 0) hasData = true;
-});
-
-if (!hasData && weekNumber === 1) {
-  // Add demo data for Week 1 if no data found
-  categories["Visible Household"].mama = 65;
-  categories["Visible Household"].papa = 35;
-  categories["Visible Household"].total = 100;
-  
-  categories["Invisible Household"].mama = 75;
-  categories["Invisible Household"].papa = 25;
-  categories["Invisible Household"].total = 100;
-  
-  categories["Visible Parental"].mama = 55;
-  categories["Visible Parental"].papa = 45;
-  categories["Visible Parental"].total = 100;
-  
-  categories["Invisible Parental"].mama = 70;
-  categories["Invisible Parental"].papa = 30;
-  categories["Invisible Parental"].total = 100;
-  
-  console.log("Added fallback data for Week 1");
-}
     
     // Convert counts to percentages for radar chart
     return Object.entries(categories).map(([category, counts]) => {
@@ -813,192 +813,195 @@ if (!hasData && weekNumber === 1) {
             </div>
             
             {!weekData || !weekData.surveyResponses || Object.keys(weekData.surveyResponses).length === 0 ? (
-  weekNumber === 1 ? (
-    // Sample data for Week 1
-    <div>
-      <div className="border rounded-lg p-4 mb-4">
-        <h4 className="font-medium">Sample Question for Week 1</h4>
-        <p className="mt-2">Who is responsible for meal planning this week?</p>
-        <p className="text-sm text-gray-500 mt-1">Invisible Household Tasks</p>
-      </div>
-      
-      <div className="grid gap-4 grid-cols-1 md:grid-cols-2 lg:grid-cols-3 mb-6">
-        {familyMembers.map(member => (
-          <div key={member.id} className="border rounded-lg p-4 bg-white">
-            <div className="flex items-center mb-3">
-              <div className="w-8 h-8 rounded-full overflow-hidden mr-2">
-                <img 
-                  src={member.profilePicture} 
-                  alt={member.name}
-                  className="w-full h-full object-cover"
-                />
-              </div>
-              <div>
-                <h5 className="font-medium text-sm">{member.name}</h5>
-                <p className="text-xs text-gray-500 capitalize">{member.role}</p>
-              </div>
-            </div>
-            
-            <div className="flex items-center justify-between">
-              <p className="text-sm font-medium">Response:</p>
-              <span className={`px-2 py-1 rounded text-xs font-medium ${
-                member.role === 'parent' && member.roleType === 'Mama' ? 'bg-purple-100 text-purple-700' : 'bg-green-100 text-green-700'
-              }`}>
-                {member.role === 'parent' && member.roleType === 'Mama' ? 'Mama' : 'Papa'}
-              </span>
-            </div>
-          </div>
-        ))}
-      </div>
-    </div>
-  ) : (
-    // Default "no data" message for other weeks
-    <div className="text-center p-6 bg-gray-50 rounded-lg">
-      <p className="text-gray-600">
-        No survey response data available for Week {weekNumber}
-      </p>
-    </div>
-  )
-) : weeklyQuestions.length === 0 ? (
-  <div className="text-center p-6 bg-gray-50 rounded-lg">
-    <p className="text-gray-600">
-      No survey questions found for Week {weekNumber}
-    </p>
-  </div>
-) : (
-  <>
-    {/* Current Question and Responses */}
-    {currentQuestion && (
-      <div>
-        <div className="border rounded-lg p-4 mb-4">
-          <h4 className="font-medium">Question {currentQuestionIndex + 1} of {weeklyQuestions.length}</h4>
-          <p className="mt-2">{currentQuestion.text}</p>
-          <p className="text-sm text-gray-500 mt-1">{currentQuestion.category}</p>
-        </div>
-        
-        <div className="grid gap-4 grid-cols-1 md:grid-cols-2 lg:grid-cols-3 mb-6">
-          {familyMembers.map(member => (
-            <div 
-              key={member.id}
-              className={`border rounded-lg p-4 ${
-                selectedMember === member.id ? 'bg-blue-50 border-blue-200' : 'bg-white'
-              } ${!selectedMember || selectedMember === member.id ? 'opacity-100' : 'opacity-50'}`}
-            >
-              <div className="flex items-center mb-3">
-                <div className="w-8 h-8 rounded-full overflow-hidden mr-2">
-                  <img 
-                    src={member.profilePicture} 
-                    alt={member.name}
-                    className="w-full h-full object-cover"
-                  />
-                </div>
+              weekNumber === 1 ? (
+                // Sample data for Week 1
                 <div>
-                  <h5 className="font-medium text-sm">{member.name}</h5>
-                  <p className="text-xs text-gray-500 capitalize">{member.role}</p>
+                  <div className="border rounded-lg p-4 mb-4">
+                    <h4 className="font-medium">Sample Question for Week 1</h4>
+                    <p className="mt-2">Who is responsible for meal planning this week?</p>
+                    <p className="text-sm text-gray-500 mt-1">Invisible Household Tasks</p>
+                  </div>
+                  
+                  <div className="grid gap-4 grid-cols-1 md:grid-cols-2 lg:grid-cols-3 mb-6">
+                    {familyMembers.map(member => (
+                      <div key={member.id} className="border rounded-lg p-4 bg-white">
+                        <div className="flex items-center mb-3">
+                          <div className="w-8 h-8 rounded-full overflow-hidden mr-2">
+                            <img 
+                              src={member.profilePicture} 
+                              alt={member.name}
+                              className="w-full h-full object-cover"
+                            />
+                          </div>
+                          <div>
+                            <h5 className="font-medium text-sm">{member.name}</h5>
+                            <p className="text-xs text-gray-500 capitalize">{member.role}</p>
+                          </div>
+                        </div>
+                        
+                        <div className="flex items-center justify-between">
+                          <p className="text-sm font-medium">Response:</p>
+                          <span className={`px-2 py-1 rounded text-xs font-medium ${
+                            member.role === 'parent' && member.roleType === 'Mama' ? 'bg-purple-100 text-purple-700' : 'bg-green-100 text-green-700'
+                          }`}>
+                            {member.role === 'parent' && member.roleType === 'Mama' ? 'Mama' : 'Papa'}
+                          </span>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
                 </div>
+              ) : (
+                // Default "no data" message for other weeks
+                <div className="text-center p-6 bg-gray-50 rounded-lg">
+                  <p className="text-gray-600">
+                    No survey response data available for Week {weekNumber}
+                  </p>
+                </div>
+              )
+            ) : weeklyQuestions.length === 0 ? (
+              <div className="text-center p-6 bg-gray-50 rounded-lg">
+                <p className="text-gray-600">
+                  No survey questions found for Week {weekNumber}
+                </p>
               </div>
-              
-              <div className="flex items-center justify-between">
-                <p className="text-sm font-medium">Response:</p>
-                <span className={`px-2 py-1 rounded text-xs font-medium ${
-                  currentResponses[member.id] === 'Mama' ? 'bg-purple-100 text-purple-700' : 
-                  currentResponses[member.id] === 'Papa' ? 'bg-green-100 text-green-700' :
-                  'bg-gray-100 text-gray-700'
-                }`}>
-                  {currentResponses[member.id] || 'No response'}
-                </span>
-              </div>
-            </div>
-          ))}
-        </div>
-        
-        {/* Navigation */}
-        <div className="flex justify-between">
-          <button
-            onClick={prevQuestion}
-            disabled={currentQuestionIndex === 0}
-            className={`px-4 py-2 rounded ${
-              currentQuestionIndex === 0 
-                ? 'bg-gray-100 text-gray-400 cursor-not-allowed' 
-                : 'bg-blue-100 text-blue-600 hover:bg-blue-200'
-            }`}
-          >
-            Previous Question
-          </button>
-          
-          <div className="text-sm text-gray-500">
-            Question {currentQuestionIndex + 1} of {weeklyQuestions.length}
+            ) : (
+              <>
+                {/* Current Question and Responses */}
+                {currentQuestion && (
+                  <div>
+                    <div className="border rounded-lg p-4 mb-4">
+                      <h4 className="font-medium">Question {currentQuestionIndex + 1} of {weeklyQuestions.length}</h4>
+                      <p className="mt-2">{currentQuestion.text}</p>
+                      <p className="text-sm text-gray-500 mt-1">{currentQuestion.category}</p>
+                    </div>
+                    
+                    <div className="grid gap-4 grid-cols-1 md:grid-cols-2 lg:grid-cols-3 mb-6">
+                      {familyMembers.map(member => (
+                        <div 
+                          key={member.id}
+                          className={`border rounded-lg p-4 ${
+                            selectedMember === member.id ? 'bg-blue-50 border-blue-200' : 'bg-white'
+                          } ${!selectedMember || selectedMember === member.id ? 'opacity-100' : 'opacity-50'}`}
+                        >
+                          <div className="flex items-center mb-3">
+                            <div className="w-8 h-8 rounded-full overflow-hidden mr-2">
+                              <img 
+                                src={member.profilePicture} 
+                                alt={member.name}
+                                className="w-full h-full object-cover"
+                              />
+                            </div>
+                            <div>
+                              <h5 className="font-medium text-sm">{member.name}</h5>
+                              <p className="text-xs text-gray-500 capitalize">{member.role}</p>
+                            </div>
+                          </div>
+                          
+                          <div className="flex items-center justify-between">
+                            <p className="text-sm font-medium">Response:</p>
+                            <span className={`px-2 py-1 rounded text-xs font-medium ${
+                              currentResponses[member.id] === 'Mama' ? 'bg-purple-100 text-purple-700' : 
+                              currentResponses[member.id] === 'Papa' ? 'bg-green-100 text-green-700' :
+                              'bg-gray-100 text-gray-700'
+                            }`}>
+                              {currentResponses[member.id] || 'No response'}
+                            </span>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                    
+                    {/* Navigation */}
+                    <div className="flex justify-between">
+                      <button
+                        onClick={prevQuestion}
+                        disabled={currentQuestionIndex === 0}
+                        className={`px-4 py-2 rounded ${
+                          currentQuestionIndex === 0 
+                            ? 'bg-gray-100 text-gray-400 cursor-not-allowed' 
+                            : 'bg-blue-100 text-blue-600 hover:bg-blue-200'
+                        }`}
+                      >
+                        Previous Question
+                      </button>
+                      
+                      <div className="text-sm text-gray-500">
+                        Question {currentQuestionIndex + 1} of {weeklyQuestions.length}
+                      </div>
+                      
+                      <button
+                        onClick={nextQuestion}
+                        disabled={currentQuestionIndex === weeklyQuestions.length - 1}
+                        className={`px-4 py-2 rounded ${
+                          currentQuestionIndex === weeklyQuestions.length - 1
+                            ? 'bg-gray-100 text-gray-400 cursor-not-allowed' 
+                            : 'bg-blue-100 text-blue-600 hover:bg-blue-200'
+                        }`}
+                      >
+                        Next Question
+                      </button>
+                    </div>
+                  </div>
+                )}
+              </>
+            )}
           </div>
-          
-          <button
-            onClick={nextQuestion}
-            disabled={currentQuestionIndex === weeklyQuestions.length - 1}
-            className={`px-4 py-2 rounded ${
-              currentQuestionIndex === weeklyQuestions.length - 1
-                ? 'bg-gray-100 text-gray-400 cursor-not-allowed' 
-                : 'bg-blue-100 text-blue-600 hover:bg-blue-200'
-            }`}
-          >
-            Next Question
-            </button>
-          </div>
-        </div>
-      )}
-    </>
-  )}
-</div>
+        )}
+      </div>
       
       {/* Weekly Wins Section */}
-      <div className="bg-gradient-to-r from-blue-500 to-purple-600 rounded-lg shadow text-white">  <div className="p-6">
-    <h3 className="text-xl font-bold mb-3">Week {weekNumber} Wins! 🎉</h3>
-    <p className="mb-4 opacity-90">
-      Celebrate your family's progress and achievements from this week
-    </p>
-    
-    <div className="bg-white bg-opacity-20 rounded-lg p-4">
-      <ul className="space-y-3">
-        {weekBalance.papa > weekBalance.mama ? (
-          <li className="flex items-start">
-            <span className="text-yellow-300 mr-2">🏆</span>
-            <span>Papa took on more responsibilities this week!</span>
-          </li>
-        ) : weekBalance.papa > 40 ? (
-          <li className="flex items-start">
-            <span className="text-yellow-300 mr-2">🏆</span>
-            <span>Papa's share of tasks has improved to {weekBalance.papa}%!</span>
-          </li>
-        ) : null}
-        
-        {weekData && weekData.tasks && weekData.tasks.filter(t => t.completed).length > 0 && (
-          <li className="flex items-start">
-            <span className="text-yellow-300 mr-2">🏆</span>
-            <span>Your family completed {weekData.tasks.filter(t => t.completed).length} tasks this week!</span>
-          </li>
-        )}
-        
-        {getRadarData().find(category => Math.abs(category.mama - category.papa) < 20) && (
-          <li className="flex items-start">
-            <span className="text-yellow-300 mr-2">🏆</span>
-            <span>You achieved better balance in {getRadarData().filter(category => Math.abs(category.mama - category.papa) < 20).length} categories!</span>
-          </li>
-        )}
-        
-        {weekData && weekData.meetingNotes && Object.keys(weekData.meetingNotes).length > 0 && (
-          <li className="flex items-start">
-            <span className="text-yellow-300 mr-2">🏆</span>
-            <span>You held a successful family meeting!</span>
-          </li>
-        )}
-        
-        <li className="flex items-start">
-          <span className="text-yellow-300 mr-2">🏆</span>
-          <span>You're one week closer to a more balanced family life!</span>
-        </li>
-      </ul>
+      <div className="bg-gradient-to-r from-blue-500 to-purple-600 rounded-lg shadow text-white">
+        <div className="p-6">
+          <h3 className="text-xl font-bold mb-3">Week {weekNumber} Wins! 🎉</h3>
+          <p className="mb-4 opacity-90">
+            Celebrate your family's progress and achievements from this week
+          </p>
+          
+          <div className="bg-white bg-opacity-20 rounded-lg p-4">
+            <ul className="space-y-3">
+              {weekBalance.papa > weekBalance.mama ? (
+                <li className="flex items-start">
+                  <span className="text-yellow-300 mr-2">🏆</span>
+                  <span>Papa took on more responsibilities this week!</span>
+                </li>
+              ) : weekBalance.papa > 40 ? (
+                <li className="flex items-start">
+                  <span className="text-yellow-300 mr-2">🏆</span>
+                  <span>Papa's share of tasks has improved to {weekBalance.papa}%!</span>
+                </li>
+              ) : null}
+              
+              {weekData && weekData.tasks && weekData.tasks.filter(t => t.completed).length > 0 && (
+                <li className="flex items-start">
+                  <span className="text-yellow-300 mr-2">🏆</span>
+                  <span>Your family completed {weekData.tasks.filter(t => t.completed).length} tasks this week!</span>
+                </li>
+              )}
+              
+              {getRadarData().find(category => Math.abs(category.mama - category.papa) < 20) && (
+                <li className="flex items-start">
+                  <span className="text-yellow-300 mr-2">🏆</span>
+                  <span>You achieved better balance in {getRadarData().filter(category => Math.abs(category.mama - category.papa) < 20).length} categories!</span>
+                </li>
+              )}
+              
+              {weekData && weekData.meetingNotes && Object.keys(weekData.meetingNotes).length > 0 && (
+                <li className="flex items-start">
+                  <span className="text-yellow-300 mr-2">🏆</span>
+                  <span>You held a successful family meeting!</span>
+                </li>
+              )}
+              
+              <li className="flex items-start">
+                <span className="text-yellow-300 mr-2">🏆</span>
+                <span>You're one week closer to a more balanced family life!</span>
+              </li>
+            </ul>
+          </div>
+        </div>
+      </div>
     </div>
-  </div>
-</div>
-</div>
   );
 };
 

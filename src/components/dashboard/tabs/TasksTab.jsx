@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { Users, Calendar, AlertCircle, CheckCircle, ChevronDown, ChevronUp, Sparkles, Brain, Info } from 'lucide-react';
 import { useFamily } from '../../../contexts/FamilyContext';
 import { useSurvey } from '../../../contexts/SurveyContext';
@@ -48,146 +48,15 @@ const analyzeTaskImbalances = (surveyResponses, fullQuestionSet) => {
   return categories;
 };
 
-// Generate tasks for Week 2 based on imbalances
-const generateAITasksForWeek2 = (surveyResponses, fullQuestionSet) => {
-  console.log("Generating AI tasks for Week 2");
-  
-  // If no survey data, use default tasks
-  if (!surveyResponses || Object.keys(surveyResponses).length === 0) {
-    console.log("No survey data, using defaults");
-    return generateTaskRecommendations();
-  }
-  
-  // Analyze imbalances in each category
-  const imbalances = analyzeTaskImbalances(surveyResponses, fullQuestionSet);
-  console.log("Analyzed imbalances:", imbalances);
-  
-  // Sort categories by imbalance score
-  const sortedImbalances = Object.entries(imbalances)
-    .sort((a, b) => b[1].imbalance - a[1].imbalance);
-  
-  console.log("Sorted imbalances:", sortedImbalances);
-  
-  // Generate tasks based on the top 2 imbalanced categories
-  const tasks = [];
-  
-  sortedImbalances.slice(0, 2).forEach(([category, data], index) => {
-    // Skip categories with no data or small imbalance
-    if (data.total === 0 || data.imbalance < 10) return;
-    
-    // Determine which parent needs more tasks
-    const targetParent = data.mamaPercent > data.papaPercent ? 'Papa' : 'Mama';
-    
-    // Create task templates based on category
-    const templates = {
-      "Visible Household": {
-        title: "Week 2: Household Management",
-        description: `Take charge of visible household tasks to create better balance (Week 2 Focus)`,
-        subTasks: [
-          { title: "Meal Preparation", description: "Plan and prepare meals for at least 3 days" },
-          { title: "Home Cleaning", description: "Handle cleaning of common areas" },
-          { title: "Laundry", description: "Manage laundry for the family this week" }
-        ]
-      },
-      "Invisible Household": {
-        title: "Week 2: Planning & Organization",
-        description: `Handle the mental load of household planning (Week 2 Focus)`,
-        subTasks: [
-          { title: "Family Calendar", description: "Update and maintain the family schedule" },
-          { title: "Shopping Planning", description: "Create shopping lists and plan purchases" },
-          { title: "Home Management", description: "Coordinate household maintenance needs" }
-        ]
-      },
-      "Visible Parental": {
-        title: "Week 2: Childcare Focus",
-        description: `Take the lead on direct childcare activities (Week 2 Focus)`,
-        subTasks: [
-          { title: "School Transport", description: "Handle school/activity transportation" },
-          { title: "Homework Help", description: "Assist children with schoolwork" },
-          { title: "Bedtime Routine", description: "Manage evening routines for children" }
-        ]
-      },
-      "Invisible Parental": {
-        title: "Week 2: Emotional Support",
-        description: `Focus on the invisible aspects of parenting (Week 2 Focus)`,
-        subTasks: [
-          { title: "School Communication", description: "Coordinate with teachers and school" },
-          { title: "Emotional Check-ins", description: "Have one-on-one time with each child" },
-          { title: "Activity Planning", description: "Research and plan activities for children" }
-        ]
-      }
-    };
-    
-    // Get template for this category
-    const template = templates[category];
-    if (!template) return;
-    
-    // Create task
-    tasks.push({
-      id: `2-${index+1}`,
-      title: template.title,
-      description: template.description,
-      assignedTo: targetParent,
-      assignedToName: targetParent,
-      completed: false,
-      completedDate: null,
-      comments: [],
-      isAIGenerated: true,
-      subTasks: template.subTasks.map((subtask, i) => ({
-        id: `2-${index+1}-${i+1}`,
-        title: subtask.title,
-        description: subtask.description,
-        completed: false,
-        completedDate: null
-      }))
-    });
-  });
-  
-  // Fill remaining slots with generic tasks
-  while (tasks.length < 4) {
-    const index = tasks.length;
-    const isForPapa = index % 2 === 0;
-    
-    tasks.push({
-      id: `2-${index+1}`,
-      title: `Week 2: ${isForPapa ? "Family Support" : "Household Balance"}`,
-      description: `Complete these tasks to improve family balance (Week 2 Focus)`,
-      assignedTo: isForPapa ? "Papa" : "Mama",
-      assignedToName: isForPapa ? "Papa" : "Mama",
-      completed: false,
-      completedDate: null,
-      comments: [],
-      subTasks: [
-        {
-          id: `2-${index+1}-1`,
-          title: isForPapa ? "Child Activities" : "Meal Coordination",
-          description: isForPapa ? "Plan and lead activities with the children" : "Plan meals for the week",
-          completed: false,
-          completedDate: null
-        },
-        {
-          id: `2-${index+1}-2`,
-          title: isForPapa ? "Morning Routine" : "Home Organization",
-          description: isForPapa ? "Handle the morning routine for the children" : "Organize a space in the home",
-          completed: false,
-          completedDate: null
-        }
-      ]
-    });
-  }
-  
-  console.log("Generated AI tasks:", tasks);
-  return tasks;
-};
-
 // Fallback task generator for when no tasks are available
-const generateTaskRecommendations = () => {
+const generateTaskRecommendations = (weekNumber = 1) => {
   // Generate sample tasks when no tasks are available from other sources
+  const taskPrefix = weekNumber ? `${weekNumber}-` : "";
   const sampleTasks = [
     {
-      id: "1",
-      title: "Meal Planning",
-      description: "Take charge of planning family meals for the week",
+      id: `${taskPrefix}1`,
+      title: `${weekNumber ? `Week ${weekNumber}: ` : ""}Meal Planning`,
+      description: `Take charge of planning family meals for the week${weekNumber ? ` (Week ${weekNumber} Focus)` : ""}`,
       assignedTo: "Papa",
       assignedToName: "Papa",
       completed: false,
@@ -195,7 +64,7 @@ const generateTaskRecommendations = () => {
       comments: [],
       subTasks: [
         {
-          id: "1-1",
+          id: `${taskPrefix}1-1`,
           title: "Create shopping list",
           description: "Make a complete shopping list for the week's meals",
           completed: false,
@@ -203,7 +72,7 @@ const generateTaskRecommendations = () => {
           comments: []
         },
         {
-          id: "1-2",
+          id: `${taskPrefix}1-2`,
           title: "Schedule meal prep",
           description: "Decide which days to prepare which meals",
           completed: false,
@@ -211,7 +80,7 @@ const generateTaskRecommendations = () => {
           comments: []
         },
         {
-          id: "1-3",
+          id: `${taskPrefix}1-3`,
           title: "Cook together",
           description: "Plan one meal to cook together as a family",
           completed: false,
@@ -221,9 +90,9 @@ const generateTaskRecommendations = () => {
       ]
     },
     {
-      id: "2",
-      title: "School Communication",
-      description: "Handle communication with schools and teachers",
+      id: `${taskPrefix}2`,
+      title: `${weekNumber ? `Week ${weekNumber}: ` : ""}School Communication`,
+      description: `Handle communication with schools and teachers${weekNumber ? ` (Week ${weekNumber} Focus)` : ""}`,
       assignedTo: "Mama",
       assignedToName: "Mama",
       completed: false,
@@ -231,7 +100,7 @@ const generateTaskRecommendations = () => {
       comments: [],
       subTasks: [
         {
-          id: "2-1",
+          id: `${taskPrefix}2-1`,
           title: "Check school emails",
           description: "Review and respond to school communications",
           completed: false,
@@ -239,7 +108,7 @@ const generateTaskRecommendations = () => {
           comments: []
         },
         {
-          id: "2-2",
+          id: `${taskPrefix}2-2`,
           title: "Update calendar",
           description: "Add school events to the family calendar",
           completed: false,
@@ -247,7 +116,7 @@ const generateTaskRecommendations = () => {
           comments: []
         },
         {
-          id: "2-3",
+          id: `${taskPrefix}2-3`,
           title: "Coordinate with teachers",
           description: "Reach out to teachers with any questions",
           completed: false,
@@ -257,9 +126,9 @@ const generateTaskRecommendations = () => {
       ]
     },
     {
-      id: "3",
-      title: "Family Calendar Management",
-      description: "Coordinate and maintain the family's schedule",
+      id: `${taskPrefix}3`,
+      title: `${weekNumber ? `Week ${weekNumber}: ` : ""}Family Calendar Management`,
+      description: `Coordinate and maintain the family's schedule${weekNumber ? ` (Week ${weekNumber} Focus)` : ""}`,
       assignedTo: "Papa",
       assignedToName: "Papa",
       completed: false,
@@ -267,7 +136,7 @@ const generateTaskRecommendations = () => {
       comments: [],
       subTasks: [
         {
-          id: "3-1",
+          id: `${taskPrefix}3-1`,
           title: "Review upcoming events",
           description: "Look ahead at the next two weeks of activities",
           completed: false,
@@ -275,7 +144,7 @@ const generateTaskRecommendations = () => {
           comments: []
         },
         {
-          id: "3-2",
+          id: `${taskPrefix}3-2`,
           title: "Coordinate transportation",
           description: "Plan who will drive to each activity",
           completed: false,
@@ -283,7 +152,7 @@ const generateTaskRecommendations = () => {
           comments: []
         },
         {
-          id: "3-3",
+          id: `${taskPrefix}3-3`,
           title: "Share with family",
           description: "Make sure everyone knows the schedule",
           completed: false,
@@ -293,9 +162,9 @@ const generateTaskRecommendations = () => {
       ]
     },
     {
-      id: "4",
-      title: "Morning Routine Help",
-      description: "Take lead on getting kids ready in the morning",
+      id: `${taskPrefix}4`,
+      title: `${weekNumber ? `Week ${weekNumber}: ` : ""}Morning Routine Help`,
+      description: `Take lead on getting kids ready in the morning${weekNumber ? ` (Week ${weekNumber} Focus)` : ""}`,
       assignedTo: "Mama",
       assignedToName: "Mama",
       completed: false,
@@ -303,7 +172,7 @@ const generateTaskRecommendations = () => {
       comments: [],
       subTasks: [
         {
-          id: "4-1",
+          id: `${taskPrefix}4-1`,
           title: "Coordinate breakfast",
           description: "Prepare or oversee breakfast for the kids",
           completed: false,
@@ -311,7 +180,7 @@ const generateTaskRecommendations = () => {
           comments: []
         },
         {
-          id: "4-2",
+          id: `${taskPrefix}4-2`,
           title: "Ensure backpacks are ready",
           description: "Check that homework and supplies are packed",
           completed: false,
@@ -319,7 +188,7 @@ const generateTaskRecommendations = () => {
           comments: []
         },
         {
-          id: "4-3",
+          id: `${taskPrefix}4-3`,
           title: "Manage departure time",
           description: "Keep track of time to ensure on-time departure",
           completed: false,
@@ -346,7 +215,8 @@ const TasksTab = ({ onStartWeeklyCheckIn, onOpenFamilyMeeting }) => {
     surveySchedule,
     taskRecommendations: initialTaskRecommendations,
     loadCurrentWeekTasks,
-    surveyResponses
+    surveyResponses,
+    getWeekHistoryData
   } = useFamily();
 
   const { fullQuestionSet } = useSurvey();
@@ -361,8 +231,19 @@ const TasksTab = ({ onStartWeeklyCheckIn, onOpenFamilyMeeting }) => {
     if (surveySchedule && surveySchedule[currentWeek]) {
       return new Date(surveySchedule[currentWeek]);
     } else {
-      // Default to 7 days from now if no schedule
-      const date = new Date();
+      // Default to 7 days from the start of the week
+      // For a new week, this should be ~7 days from when the week started
+      let date = new Date();
+      
+      // If we have completed the previous week, use that as reference
+      if (completedWeeks.includes(currentWeek - 1)) {
+        // Try to get completion date of previous week
+        const prevWeekData = getWeekHistoryData(currentWeek - 1);
+        if (prevWeekData && prevWeekData.completionDate) {
+          date = new Date(prevWeekData.completionDate);
+        }
+      }
+      
       date.setDate(date.getDate() + 7);
       return date;
     }
@@ -414,201 +295,42 @@ const TasksTab = ({ onStartWeeklyCheckIn, onOpenFamilyMeeting }) => {
     
   }, [surveySchedule, currentWeek]); // Re-run when schedule or week changes
   
-  // Replace the useEffect block for task loading (around line 120)
-useEffect(() => {
-  const loadTasks = async () => {
-    try {
-      console.log(`Loading tasks for Week ${currentWeek}, user:`, selectedUser?.name);
-      console.log('Completed weeks:', completedWeeks);
-      
-      // FORCE NEW TASK GENERATION FOR WEEK 2
-      if (currentWeek === 2) {
-        console.log("FORCING NEW TASK GENERATION FOR WEEK 2");
+  // Load tasks for the current week
+  useEffect(() => {
+    const loadTasks = async () => {
+      try {
+        console.log(`Loading tasks for Week ${currentWeek}, user:`, selectedUser?.name);
+        console.log('Completed weeks:', completedWeeks);
         
-        // Generate completely new tasks with Week 2 specific IDs
-        const week2Tasks = [
-          {
-            id: "2-1",
-            title: "Week 2: Meal Planning",
-            description: "Take charge of planning family meals for Week 2",
-            assignedTo: "Papa",
-            assignedToName: "Papa",
-            completed: false,
-            completedDate: null,
-            comments: [],
-            subTasks: [
-              {
-                id: "2-1-1",
-                title: "Create shopping list",
-                description: "Make a complete shopping list for Week 2 meals",
-                completed: false,
-                completedDate: null
-              },
-              {
-                id: "2-1-2",
-                title: "Schedule meal prep",
-                description: "Decide which days to prepare which meals",
-                completed: false,
-                completedDate: null
-              },
-              {
-                id: "2-1-3",
-                title: "Cook together",
-                description: "Plan one meal to cook together as a family",
-                completed: false,
-                completedDate: null
-              }
-            ]
-          },
-          {
-            id: "2-3",
-            title: "Week 2: Family Calendar",
-            description: "Coordinate the family's schedule for Week 2",
-            assignedTo: "Papa",
-            assignedToName: "Papa",
-            completed: false,
-            completedDate: null,
-            comments: [],
-            subTasks: [
-              {
-                id: "2-3-1",
-                title: "Review upcoming events",
-                description: "Look ahead at Week 2 activities",
-                completed: false,
-                completedDate: null
-              },
-              {
-                id: "2-3-2",
-                title: "Coordinate transportation",
-                description: "Plan Week 2 driving arrangements",
-                completed: false,
-                completedDate: null
-              },
-              {
-                id: "2-3-3",
-                title: "Share with family",
-                description: "Make sure everyone knows the Week 2 schedule",
-                completed: false,
-                completedDate: null
-              }
-            ]
-          },
-          {
-            id: "2-2",
-            title: "Week 2: School Communication",
-            description: "Handle Week 2 communications with schools",
-            assignedTo: "Mama",
-            assignedToName: "Mama",
-            completed: false,
-            completedDate: null,
-            comments: [],
-            subTasks: [
-              {
-                id: "2-2-1",
-                title: "Check school emails",
-                description: "Review Week 2 school communications",
-                completed: false,
-                completedDate: null
-              },
-              {
-                id: "2-2-2",
-                title: "Update calendar",
-                description: "Add Week 2 school events to the family calendar",
-                completed: false,
-                completedDate: null
-              },
-              {
-                id: "2-2-3",
-                title: "Coordinate with teachers",
-                description: "Reach out with any Week 2 questions",
-                completed: false,
-                completedDate: null
-              }
-            ]
-          },
-          {
-            id: "2-4",
-            title: "Week 2: Morning Routine",
-            description: "Take lead on Week 2 morning preparations",
-            assignedTo: "Mama",
-            assignedToName: "Mama",
-            completed: false,
-            completedDate: null,
-            comments: [],
-            subTasks: [
-              {
-                id: "2-4-1",
-                title: "Coordinate breakfast",
-                description: "Prepare Week 2 breakfast arrangements",
-                completed: false,
-                completedDate: null
-              },
-              {
-                id: "2-4-2",
-                title: "Ensure backpacks are ready",
-                description: "Check Week 2 homework and supplies",
-                completed: false,
-                completedDate: null
-              },
-              {
-                id: "2-4-3",
-                title: "Manage departure time",
-                description: "Keep track of Week 2 morning schedules",
-                completed: false,
-                completedDate: null
-              }
-            ]
-          }
-        ];
+        // Regular task loading logic for all weeks
+        let tasks = [];
         
-        console.log("Generated Week 2 tasks:", week2Tasks);
-        setTaskRecommendations(week2Tasks);
-        
-        // Save to Firebase
         if (familyId) {
           try {
-            await DatabaseService.saveFamilyData({
-              tasks: week2Tasks,
-              updatedAt: new Date().toISOString()
-            }, familyId);
-            console.log("Week 2 tasks saved to Firebase");
+            tasks = await DatabaseService.getTasksForWeek(familyId, currentWeek);
+            console.log(`Tasks loaded from Firebase for Week ${currentWeek}:`, tasks?.length || 0);
           } catch (error) {
-            console.error("Error saving Week 2 tasks:", error);
+            console.error("Error loading tasks:", error);
           }
         }
         
-        return; // Exit early
-      }
-      
-      // Regular task loading logic for other weeks
-      let tasks = [];
-      
-      if (familyId) {
-        try {
-          tasks = await DatabaseService.getTasksForWeek(familyId, currentWeek);
-          console.log(`Tasks loaded from Firebase for Week ${currentWeek}:`, tasks?.length || 0);
-        } catch (error) {
-          console.error("Error loading tasks:", error);
+        if (tasks && tasks.length > 0) {
+          setTaskRecommendations(tasks);
+        } else {
+          // Fallback to default tasks
+          console.log("Using fallback tasks");
+          setTaskRecommendations(generateTaskRecommendations(currentWeek));
         }
+        
+      } catch (error) {
+        console.error(`Error in loadTasks for Week ${currentWeek}:`, error);
+        setTaskRecommendations(generateTaskRecommendations(currentWeek));
       }
-      
-      if (tasks && tasks.length > 0) {
-        setTaskRecommendations(tasks);
-      } else {
-        // Fallback to default tasks
-        console.log("Using fallback tasks");
-        setTaskRecommendations(generateTaskRecommendations());
-      }
-      
-    } catch (error) {
-      console.error(`Error in loadTasks for Week ${currentWeek}:`, error);
-      setTaskRecommendations(generateTaskRecommendations());
-    }
-  };
-  
-  loadTasks();
-  
-}, [familyId, currentWeek, completedWeeks]);
+    };
+    
+    loadTasks();
+    
+  }, [familyId, currentWeek, completedWeeks]);
 
   // Effect to force reload tasks when component becomes visible again
   useEffect(() => {
@@ -866,9 +588,10 @@ useEffect(() => {
           }
         }
         
-        // Update state with the modified copy
+        // Update state immediately with the modified copy
         setTaskRecommendations(updatedTasks);
         
+        // CRITICAL CHANGES: Save to both context and directly to Firebase
         // Save directly to Firebase first for immediate persistence
         if (familyId) {
           console.log(`Saving updated tasks directly to Firebase for Week ${currentWeek}`);
@@ -880,15 +603,19 @@ useEffect(() => {
             console.log("Tasks saved to Firebase successfully");
           } catch (firebaseError) {
             console.error("Error saving to Firebase directly:", firebaseError);
+            // Alert user of error instead of silently failing
+            alert("Error saving your progress. Please try again.");
+            return; // Stop execution if Firebase save fails
           }
         }
         
-        // Also try to update through context
+        // Also update through context method as backup
         try {
           await updateSubtaskCompletion(taskId, subtaskId, isCompleted);
           console.log("Tasks also updated via context method");
         } catch (contextError) {
           console.error("Error updating through context:", contextError);
+          // Not alerting here since Firebase save already succeeded
         }
         
       } catch (error) {

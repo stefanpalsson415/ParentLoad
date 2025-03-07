@@ -37,6 +37,15 @@ const WeeklyCheckInScreen = () => {
     }
   }, [selectedUser, navigate]);
   
+  // Check if this user has already completed this week's check-in
+  useEffect(() => {
+    if (selectedUser && selectedUser.weeklyCompleted && 
+        selectedUser.weeklyCompleted[currentWeek-1]?.completed) {
+      alert("You've already completed this week's check-in!");
+      navigate('/dashboard'); // Redirect back to dashboard
+    }
+  }, [selectedUser, currentWeek, navigate]);
+  
   // Initialize weekly questions and reset survey - only once
   useEffect(() => {
     setWeeklyQuestions(generateWeeklyQuestions(currentWeek));
