@@ -529,6 +529,7 @@ await DatabaseService.saveFamilyData({
   completedWeeks: updatedCompletedWeeks,
   familyMembers: updatedMembers, // Update family members with reset completion status
   tasks: newTasks, // Save the new tasks for the new week
+  surveySchedule: updatedSurveySchedule, // Add the updated schedule
   updatedAt: new Date().toISOString()
 }, familyId);
 
@@ -542,6 +543,8 @@ setFamilyMembers(updatedMembers); // Update family members state too
 setTaskRecommendations(newTasks); // Update tasks with the new ones
       
       // 10. Update state only after successful Firebase update
+      setSurveySchedule(updatedSurveySchedule); // Add this line
+
       setWeekHistory(updatedHistory);
       setWeekStatus(updatedStatus);
       setLastCompletedFullWeek(newLastCompletedWeek);
@@ -560,208 +563,428 @@ setTaskRecommendations(newTasks); // Update tasks with the new ones
   };
 
   // Helper function to generate new tasks for the next week
-  const generateNewWeekTasks = (weekNumber, previousTasks, previousResponses) => {
-    // Create a template for new tasks
-    const taskTemplates = [
-      // Papa tasks
-      {
-        id: `${weekNumber}-1`,
-        title: "Meal Planning",
-        description: "Take charge of planning family meals for the week",
-        assignedTo: "Papa",
-        assignedToName: "Papa",
-        completed: false,
-        completedDate: null,
-        comments: [],
-        subTasks: [
-          {
-            id: `${weekNumber}-1-1`,
-            title: "Create shopping list",
-            description: "Make a complete shopping list for the week's meals",
-            completed: false,
-            completedDate: null
-          },
-          {
-            id: `${weekNumber}-1-2`, 
-            title: "Schedule meal prep",
-            description: "Decide which days to prepare which meals",
-            completed: false,
-            completedDate: null
-          },
-          {
-            id: `${weekNumber}-1-3`,
-            title: "Cook together",
-            description: "Plan one meal to cook together as a family",
-            completed: false,
-            completedDate: null
-          }
-        ]
+// Helper function to generate new tasks for the next week based on family data
+const generateNewWeekTasks = (weekNumber, previousTasks, previousResponses) => {
+  console.log(`Generating AI-driven tasks for Week ${weekNumber} based on family data`);
+  
+  // First, analyze the survey responses to find imbalances and patterns
+  const categoryImbalances = analyzeImbalancesByCategory(previousResponses);
+  console.log("Category imbalances detected:", categoryImbalances);
+  
+  // Track which areas have been addressed in previous weeks
+  const previousFocusAreas = previousTasks
+    .filter(task => task.isAIGenerated)
+    .map(task => task.focusArea);
+  
+  // Determine priority areas to focus on this week
+  const priorityAreas = determinePriorityAreas(categoryImbalances, previousFocusAreas);
+  console.log("Priority areas for this week:", priorityAreas);
+  
+  // Generate tasks based on the family's specific needs
+  const tasks = [];
+  
+  // Add Papa's tasks based on analysis results
+  const papaFocusAreas = priorityAreas.filter(area => area.assignTo === "Papa");
+  papaFocusAreas.slice(0, 2).forEach((area, index) => {
+    tasks.push(generateTaskForArea(`${weekNumber}-${index*2+1}`, "Papa", area, weekNumber));
+  });
+  
+  // Add Mama's tasks based on analysis results
+  const mamaFocusAreas = priorityAreas.filter(area => area.assignTo === "Mama");
+  mamaFocusAreas.slice(0, 2).forEach((area, index) => {
+    tasks.push(generateTaskForArea(`${weekNumber}-${index*2+2}`, "Mama", area, weekNumber));
+  });
+  
+  // Add AI-driven insight tasks for both parents
+  const papaInsightTask = generateAIInsightTask(`${weekNumber}-ai-1`, "Papa", priorityAreas, weekNumber);
+  const mamaInsightTask = generateAIInsightTask(`${weekNumber}-ai-2`, "Mama", priorityAreas, weekNumber);
+  
+  return [...tasks, papaInsightTask, mamaInsightTask];
+};
+
+// Helper function to analyze survey responses and identify imbalances
+const analyzeImbalancesByCategory = (responses) => {
+  // Categories we track
+  const categories = {
+    "Visible Household Tasks": { mama: 0, papa: 0, total: 0 },
+    "Invisible Household Tasks": { mama: 0, papa: 0, total: 0 },
+    "Visible Parental Tasks": { mama: 0, papa: 0, total: 0 },
+    "Invisible Parental Tasks": { mama: 0, papa: 0, total: 0 }
+  };
+  
+  // Count responses by category
+  Object.entries(responses || {}).forEach(([key, value]) => {
+    // Extract the question ID and find its category
+    let category = null;
+    
+    // Handle different question ID formats
+    if (key.includes('q')) {
+      const questionId = key.includes('-') ? key.split('-').pop() : key;
+      
+      // Find the question in our question set
+      const question = fullQuestionSet.find(q => q.id === questionId);
+      if (question) {
+        category = question.category;
+      }
+    }
+    
+    // Update counts if we found a valid category
+    if (category && categories[category]) {
+      categories[category].total++;
+      if (value === 'Mama') {
+        categories[category].mama++;
+      } else if (value === 'Papa') {
+        categories[category].papa++;
+      }
+    }
+  });
+  
+  // Calculate imbalance scores and percentages
+  const imbalances = [];
+  
+  Object.entries(categories).forEach(([category, counts]) => {
+    if (counts.total > 0) {
+      const mamaPercent = Math.round((counts.mama / counts.total) * 100);
+      const papaPercent = Math.round((counts.papa / counts.total) * 100);
+      const imbalanceScore = Math.abs(mamaPercent - papaPercent);
+      
+      imbalances.push({
+        category,
+        mamaPercent,
+        papaPercent,
+        imbalanceScore,
+        // Determine who should take on more in this category
+        assignTo: mamaPercent > papaPercent ? "Papa" : "Mama"
+      });
+    }
+  });
+  
+  // If we don't have enough data, provide some default imbalances
+  if (imbalances.length === 0 || imbalances.every(i => i.imbalanceScore === 0)) {
+    return [
+      { 
+        category: "Invisible Household Tasks", 
+        mamaPercent: 75, 
+        papaPercent: 25, 
+        imbalanceScore: 50, 
+        assignTo: "Papa" 
       },
-      {
-        id: `${weekNumber}-3`,
-        title: "Family Calendar Management",
-        description: "Coordinate and maintain the family's schedule",
-        assignedTo: "Papa",
-        assignedToName: "Papa",
-        completed: false,
-        completedDate: null,
-        comments: [],
-        subTasks: [
-          {
-            id: `${weekNumber}-3-1`,
-            title: "Review upcoming events",
-            description: "Look ahead at the next two weeks of activities",
-            completed: false,
-            completedDate: null
-          },
-          {
-            id: `${weekNumber}-3-2`,
-            title: "Coordinate transportation",
-            description: "Plan who will drive to each activity",
-            completed: false,
-            completedDate: null
-          },
-          {
-            id: `${weekNumber}-3-3`,
-            title: "Share with family",
-            description: "Make sure everyone knows the schedule",
-            completed: false,
-            completedDate: null
-          }
-        ]
+      { 
+        category: "Invisible Parental Tasks", 
+        mamaPercent: 70, 
+        papaPercent: 30, 
+        imbalanceScore: 40, 
+        assignTo: "Papa" 
       },
-      // Mama tasks
-      {
-        id: `${weekNumber}-2`,
-        title: "School Communication",
-        description: "Handle communication with schools and teachers",
-        assignedTo: "Mama",
-        assignedToName: "Mama",
-        completed: false,
-        completedDate: null,
-        comments: [],
-        subTasks: [
-          {
-            id: `${weekNumber}-2-1`,
-            title: "Check school emails",
-            description: "Review and respond to school communications",
-            completed: false,
-            completedDate: null
-          },
-          {
-            id: `${weekNumber}-2-2`,
-            title: "Update calendar",
-            description: "Add school events to the family calendar",
-            completed: false,
-            completedDate: null
-          },
-          {
-            id: `${weekNumber}-2-3`,
-            title: "Coordinate with teachers",
-            description: "Reach out to teachers with any questions",
-            completed: false,
-            completedDate: null
-          }
-        ]
+      { 
+        category: "Visible Household Tasks", 
+        mamaPercent: 60, 
+        papaPercent: 40, 
+        imbalanceScore: 20, 
+        assignTo: "Papa" 
       },
-      {
-        id: `${weekNumber}-4`,
-        title: "Morning Routine Help",
-        description: "Take lead on getting kids ready in the morning",
-        assignedTo: "Mama",
-        assignedToName: "Mama",
-        completed: false,
-        completedDate: null,
-        comments: [],
-        subTasks: [
-          {
-            id: `${weekNumber}-4-1`,
-            title: "Coordinate breakfast",
-            description: "Prepare or oversee breakfast for the kids",
-            completed: false,
-            completedDate: null
-          },
-          {
-            id: `${weekNumber}-4-2`,
-            title: "Ensure backpacks are ready",
-            description: "Check that homework and supplies are packed",
-            completed: false,
-            completedDate: null
-          },
-          {
-            id: `${weekNumber}-4-3`,
-            title: "Manage departure time",
-            description: "Keep track of time to ensure on-time departure",
-            completed: false,
-            completedDate: null
-          }
-        ]
+      { 
+        category: "Visible Parental Tasks", 
+        mamaPercent: 55, 
+        papaPercent: 45, 
+        imbalanceScore: 10, 
+        assignTo: "Papa" 
       }
     ];
-    
-    // For future versions, analyze previous responses to intelligently suggest tasks
-    // that address the most imbalanced areas, but for now, we'll just use the template
-    
-    // Add week-specific adjustments to task titles or descriptions based on week number
-    const adjustedTasks = taskTemplates.map(task => {
-      if (weekNumber === 2) {
-        return {
-          ...task,
-          description: `${task.description} (Week ${weekNumber} Focus)`
-        };
-      } else if (weekNumber > 2) {
-        return {
-          ...task,
-          title: `Week ${weekNumber}: ${task.title}`,
-          description: `${task.description} (Building on previous weeks)`
-        };
-      }
-      return task;
-    });
-    
-    // Add AI-powered task that adapts based on the week
-    const aiTask = {
-      id: `${weekNumber}-ai-1`,
-      title: `Week ${weekNumber} Balance Challenge`,
-      description: "This AI-generated task adapts to your family's unique balance needs",
-      assignedTo: weekNumber % 2 === 0 ? "Mama" : "Papa", // Alternate between parents
-      assignedToName: weekNumber % 2 === 0 ? "Mama" : "Papa",
-      isAIGenerated: true,
-      completed: false,
-      completedDate: null,
-      comments: [],
-      insight: `Your family survey data shows progress, but there's an opportunity to improve balance in ${
-        weekNumber % 2 === 0 ? "emotional support tasks" : "household planning tasks"
-      }.`,
-      subTasks: [
-        {
-          id: `${weekNumber}-ai-1-1`,
-          title: "Review your current balance",
-          description: "Look at your family dashboard to understand your current state",
-          completed: false,
-          completedDate: null
-        },
-        {
-          id: `${weekNumber}-ai-1-2`,
-          title: `Take over a specific ${weekNumber % 2 === 0 ? "parental" : "household"} task`,
-          description: "Choose an area where you can make an immediate difference",
-          completed: false,
-          completedDate: null
-        },
-        {
-          id: `${weekNumber}-ai-1-3`,
-          title: "Discuss the impact with your family",
-          description: "Share how taking on this task is affecting your family dynamic",
-          completed: false,
-          completedDate: null
-        }
-      ]
-    };
-    
-    // Add the AI task to the list
-    return [...adjustedTasks, aiTask];
-  };
+  }
+  
+  // Sort by imbalance score (highest first)
+  return imbalances.sort((a, b) => b.imbalanceScore - a.imbalanceScore);
+};
 
+// Function to determine priority areas based on imbalances and previous focus
+const determinePriorityAreas = (imbalances, previousFocusAreas) => {
+  // First, break down into specific task areas for each category
+  const taskAreas = [];
+  
+  imbalances.forEach(imbalance => {
+    if (imbalance.category === "Visible Household Tasks") {
+      taskAreas.push(
+        { 
+          ...imbalance, 
+          focusArea: "Meal Planning",
+          description: "Take charge of planning family meals for the week",
+          insight: `Survey data shows ${imbalance.assignTo === "Papa" ? "Mama is handling" : "Papa is handling"} ${imbalance.assignTo === "Papa" ? imbalance.mamaPercent : imbalance.papaPercent}% of meal planning tasks.`
+        },
+        { 
+          ...imbalance, 
+          focusArea: "Cleaning Coordination",
+          description: "Manage household cleaning responsibilities",
+          insight: `Your family's data indicates an imbalance in household maintenance tasks.`
+        },
+        { 
+          ...imbalance, 
+          focusArea: "Home Maintenance",
+          description: "Handle household repairs and upkeep",
+          insight: `Survey results show that visible household tasks like repairs need better balance.`
+        }
+      );
+    }
+    else if (imbalance.category === "Invisible Household Tasks") {
+      taskAreas.push(
+        { 
+          ...imbalance, 
+          focusArea: "Family Calendar",
+          description: "Manage the family's schedule and appointments",
+          insight: `Data shows ${imbalance.assignTo === "Papa" ? "Mama is handling" : "Papa is handling"} ${imbalance.assignTo === "Papa" ? imbalance.mamaPercent : imbalance.papaPercent}% of calendar management.`
+        },
+        { 
+          ...imbalance, 
+          focusArea: "Financial Planning",
+          description: "Take the lead on family budget and financial decisions",
+          insight: `Your surveys indicate an imbalance in who handles financial planning.`
+        },
+        { 
+          ...imbalance, 
+          focusArea: "Household Supplies",
+          description: "Monitor and restock household necessities",
+          insight: `Data indicates one parent is handling most of the invisible household management.`
+        }
+      );
+    }
+    else if (imbalance.category === "Visible Parental Tasks") {
+      taskAreas.push(
+        { 
+          ...imbalance, 
+          focusArea: "Homework Support",
+          description: "Take a more active role in children's schoolwork",
+          insight: `Survey results show a ${imbalance.imbalanceScore}% imbalance in who helps with children's educational needs.`
+        },
+        { 
+          ...imbalance, 
+          focusArea: "Morning Routines",
+          description: "Help children prepare for school in the mornings",
+          insight: `Data indicates morning routines are managed predominantly by one parent.`
+        },
+        { 
+          ...imbalance, 
+          focusArea: "Bedtime Routines",
+          description: "Take the lead on nighttime rituals and sleep schedules",
+          insight: `Surveys show an imbalance in who manages children's bedtime routines.`
+        }
+      );
+    }
+    else if (imbalance.category === "Invisible Parental Tasks") {
+      taskAreas.push(
+        { 
+          ...imbalance, 
+          focusArea: "Emotional Support",
+          description: "Provide more emotional guidance for the children",
+          insight: `Family data shows ${imbalance.assignTo === "Papa" ? "Mama is handling" : "Papa is handling"} ${imbalance.assignTo === "Papa" ? imbalance.mamaPercent : imbalance.papaPercent}% of emotional support tasks.`
+        },
+        { 
+          ...imbalance, 
+          focusArea: "School Communication",
+          description: "Manage interactions with teachers and school staff",
+          insight: `Survey results indicate an imbalance in communication with schools.`
+        },
+        { 
+          ...imbalance, 
+          focusArea: "Social Planning",
+          description: "Arrange playdates and social activities",
+          insight: `Data shows social planning is primarily handled by one parent.`
+        }
+      );
+    }
+  });
+  
+  // Prioritization algorithm:
+  // 1. Sort by imbalance score
+  // 2. Boost areas not previously addressed
+  // 3. Ensure both parents get assigned tasks
+  
+  // First, sort by imbalance score
+  taskAreas.sort((a, b) => b.imbalanceScore - a.imbalanceScore);
+  
+  // Boost score for areas not recently addressed
+  taskAreas.forEach(area => {
+    // If this focus area hasn't been addressed in previous weeks, increase its priority
+    if (!previousFocusAreas.includes(area.focusArea)) {
+      area.priorityBoost = 20;
+    } else {
+      area.priorityBoost = 0;
+    }
+  });
+  
+  // Create final priority list based on imbalance + priority boost
+  return taskAreas
+    .sort((a, b) => (b.imbalanceScore + b.priorityBoost) - (a.imbalanceScore + a.priorityBoost))
+    // Make sure we have tasks for both parents
+    .filter((area, index, self) => {
+      // Keep this area if:
+      // 1. It's one of the first 4 highest priority areas, OR
+      // 2. We need more tasks for this parent (ensure at least 2 for each)
+      const papaTasks = self.filter(a => a.assignTo === "Papa" && self.indexOf(a) < index);
+      const mamaTasks = self.filter(a => a.assignTo === "Mama" && self.indexOf(a) < index);
+      
+      return (
+        index < 4 || 
+        (area.assignTo === "Papa" && papaTasks.length < 2) || 
+        (area.assignTo === "Mama" && mamaTasks.length < 2)
+      );
+    });
+};
+
+// Generate a normal task for a specific focus area
+const generateTaskForArea = (taskId, assignedTo, areaData, weekNumber) => {
+  // Create subtasks specific to this focus area
+  const subTasks = [];
+  
+  if (areaData.focusArea === "Meal Planning") {
+    subTasks.push(
+      { title: "Create weekly menu", description: "Plan meals for each day of the week" },
+      { title: "Make shopping list", description: "List all ingredients needed for the menu" },
+      { title: "Coordinate with family", description: "Get input on meal preferences" }
+    );
+  } 
+  else if (areaData.focusArea === "Family Calendar") {
+    subTasks.push(
+      { title: "Review upcoming events", description: "Look at the family's schedule for the next two weeks" },
+      { title: "Update shared calendar", description: "Make sure all events are properly recorded" },
+      { title: "Communicate schedule", description: "Make sure everyone knows what's happening" }
+    );
+  }
+  else if (areaData.focusArea === "Emotional Support") {
+    subTasks.push(
+      { title: "Have one-on-one talks", description: "Check in with each child individually" },
+      { title: "Notice emotional needs", description: "Pay attention to cues that children need support" },
+      { title: "Validate feelings", description: "Acknowledge emotions without dismissing them" }
+    );
+  }
+  else if (areaData.focusArea === "Homework Support") {
+    subTasks.push(
+      { title: "Create study space", description: "Set up a quiet area for homework" },
+      { title: "Review assignments", description: "Know what homework is due and when" },
+      { title: "Provide assistance", description: "Be available to help with questions" }
+    );
+  }
+  else if (areaData.focusArea === "School Communication") {
+    subTasks.push(
+      { title: "Check school messages", description: "Review emails and notices from school" },
+      { title: "Respond to teachers", description: "Reply to any communications from staff" },
+      { title: "Share info with family", description: "Keep everyone informed about school news" }
+    );
+  }
+  else {
+    // Generic subtasks for any other focus area
+    subTasks.push(
+      { title: "Assess current situation", description: `Evaluate how ${areaData.focusArea} is currently handled` },
+      { title: "Make an action plan", description: "Develop a strategy for taking more responsibility" },
+      { title: "Implement changes", description: "Put your plan into action consistently" }
+    );
+  }
+  
+  // Map subtasks to the correct format with IDs
+  const formattedSubTasks = subTasks.map((subTask, index) => ({
+    id: `${taskId}-${index+1}`,
+    title: subTask.title,
+    description: subTask.description,
+    completed: false,
+    completedDate: null
+  }));
+  
+  // Create the task with AI-driven insight
+  return {
+    id: taskId,
+    title: `${weekNumber > 1 ? `Week ${weekNumber}: ` : ""}${areaData.focusArea}`,
+    description: areaData.description,
+    assignedTo: assignedTo,
+    assignedToName: assignedTo,
+    focusArea: areaData.focusArea, 
+    category: areaData.category,
+    completed: false,
+    completedDate: null,
+    comments: [],
+    aiInsight: areaData.insight,
+    subTasks: formattedSubTasks
+  };
+};
+
+// Generate special AI insight task
+const generateAIInsightTask = (taskId, assignedTo, priorityAreas, weekNumber) => {
+  // Find relevant insights for this parent
+  const parentAreas = priorityAreas.filter(area => area.assignTo === assignedTo);
+  const otherParent = assignedTo === "Mama" ? "Papa" : "Mama";
+  
+  // Create insights based on the parent's highest priority areas
+  let insight = `Our AI analysis shows that `;
+  let title, description, taskType;
+  
+  if (parentAreas.length > 0) {
+    const topArea = parentAreas[0];
+    
+    if (topArea.category.includes("Invisible")) {
+      taskType = "invisible";
+      insight += `there's a significant imbalance in ${topArea.category}. ${assignedTo} could take on more responsibility in this area to create better balance.`;
+      title = `${assignedTo}'s Invisible Work Challenge`;
+      description = `Address the imbalance in ${topArea.category.toLowerCase()} based on family survey data`;
+    } else {
+      taskType = "visible";
+      insight += `${otherParent} is handling ${assignedTo === "Mama" ? topArea.papaPercent : topArea.mamaPercent}% of tasks in ${topArea.category}, creating an opportunity for more balanced sharing.`;
+      title = `${assignedTo}'s Balance Challenge`;
+      description = `Create better balance in ${topArea.category.toLowerCase()} with your partner`;
+    }
+  } else {
+    // Fallback if no specific areas for this parent
+    taskType = "general";
+    insight += `maintaining open communication about workload is key to a balanced family life.`;
+    title = `${assignedTo}'s Family Check-in`;
+    description = `Have a conversation about how responsibilities are currently shared`;
+  }
+  
+  // Create subtasks based on task type
+  let subTasks = [];
+  
+  if (taskType === "invisible") {
+    subTasks = [
+      { title: "Identify invisible work", description: "Notice tasks that often go unrecognized or unappreciated" },
+      { title: "Take initiative", description: "Proactively handle a task that's usually done by your partner" },
+      { title: "Create a system", description: "Develop a way to ensure this task remains balanced" }
+    ];
+  } else if (taskType === "visible") {
+    subTasks = [
+      { title: "Observe current patterns", description: "Notice how visible tasks are currently divided" },
+      { title: "Schedule shared work", description: "Plan time to work alongside your partner on tasks" },
+      { title: "Trade responsibilities", description: "Switch who does which tasks occasionally" }
+    ];
+  } else {
+    subTasks = [
+      { title: "Schedule a discussion", description: "Set aside time to talk about family balance" },
+      { title: "Express appreciation", description: "Acknowledge the work your partner does" },
+      { title: "Plan adjustments", description: "Identify ways to improve balance going forward" }
+    ];
+  }
+  
+  // Format subtasks with IDs
+  const formattedSubTasks = subTasks.map((subTask, index) => ({
+    id: `${taskId}-${index+1}`,
+    title: subTask.title,
+    description: subTask.description,
+    completed: false,
+    completedDate: null
+  }));
+  
+  // Create the AI insight task
+  return {
+    id: taskId,
+    title: `Week ${weekNumber}: ${title}`,
+    description: description,
+    assignedTo: assignedTo,
+    assignedToName: assignedTo,
+    isAIGenerated: true,
+    hiddenWorkloadType: parentAreas.length > 0 ? parentAreas[0].category : "Family Balance",
+    completed: false,
+    completedDate: null,
+    comments: [],
+    insight: insight,
+    subTasks: formattedSubTasks
+  };
+};
   // Add comment to task
   const addTaskComment = async (taskId, text) => {
     try {

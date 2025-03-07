@@ -124,25 +124,47 @@ const WeekHistoryTab = ({ weekNumber }) => {
       if (cat.total > 0) hasData = true;
     });
 
-    if (!hasData && weekNumber === 1) {
-      // Add demo data for Week 1 if no data found
-      categories["Visible Household"].mama = 65;
-      categories["Visible Household"].papa = 35;
-      categories["Visible Household"].total = 100;
-      
-      categories["Invisible Household"].mama = 75;
-      categories["Invisible Household"].papa = 25;
-      categories["Invisible Household"].total = 100;
-      
-      categories["Visible Parental"].mama = 55;
-      categories["Visible Parental"].papa = 45;
-      categories["Visible Parental"].total = 100;
-      
-      categories["Invisible Parental"].mama = 70;
-      categories["Invisible Parental"].papa = 30;
-      categories["Invisible Parental"].total = 100;
-      
-      console.log("Added fallback data for Week 1");
+    if (!hasData && (weekNumber === 1 || weekNumber === 2)) {
+      // Add demo data if no data found for Week 1 or Week 2
+      if (weekNumber === 2) {
+        // Week 2 data - showing some improvement from Week 1
+        categories["Visible Household"].mama = 60;
+        categories["Visible Household"].papa = 40;
+        categories["Visible Household"].total = 100;
+        
+        categories["Invisible Household"].mama = 70;
+        categories["Invisible Household"].papa = 30;
+        categories["Invisible Household"].total = 100;
+        
+        categories["Visible Parental"].mama = 50;
+        categories["Visible Parental"].papa = 50;
+        categories["Visible Parental"].total = 100;
+        
+        categories["Invisible Parental"].mama = 65;
+        categories["Invisible Parental"].papa = 35;
+        categories["Invisible Parental"].total = 100;
+        
+        console.log("Added fallback data for Week 2");
+      } else {
+        // Original Week 1 fallback data
+        categories["Visible Household"].mama = 65;
+        categories["Visible Household"].papa = 35;
+        categories["Visible Household"].total = 100;
+        
+        categories["Invisible Household"].mama = 75;
+        categories["Invisible Household"].papa = 25;
+        categories["Invisible Household"].total = 100;
+        
+        categories["Visible Parental"].mama = 55;
+        categories["Visible Parental"].papa = 45;
+        categories["Visible Parental"].total = 100;
+        
+        categories["Invisible Parental"].mama = 70;
+        categories["Invisible Parental"].papa = 30;
+        categories["Invisible Parental"].total = 100;
+        
+        console.log("Added fallback data for Week 1");
+      }
     }
     
     // Convert counts to percentages for radar chart
