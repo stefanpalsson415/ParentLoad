@@ -1,5 +1,4 @@
 import React, { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
 import { LogOut, Filter, Settings } from 'lucide-react';
 import { useFamily } from '../../contexts/FamilyContext';
 import DashboardTab from './tabs/DashboardTab';
@@ -12,6 +11,10 @@ import InitialSurveyTab from './tabs/InitialSurveyTab';
 import UserSettingsScreen from '../user/UserSettingsScreen';
 import FamilyMeetingScreen from '../meeting/FamilyMeetingScreen';
 import { useAuth } from '../../contexts/AuthContext';
+import { useNavigate, useLocation } from 'react-router-dom';
+
+
+
 
 const DashboardScreen = ({ onOpenFamilyMeeting }) => {
   const navigate = useNavigate();
@@ -29,7 +32,92 @@ const DashboardScreen = ({ onOpenFamilyMeeting }) => {
   const [activeTab, setActiveTab] = useState('dashboard');
   const [showSettings, setShowSettings] = useState(false);
   const [showFamilyMeeting, setShowFamilyMeeting] = useState(false);
+
+
+// DEBUGGING: Check for direct family ID parameter
+useEffect(() => {
+  const params = new URLSearchParams(window.location.search);
+  const forceFamilyId = params.get('forceFamilyId');
   
+  if (forceFamilyId) {
+    console.log("FORCE LOADING FAMILY:", forceFamilyId);
+    
+    // Create a visible debug element
+    const debugDiv = document.createElement('div');
+    debugDiv.style.position = 'fixed';
+    debugDiv.style.top = '10px';
+    debugDiv.style.right = '10px';
+    debugDiv.style.padding = '10px';
+    debugDiv.style.background = 'black';
+    debugDiv.style.color = 'lime';
+    debugDiv.style.zIndex = '9999';
+    debugDiv.style.fontFamily = 'monospace';
+    debugDiv.style.fontSize = '12px';
+    debugDiv.textContent = `Loading family: ${forceFamilyId}`;
+    document.body.appendChild(debugDiv);
+    
+    // Try to load the family
+    loadFamilyData(forceFamilyId)
+      .then(data => {
+        debugDiv.textContent += '\nFamily loaded: ' + (data?.familyName || 'Unknown');
+        
+        // Force refresh the component state
+        window.location.href = '/dashboard';
+      })
+      .catch(err => {
+        debugDiv.textContent += '\nERROR: ' + err.message;
+        console.error("Force loading error:", err);
+      });
+  }
+}, []);
+
+  // Check for direct navigation state
+const location = useLocation();
+useEffect(() => {
+  if (location.state?.directAccess && location.state?.familyId) {
+    console.log("DIRECT ACCESS via router state:", location.state.familyId);
+    
+    // Only load if needed
+    if (!selectedUser || !familyMembers || familyMembers.length === 0) {
+      loadFamilyData(location.state.familyId)
+        .then(() => console.log("Family loaded successfully from router state"))
+        .catch(error => console.error("Error loading family:", error));
+    }
+  }
+}, [location]);
+
+// PRIORITY: Direct family access bypass
+useEffect(() => {
+  try {
+    const directAccess = localStorage.getItem('directFamilyAccess');
+    if (directAccess) {
+      const { familyId, familyName, timestamp } = JSON.parse(directAccess);
+      
+      // Check if this is recent (within last 30 seconds)
+      const now = new Date().getTime();
+      if (now - timestamp < 30000) {
+        console.log("DIRECT FAMILY ACCESS:", familyId, familyName);
+        
+        // Load this family immediately
+        loadFamilyData(familyId).then(() => {
+          console.log("DIRECT FAMILY LOADED SUCCESSFULLY");
+          // Clear the direct access
+          localStorage.removeItem('directFamilyAccess');
+        }).catch(err => {
+          console.error("DIRECT FAMILY LOAD ERROR:", err);
+          alert("Error loading family: " + err.message);
+        });
+      } else {
+        // Expired access attempt, clean up
+        localStorage.removeItem('directFamilyAccess');
+      }
+    }
+  } catch (e) {
+    console.error("Error in direct family access:", e);
+    localStorage.removeItem('directFamilyAccess');
+  }
+}, []);
+
 // Extract family ID from URL if present
 useEffect(() => {
   const params = new URLSearchParams(window.location.search);

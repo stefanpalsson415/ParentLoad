@@ -285,26 +285,32 @@ export const FamilySelectionScreen = () => {
                      <button
                      key={family.familyId}
                      className="w-full p-3 text-left border rounded-lg hover:bg-gray-50"
-                     onClick={async () => {
+                     onClick={async (event) => {  // ADD event parameter here
                        try {
-                         // First store the family ID in localStorage
-                         localStorage.setItem('selectedFamilyId', family.familyId);
+                         // Add loading indication
+                         const buttonElement = event.currentTarget;  // RENAMED to buttonElement
+                         buttonElement.textContent = 'Loading...';
+                         buttonElement.disabled = true;
                          
-                         // Show loading state on the button
-                         const button = document.querySelector(`[data-family-id="${family.familyId}"]`);
-                         if (button) button.textContent = 'Loading...';
-                         
-                         // Load the family data directly
+                         // Load the family data FIRST, before any navigation
                          await loadFamilyData(family.familyId);
                          
-                         // Hard redirect to dashboard without parameters
-                         window.location.href = '/dashboard';
+                         // Now navigate with state
+                         navigate('/dashboard', { 
+                           state: { 
+                             directAccess: true,
+                             familyId: family.familyId 
+                           }
+                         });
                        } catch (error) {
-                         console.error("Error loading family:", error);
-                         alert("Could not load family data. Please try again.");
+                         console.error("Family selection error:", error);
+                         alert("Error loading family: " + error.message);
+                         
+                         // Reset button
+                         buttonElement.textContent = family.familyName || 'Unnamed Family';  // CHANGED to buttonElement
+                         buttonElement.disabled = false;
                        }
                      }}
-                     data-family-id={family.familyId}
                    >
                         <div className="font-medium">{family.familyName || 'Unnamed Family'}</div>
                         <div className="text-xs text-gray-500">
@@ -316,6 +322,33 @@ export const FamilySelectionScreen = () => {
                 </div>
               )}
               
+{/* DEBUG SECTION */}
+<div className="mt-8 p-4 border rounded bg-gray-100">
+  <h3 className="font-bold">Debug Information</h3>
+  <div className="text-xs mt-2">
+    <p>Current User ID: {currentUser?.uid || 'None'}</p>
+    <p>Available Families: {availableFamilies?.length || 0}</p>
+    <pre className="mt-2 overflow-auto max-h-40">
+      {JSON.stringify(availableFamilies, null, 2)}
+    </pre>
+    
+    {/* Direct Debug Link */}
+    <div className="mt-4">
+      <p className="font-bold">Direct Access Links:</p>
+      {availableFamilies?.map(family => (
+        <div key={family.familyId} className="mt-2">
+          <a 
+            href={`/dashboard?forceFamilyId=${family.familyId}`}
+            className="text-blue-600 underline"
+          >
+            DIRECT: {family.familyName} ({family.familyId})
+          </a>
+        </div>
+      ))}
+    </div>
+  </div>
+</div>
+
               <div className="space-y-4">
                 <button
                   onClick={() => navigate('/signup')}
