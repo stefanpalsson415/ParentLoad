@@ -434,26 +434,29 @@ export function FamilyProvider({ children }) {
         surveyResponses: {}
       };
 
-      // Get all weekly survey responses for this week
-      // They could be structured differently (with or without week prefix)
-      Object.keys(surveyResponses).forEach(key => {
-        if (key.includes(`week-${weekNumber}`) || 
-            key.includes(`weekly-${weekNumber}`) || 
-            (key.includes(`weekly`) && weekNumber === 1)) {
-          weekData.surveyResponses[key] = surveyResponses[key];
-        }
-        // Also include simple question IDs like q1, q2 from weekly surveys
-        else if (key.startsWith('q') && !key.includes('-')) {
-          // This handles the case where question IDs might be stored without prefixes
-          const weeklyDocIds = Object.keys(surveyResponses).filter(k => 
-            k.includes(`weekly-${weekNumber}`) || 
-            (k.includes('weekly') && weekNumber === 1));
-          
-          if (weeklyDocIds.length > 0) {
-            weekData.surveyResponses[key] = surveyResponses[key];
-          }
-        }
-      });
+     // Collect ALL survey responses for this week
+console.log(`Collecting survey responses for Week ${weekNumber}`);
+console.log("Available responses:", Object.keys(surveyResponses).length);
+
+// First, add all general survey responses (without week prefix)
+Object.keys(surveyResponses).forEach(key => {
+  // Include all question responses (both with and without week prefix)
+  if (key.startsWith('q') || key.includes(`q`)) {
+    weekData.surveyResponses[key] = surveyResponses[key];
+  }
+});
+
+// Then add specific week-prefixed responses
+Object.keys(surveyResponses).forEach(key => {
+  if (key.includes(`week-${weekNumber}`) || 
+      key.includes(`weekly-${weekNumber}`) || 
+      (key.includes(`week${weekNumber}`) || 
+      (weekNumber === 1 && (key.includes('weekly') || key.includes('week1'))))) {
+    weekData.surveyResponses[key] = surveyResponses[key];
+  }
+});
+
+console.log(`Collected ${Object.keys(weekData.surveyResponses).length} responses for Week ${weekNumber}`);
 
 
             
