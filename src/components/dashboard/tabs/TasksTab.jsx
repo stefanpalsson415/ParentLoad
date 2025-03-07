@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Users, Calendar, AlertCircle, CheckCircle, ChevronDown, ChevronUp, Sparkles, Brain, Info } from 'lucide-react';
 import { useFamily } from '../../../contexts/FamilyContext';
+import { useSurvey } from '../../../contexts/SurveyContext';
 import DatabaseService from '../../../services/DatabaseService';
 
 // AI-powered task generation based on survey data
@@ -344,8 +345,11 @@ const TasksTab = ({ onStartWeeklyCheckIn, onOpenFamilyMeeting }) => {
     updateSubtaskCompletion,
     surveySchedule,
     taskRecommendations: initialTaskRecommendations,
-    loadCurrentWeekTasks
+    loadCurrentWeekTasks,
+    surveyResponses
   } = useFamily();
+
+  const { fullQuestionSet } = useSurvey();
   
   // State to track when everyone completed initial survey
   const [allInitialComplete, setAllInitialComplete] = useState(false);
@@ -642,7 +646,7 @@ useEffect(() => {
       document.removeEventListener('visibilitychange', handleVisibilityChange);
     };
   }, [familyId, currentWeek, surveyResponses, fullQuestionSet]); // <-- Updated dependencies
-    
+
   // Load AI task recommendations
   const loadAiRecommendations = async () => {
     if (!familyId) return;

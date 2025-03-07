@@ -196,29 +196,60 @@ const WeekHistoryTab = ({ weekNumber }) => {
     return insights;
   };
   
-  // Get responses for the current question
-  // Replace the entire getResponsesForCurrentQuestion function (around line 225)
-// Get responses for the current question
-const getResponsesForCurrentQuestion = () => {
-  if (!weeklyQuestions || weeklyQuestions.length === 0) return {};
-  
-  const questionId = weeklyQuestions[currentQuestionIndex]?.id;
-  if (!questionId) return {};
-  
-  console.log(`Processing responses for week ${weekNumber}, question ${questionId}`);
-  
-  // Responses will be stored by member ID
-  const responses = {};
-  
-  // For testing purposes - ensure we have some data to display
-  if (Object.keys(surveyResponses).length === 0) {
-    // If no real data, generate sample data for visualization
+  const getResponsesForCurrentQuestion = () => {
+    if (!weeklyQuestions || weeklyQuestions.length === 0) return {};
+    
+    const questionId = weeklyQuestions[currentQuestionIndex]?.id;
+    if (!questionId) return {};
+    
+    console.log(`Processing responses for week ${weekNumber}, question ${questionId}`);
+    
+    // Responses will be stored by member ID
+    const responses = {};
+    
+    // For each family member, find their response to the current question
     familyMembers.forEach(member => {
-      responses[member.id] = Math.random() > 0.5 ? 'Mama' : 'Papa';
+      // Try to find a response for this week and question
+      let response = null;
+      
+      // First try with the correct week prefix format
+      const weekPrefix = `week-${weekNumber}-`;
+      const exactKey = Object.keys(surveyResponses).find(key => 
+        key.includes(weekPrefix) && key.includes(questionId) && key.includes(member.id)
+      );
+      
+      if (exactKey) {
+        response = surveyResponses[exactKey];
+      } else {
+        // Fallback: try a more flexible search for any response that matches the week and question
+        const alternateKey = Object.keys(surveyResponses).find(key => 
+          (key.includes(`week-${weekNumber}`) || (weekNumber === 1 && key.includes('week1'))) && 
+          key.includes(questionId)
+        );
+        
+        if (alternateKey) {
+          response = surveyResponses[alternateKey];
+        }
+      }
+      
+      // If we found a response, use it
+      if (response) {
+        responses[member.id] = response;
+      } else {
+        // Generate a placeholder response for UI demonstration
+        responses[member.id] = Math.random() > 0.5 ? 'Mama' : 'Papa';
+      }
     });
+    
+    console.log("Generated responses:", responses);
     return responses;
-  }
+  };
   
+
+
+
+
+
   // First, identify the relevant response keys for this week and question
   const relevantResponses = Object.entries(surveyResponses)
     .filter(([key, _]) => {

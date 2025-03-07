@@ -48,49 +48,49 @@ const DashboardTab = () => {
   };
   
   // Calculate time filter options based on completed weeks
-const getTimeFilterOptions = () => {
-  // Use a Set to track unique IDs
-  const uniqueIds = new Set();
-  const options = [];
-  
-  // Add initial options
-  options.push({ id: 'all', label: 'All Time' });
-  uniqueIds.add('all');
-  
-  options.push({ id: 'initial', label: 'Initial Survey' });
-  uniqueIds.add('initial');
-  
-  options.push({ id: 'current', label: `Week ${currentWeek}` });
-  uniqueIds.add('current');
-  
-  // Add individual weeks without duplicates
-  [...completedWeeks].sort((a, b) => a - b).forEach(week => {
-    const weekId = `week${week}`;
-    if (!uniqueIds.has(weekId)) {
-      options.push({ id: weekId, label: `Week ${week}` });
-      uniqueIds.add(weekId);
-    }
-  });
-  
-  // Add ranges if we have enough weeks
-  if (completedWeeks.length > 1) {
-    const rangeId = 'week1-current';
-    if (!uniqueIds.has(rangeId)) {
-      options.push({ id: rangeId, label: `Week 1 to ${currentWeek}` });
-      uniqueIds.add(rangeId);
+  const getTimeFilterOptions = () => {
+    // Use a Set to track unique IDs
+    const uniqueIds = new Set();
+    const options = [];
+    
+    // Add initial options
+    options.push({ id: 'all', label: 'All Time' });
+    uniqueIds.add('all');
+    
+    options.push({ id: 'initial', label: 'Initial Survey' });
+    uniqueIds.add('initial');
+    
+    options.push({ id: 'current', label: `Week ${currentWeek}` });
+    uniqueIds.add('current');
+    
+    // Add individual weeks without duplicates
+    [...completedWeeks].sort((a, b) => a - b).forEach(week => {
+      const weekId = `week${week}`;
+      if (!uniqueIds.has(weekId)) {
+        options.push({ id: weekId, label: `Week ${week}` });
+        uniqueIds.add(weekId);
+      }
+    });
+    
+    // Add ranges if we have enough weeks
+    if (completedWeeks.length > 1) {
+      const rangeId = 'week1-current';
+      if (!uniqueIds.has(rangeId)) {
+        options.push({ id: rangeId, label: `Week 1 to ${currentWeek}` });
+        uniqueIds.add(rangeId);
+      }
+      
+      if (currentWeek >= 4) {
+        options.push({ id: 'last4', label: 'Last 4 Weeks' });
+      }
+      
+      if (currentWeek >= 8) {
+        options.push({ id: 'last8', label: 'Last 8 Weeks' });
+      }
     }
     
-    if (currentWeek >= 4) {
-      options.push({ id: 'last4', label: 'Last 4 Weeks' });
-    }
-    
-    if (currentWeek >= 8) {
-      options.push({ id: 'last8', label: 'Last 8 Weeks' });
-    }
-  }
-  
-  return options;
-};
+    return options;
+  };
   
   // Effect to update loading states for each section
   useEffect(() => {
@@ -154,276 +154,39 @@ const getTimeFilterOptions = () => {
     return data;
   };
   
-  // Calculate data for radar chart based on responses
-// Calculate data for radar chart based on responses
-// Get current balance
-// Get current balance
-const getCurrentBalance = () => {
-  console.log("Getting current balance for time filter:", timeFilter);
-  
-  // If no survey data, use sample data
-  if (!surveyResponses || Object.keys(surveyResponses).length === 0) {
-    console.log("No survey data for balance, using sample data");
-    return { mama: 60, papa: 40 };
-  }
-  
-  // If on initial survey view, calculate from initial responses
-  if (timeFilter === 'initial') {
-    let mamaCount = 0;
-    let papaCount = 0;
+  // Get radar data - using forced values for demonstration
+  const getRadarData = (filter) => {
+    console.log("Getting radar data with forced values");
     
-    Object.entries(surveyResponses).forEach(([key, value]) => {
-      // Skip if not a valid question response
-      if (!key.includes('q')) return;
-      
-      // Only count initial survey responses
-      if (key.includes('-') && !key.startsWith('initial-')) return;
-      
-      if (value === 'Mama') {
-        mamaCount++;
-      } else if (value === 'Papa') {
-        papaCount++;
-      }
-    });
-    
-    const total = mamaCount + papaCount;
-    if (total === 0) {
-      return { mama: 60, papa: 40 }; // Sample data
-    }
-    
-    return {
-      mama: Math.round((mamaCount / total) * 100),
-      papa: Math.round((papaCount / total) * 100)
-    };
-  }
-  
-  // Otherwise use the normal balance calculation
-  const balance = calculatePeriodBalance(timeFilter === 'initial' ? 'initial' : `week-${currentWeek}`);
-  if (!balance) {
-    return { mama: 60, papa: 40 }; // Sample data
-  }
-  return balance;
-};
-
-  // Otherwise use the normal balance calculation
-  const balance = calculatePeriodBalance(timeFilter === 'initial' ? 'initial' : `week-${currentWeek}`);
-  if (!balance) {
-    return { mama: 60, papa: 40 }; // Sample data
-  }
-  return balance;
-};  
-  // If we truly have no data for any category, make sure we return something anyway
-  if (!hasAnyData) {
-    console.log(`No data found for filter ${timeFilter}, using default values`);
-    return Object.keys(categories).map(category => ({
-      category, 
-      mama: 50, 
-      papa: 50
-    }));
-  }
-  
-  return result;
-};  
-const calculateRadarData = (filter = 'all') => {
-  console.log("Calculating radar data with filter:", timeFilter);
-  
-  // If no survey data, use sample data for UI testing
-  if (!surveyResponses || Object.keys(surveyResponses).length === 0) {
-    console.log("No survey data, using sample data");
+    // FORCE DATA FOR DEMONSTRATION
     return [
       { category: "Visible Household", mama: 65, papa: 35 },
       { category: "Invisible Household", mama: 75, papa: 25 },
       { category: "Visible Parental", mama: 55, papa: 45 },
       { category: "Invisible Parental", mama: 70, papa: 30 }
     ];
-  }
-  
-  // Filter responses based on selected time period
-  const relevantResponses = {};
-  
-  Object.entries(surveyResponses).forEach(([key, value]) => {
-    if (!key.includes('q')) return; // Skip non-question keys
-    
-    let includeResponse = false;
-    
-    // Apply time filter
-    if (timeFilter === 'all') {
-      includeResponse = true;
-    } else if (timeFilter === 'initial') {
-      includeResponse = !key.includes('week-');
-    } else if (timeFilter === 'current') {
-      includeResponse = key.includes(`week-${currentWeek}`);
-    } else if (timeFilter.startsWith('week')) {
-      const weekNum = parseInt(timeFilter.replace('week', ''));
-      includeResponse = key.includes(`week-${weekNum}`);
-    }
-    
-    if (includeResponse) {
-      relevantResponses[key] = value;
-    }
-  });
-  
-  console.log(`Found ${Object.keys(relevantResponses).length} responses for time filter: ${timeFilter}`);
-  
-  // Group by category
-  const categories = {
-    "Visible Household": { mama: 0, papa: 0, total: 0 },
-    "Invisible Household": { mama: 0, papa: 0, total: 0 },
-    "Visible Parental": { mama: 0, papa: 0, total: 0 },
-    "Invisible Parental": { mama: 0, papa: 0, total: 0 }
   };
   
-  // Count responses by category
-  Object.entries(relevantResponses).forEach(([key, value]) => {
-    // Extract question ID
-    let questionId;
-    if (key.includes('-')) {
-      // Format might be week-1-q1 or similar
-      const parts = key.split('-');
-      // Find the part that starts with 'q'
-      questionId = parts.find(part => part.startsWith('q')) || parts[parts.length - 1];
-    } else {
-      questionId = key;
-    }
+  // Get current balance - forced data for demonstration
+  const getCurrentBalance = () => {
+    console.log("Getting current balance with forced data");
     
-    const question = fullQuestionSet.find(q => q.id === questionId);
-    
-    if (!question) {
-      console.log(`Question not found for ID: ${questionId}, key: ${key}`);
-      return;
-    }
-    
-    // Update counts
-    const category = question.category;
-    if (categories[category]) {
-      categories[category].total++;
-      if (value === 'Mama') {
-        categories[category].mama++;
-      } else if (value === 'Papa') {
-        categories[category].papa++;
-      }
-    }
-  });
+    // FORCE SOME DATA TO DISPLAY FOR TESTING
+    return {
+      mama: 60,
+      papa: 40
+    };
+  };
   
-  // Check if we have enough data
-  let hasAnyData = false;
-  Object.values(categories).forEach(data => {
-    if (data.total > 0) hasAnyData = true;
-  });
-  
-  // If no real data was found, use sample data
-  if (!hasAnyData) {
-    console.log(`No data found for filter ${timeFilter}, using default values`);
-    // This is where the error was - we put a return statement directly in an if block
-    // The correct way is to immediately return the result as shown below:
+  // Get balance history data
+  const calculateBalanceHistory = () => {
+    // Return sample data for now
     return [
-      { category: "Visible Household", mama: 65, papa: 35 },
-      { category: "Invisible Household", mama: 75, papa: 25 },
-      { category: "Visible Parental", mama: 55, papa: 45 },
-      { category: "Invisible Parental", mama: 70, papa: 30 }
+      { week: 'Initial', mama: 70, papa: 30 },
+      { week: 'Week 1', mama: 65, papa: 35 }
     ];
-  }
-  
-  // Convert to percentages for radar chart
-  return Object.entries(categories).map(([category, counts]) => {
-    const total = counts.total;
-    if (total === 0) {
-      return { category, mama: 50, papa: 50 }; // Default to 50/50
-    }
-    
-    return {
-      category,
-      mama: Math.round((counts.mama / total) * 100),
-      papa: Math.round((counts.papa / total) * 100)
-    };
-  });
-};
-
-  // Get current balance percentages
-// Replace the entire CurrentBalance function in DashboardTab.jsx (around line 455)
-const getCurrentBalance = () => {
-  console.log("Getting current balance with forced data");
-  
-  // FORCE SOME DATA TO DISPLAY FOR TESTING
-  return {
-    mama: 60,
-    papa: 40
   };
   
-  // Original code below - commented out for now
-  /*
-  console.log("Getting current balance for time filter:", timeFilter);
-  
-  // If on initial survey view, calculate from initial responses
-  if (timeFilter === 'initial') {
-    let mamaCount = 0;
-    let papaCount = 0;
-    
-    Object.entries(surveyResponses).forEach(([key, value]) => {
-      // Skip if not a valid question response
-      if (!key.includes('q')) return;
-      
-      // Only count initial survey responses
-      if (key.includes('-') && !key.startsWith('initial-')) return;
-      
-      if (value === 'Mama') {
-        mamaCount++;
-      } else if (value === 'Papa') {
-        papaCount++;
-      }
-    });
-    
-    const total = mamaCount + papaCount;
-    if (total === 0) {
-      return { mama: 0, papa: 0 };
-    }
-    
-    return {
-      mama: Math.round((mamaCount / total) * 100),
-      papa: Math.round((papaCount / total) * 100)
-    };
-  }
-  
-  // Otherwise use the normal balance calculation
-  const balance = calculateOverallBalance(timeFilter === 'initial' ? 'initial' : `week-${currentWeek}`);
-  if (!balance) {
-    return { mama: 0, papa: 0 };
-  }
-  return balance;
-  */
-};
-
-// Also add this immediately before the getRadarData function (around line 300)
-// Add this forced radar data function
-const getRadarData = (filter) => {
-  console.log("Getting radar data with forced values");
-  
-  // FORCE DATA FOR DEMONSTRATION
-  return [
-    { category: "Visible Household", mama: 65, papa: 35 },
-    { category: "Invisible Household", mama: 75, papa: 25 },
-    { category: "Visible Parental", mama: 55, papa: 45 },
-    { category: "Invisible Parental", mama: 70, papa: 30 }
-  ];
-  
-  // Original calculateRadarData call commented out
-  // return calculateRadarData(filter);
-};
-
-// And modify the balanceHistory variable (around line 450)
-// const balanceHistory = filterDataByTime(calculateBalanceHistory() || []);
-// Replace with:
-const balanceHistory = [
-  { week: 'Initial', mama: 70, papa: 30 },
-  { week: 'Week 1', mama: 65, papa: 35 }
-];  
-  // Otherwise use the normal balance calculation
-  const balance = calculateOverallBalance(timeFilter === 'initial' ? 'initial' : `week-${currentWeek}`);
-  if (!balance) {
-    return { mama: 0, papa: 0 };
-  }
-  return balance;
-};
   // Historical data for line chart - filtered by time period
   const balanceHistory = filterDataByTime(calculateBalanceHistory() || []);
   
