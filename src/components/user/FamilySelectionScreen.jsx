@@ -1,13 +1,13 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Camera, PlusCircle, CheckCircle, AlertCircle, Upload, Calendar } from 'lucide-react';
+import { Camera, PlusCircle, CheckCircle, AlertCircle, Upload, Calendar, Mail, Lock, User, LogOut } from 'lucide-react';
 import { useAuth } from '../../contexts/AuthContext';
 import { useFamily } from '../../contexts/FamilyContext';
 import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
 import { storage } from '../../services/firebase';
 
 export const FamilySelectionScreen = () => {
-  const { currentUser } = useAuth();
+  const { currentUser, availableFamilies, loadFamilyData, familyData, login, logout } = useAuth();
   const { 
     familyMembers, 
     selectedUser, 
@@ -15,14 +15,25 @@ export const FamilySelectionScreen = () => {
     updateMemberProfile 
   } = useFamily();
   
-  const { availableFamilies, loadFamilyData, familyData } = useAuth();
-
-
   const navigate = useNavigate();
   
   const [showProfileUpload, setShowProfileUpload] = useState(false);
   const [uploadForMember, setUploadForMember] = useState(null);
   const [isUploading, setIsUploading] = useState(false);
+  
+  // Login form state
+  const [showLoginForm, setShowLoginForm] = useState(!currentUser);
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
+  const [isLoggingIn, setIsLoggingIn] = useState(false);
+  const [loginError, setLoginError] = useState('');
+  
+  // Debug logging
+  useEffect(() => {
+    console.log("Current user:", currentUser);
+    console.log("Available families:", availableFamilies);
+    console.log("Family members:", familyMembers);
+  }, [currentUser, availableFamilies, familyMembers]);
   
   const handleSelectForUpload = (member, e) => {
     e.stopPropagation();
@@ -31,34 +42,18 @@ export const FamilySelectionScreen = () => {
   };
   
   const handleImageUpload = async (e) => {
+    // Upload code unchanged...
     const file = e.target.files[0];
     if (file && uploadForMember) {
       setIsUploading(true);
       try {
-        console.log("Starting upload for file:", file.name, "size:", file.size);
-        
-        // Create a reference to the file location in Firebase Storage
         const storageRef = ref(storage, `profiles/${uploadForMember.id}/${Date.now()}_${file.name}`);
-        console.log("Storage reference created");
-        
-        // Upload the file
-        console.log("Beginning upload to Firebase Storage...");
         const snapshot = await uploadBytes(storageRef, file);
-        console.log("Upload completed successfully:", snapshot);
-        
-        // Get the download URL
-        console.log("Retrieving download URL...");
         const imageUrl = await getDownloadURL(snapshot.ref);
-        console.log("Download URL received:", imageUrl);
-        
-        // Update the profile with the URL from Firebase
         await updateMemberProfile(uploadForMember.id, { profilePicture: imageUrl });
-        console.log("Profile updated with new image URL");
-        
         setShowProfileUpload(false);
       } catch (error) {
         console.error("Error uploading image:", error);
-        // Show a more specific error message based on the error
         let errorMessage = "Failed to upload image. Please try again.";
         
         if (error.code === 'storage/unauthorized') {
@@ -120,17 +115,243 @@ export const FamilySelectionScreen = () => {
     };
   };
   
+  // Handle login submission
+  const handleLogin = async (e) => {
+    e.preventDefault();
+    setIsLoggingIn(true);
+    setLoginError('');
+    
+    try {
+      await login(email, password);
+      // Auth state change will trigger UI update
+      setShowLoginForm(false);
+    } catch (error) {
+      console.error("Login error:", error);
+      setLoginError('Invalid email or password. Please try again.');
+    } finally {
+      setIsLoggingIn(false);
+    }
+  };
+  
+  // Handle logout
+  const handleLogout = async () => {
+    try {
+      await logout();
+      setShowLoginForm(true);
+    } catch (error) {
+      console.error("Logout error:", error);
+    }
+  };
+  
+  // Login Form Screen
+  const renderLoginForm = () => {
+    return (
+      <div className="min-h-screen bg-gradient-to-b from-blue-50 to-white flex flex-col">
+        <div className="flex-1 flex flex-col items-center justify-center p-6">
+          <div className="w-full max-w-md">
+            {/* Header */}
+            <div className="text-center mb-8">
+              <h1 className="text-3xl font-bold text-blue-800 mb-2">ParentLoad</h1>
+              <p className="text-gray-600">
+                Log in to access your family's workload balancer
+              </p>
+            </div>
+            
+            {/* Login Form */}
+            <div className="bg-white rounded-xl shadow-lg p-6 mb-8">
+              <h2 className="text-xl font-semibold mb-4 text-center">Log In</h2>
+              
+              {loginError && (
+                <div className="bg-red-50 text-red-700 p-3 rounded mb-4 text-sm">
+                  {loginError}
+                </div>
+              )}
+              
+              <form onSubmit={handleLogin}>
+                <div className="space-y-4">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Email</label>
+                    <div className="flex border rounded-md overflow-hidden">
+                      <div className="bg-gray-100 p-2 flex items-center justify-center">
+                        <Mail size={18} className="text-gray-500" />
+                      </div>
+                      <input
+                        type="email"
+                        value={email}
+                        onChange={(e) => setEmail(e.target.value)}
+                        className="flex-1 p-2 focus:outline-none"
+                        placeholder="Enter your email"
+                        required
+                      />
+                    </div>
+                  </div>
+                  
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Password</label>
+                    <div className="flex border rounded-md overflow-hidden">
+                      <div className="bg-gray-100 p-2 flex items-center justify-center">
+                        <Lock size={18} className="text-gray-500" />
+                      </div>
+                      <input
+                        type="password"
+                        value={password}
+                        onChange={(e) => setPassword(e.target.value)}
+                        className="flex-1 p-2 focus:outline-none"
+                        placeholder="Enter your password"
+                        required
+                      />
+                    </div>
+                  </div>
+                  
+                  <button
+                    type="submit"
+                    disabled={isLoggingIn}
+                    className="w-full py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 flex items-center justify-center"
+                  >
+                    {isLoggingIn ? (
+                      <>
+                        <div className="mr-2 w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+                        Logging in...
+                      </>
+                    ) : (
+                      'Log In'
+                    )}
+                  </button>
+                </div>
+              </form>
+            </div>
+            
+            {/* Create New Family Button */}
+            <button
+              onClick={() => navigate('/signup')}
+              className="w-full py-3 px-4 rounded-md font-medium text-blue-600 border border-blue-600 hover:bg-blue-50 flex items-center justify-center"
+            >
+              <PlusCircle size={16} className="mr-2" />
+              Create New Family
+            </button>
+          </div>
+        </div>
+        
+        {/* Footer */}
+        <div className="p-4 text-center text-sm text-gray-500">
+          <p>ParentLoad v1.0 - Balancing family responsibilities together</p>
+        </div>
+      </div>
+    );
+  };
+  
+  // If showing login form, render it
+  if (showLoginForm) {
+    return renderLoginForm();
+  }
+  
+  // If logged in but no family members, show a message
+  if (familyMembers.length === 0) {
+    return (
+      <div className="min-h-screen bg-gradient-to-b from-blue-50 to-white flex flex-col">
+        <div className="flex-1 flex flex-col items-center justify-center p-6">
+          <div className="w-full max-w-md">
+            {/* Header */}
+            <div className="text-center mb-8">
+              <h1 className="text-3xl font-bold text-blue-800 mb-2">ParentLoad</h1>
+              <p className="text-gray-600">
+                Welcome to your family workload manager
+              </p>
+            </div>
+            
+            {/* No Family Members Message */}
+            <div className="bg-white rounded-xl shadow-lg p-6 mb-8">
+              <h2 className="text-xl font-semibold mb-4 text-center">No Family Found</h2>
+              <p className="text-center text-gray-600 mb-6">
+                It looks like you don't have any family members set up yet.
+              </p>
+              
+              {/* Family Switcher */}
+              {availableFamilies && availableFamilies.length > 0 && (
+                <div className="mb-6">
+                  <h3 className="text-lg font-semibold mb-3">Switch Family</h3>
+                  <div className="space-y-2">
+                    {availableFamilies.map((family) => (
+                      <button
+                        key={family.familyId}
+                        className="w-full p-3 text-left border rounded-lg hover:bg-gray-50"
+                        onClick={async () => {
+                          try {
+                            await loadFamilyData(family.familyId);
+                            window.location.reload();
+                          } catch(error) {
+                            console.error("Error switching family:", error);
+                          }
+                        }}
+                      >
+                        <div className="font-medium">{family.familyName || 'Unnamed Family'}</div>
+                        <div className="text-xs text-gray-500">
+                          {family.familyMembers?.length || 0} members
+                        </div>
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              )}
+              
+              <div className="space-y-4">
+                <button
+                  onClick={() => navigate('/signup')}
+                  className="w-full py-3 px-4 rounded-md font-medium text-white bg-blue-600 hover:bg-blue-700 flex items-center justify-center"
+                >
+                  <PlusCircle size={16} className="mr-2" />
+                  Create New Family
+                </button>
+                
+                <button
+                  onClick={handleLogout}
+                  className="w-full py-2 px-4 rounded-md font-medium text-gray-700 border border-gray-300 hover:bg-gray-50 flex items-center justify-center"
+                >
+                  <LogOut size={16} className="mr-2" />
+                  Log Out
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+        
+        {/* Footer */}
+        <div className="p-4 text-center text-sm text-gray-500">
+          <p>ParentLoad v1.0 - Balancing family responsibilities together</p>
+        </div>
+      </div>
+    );
+  }
+  
+  // Normal profile selection view with logout option
   return (
     <div className="min-h-screen bg-gradient-to-b from-blue-50 to-white flex flex-col">
       <div className="flex-1 flex flex-col items-center justify-center p-6">
         <div className="w-full max-w-md">
-          {/* Header */}
-          <div className="text-center mb-8">
-            <h1 className="text-3xl font-bold text-blue-800 mb-2">ParentLoad</h1>
-            <p className="text-gray-600">
-              Who are you in the family? Select your profile to begin.
-            </p>
+          {/* Header with Logout */}
+          <div className="flex justify-between items-center mb-8">
+            <h1 className="text-3xl font-bold text-blue-800">ParentLoad</h1>
+            <button 
+              onClick={handleLogout}
+              className="text-sm text-gray-600 hover:text-gray-800 flex items-center"
+            >
+              <LogOut size={16} className="mr-1" />
+              Log Out
+            </button>
           </div>
+          
+          <p className="text-gray-600 text-center mb-6">
+            Who are you in the family? Select your profile to begin.
+          </p>
+
+          {/* Switch Account Button */}
+          <button
+            onClick={() => setShowLoginForm(true)}
+            className="w-full py-2 px-4 rounded-md font-medium text-blue-600 border border-blue-300 hover:bg-blue-50 flex items-center justify-center mb-6"
+          >
+            <User size={16} className="mr-2" />
+            Switch Account
+          </button>
 
           {/* Family member selection */}
           <div className="bg-white rounded-xl shadow-lg p-6 mb-8">
@@ -167,7 +388,6 @@ export const FamilySelectionScreen = () => {
                       <h3 className="font-medium text-lg">{member.name}</h3>
                       <p className="text-sm text-gray-500 capitalize">{member.role}</p>
                       <div className="mt-1">
-                        {/* Showing next action instead of completion status */}
                         <span className={`text-xs flex items-center ${getNextAction(member).className}`}>
                           {getNextAction(member).icon}
                           {getNextAction(member).text}
@@ -234,43 +454,6 @@ export const FamilySelectionScreen = () => {
           </div>
         </div>
       </div>
-
-      {/* Add family selector if multiple families exist */}
-      {availableFamilies && availableFamilies.length > 1 && (
-        <div className="w-full max-w-md mx-auto mt-6 mb-4">
-          <div className="bg-white rounded-lg shadow p-4">
-            <h3 className="text-lg font-semibold mb-3">Switch Family</h3>
-            <div className="space-y-2">
-              {availableFamilies.map((family) => (
-                <button
-                  key={family.familyId}
-                  className={`w-full p-3 text-left border rounded-lg ${
-                    familyData?.familyId === family.familyId ? 'bg-blue-50 border-blue-300' : 'hover:bg-gray-50'
-                  }`}
-                  onClick={async () => {
-                    try {
-                      await loadFamilyData(family.familyId);
-                      // Force refresh the page to update UI
-                      window.location.reload();
-                    } catch(error) {
-                      console.error("Error switching family:", error);
-                    }
-                  }}
-                >
-                  <div className="font-medium">{family.familyName || 'Unnamed Family'}</div>
-                  <div className="text-xs text-gray-500">
-                    {family.familyMembers?.length || 0} members
-                  </div>
-                </button>
-              ))}
-            </div>
-          </div>
-        </div>
-      )}
-
-
-
-
 
       {/* Footer */}
       <div className="p-4 text-center text-sm text-gray-500">
