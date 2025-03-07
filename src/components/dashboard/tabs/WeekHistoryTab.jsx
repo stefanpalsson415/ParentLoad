@@ -245,45 +245,6 @@ const WeekHistoryTab = ({ weekNumber }) => {
     return responses;
   };
   
-
-
-
-
-
-  // First, identify the relevant response keys for this week and question
-  const relevantResponses = Object.entries(surveyResponses)
-    .filter(([key, _]) => {
-      // Match both week number and question ID
-      return (
-        (key.includes(`week-${weekNumber}`) || 
-         (weekNumber === 0 && !key.includes('week-'))) && // For initial survey
-        key.includes(questionId)
-      );
-    });
-  
-  console.log(`Found ${relevantResponses.length} relevant responses`);
-  
-  // Then, assign responses to family members based on member ID in key or best guess
-  familyMembers.forEach(member => {
-    // Try to find a direct match for this member
-    const memberResponse = relevantResponses.find(([key, _]) => 
-      key.includes(member.id) || key.includes(member.name.toLowerCase())
-    );
-    
-    if (memberResponse) {
-      // We found a direct match for this member
-      responses[member.id] = memberResponse[1]; // Use the value
-    } else if (relevantResponses.length > 0) {
-      // No direct match, but we have some responses - use the first one as a fallback
-      responses[member.id] = relevantResponses[0][1];
-    } else {
-      // No data at all - use a default value
-      responses[member.id] = Math.random() > 0.5 ? 'Mama' : 'Papa';
-    }
-  });
-  
-  return responses;
-};
   // Navigate to next question
   const nextQuestion = () => {
     if (currentQuestionIndex < weeklyQuestions.length - 1) {
