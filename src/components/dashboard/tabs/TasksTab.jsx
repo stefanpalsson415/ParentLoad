@@ -288,6 +288,16 @@ const TasksTab = ({ onStartWeeklyCheckIn, onOpenFamilyMeeting }) => {
     }
   }, [checkInDueDate]);
 
+  // Effect to recalculate check-in availability immediately after date changes
+  useEffect(() => {
+    // Update days until check-in
+    setDaysUntilCheckIn(calculateDaysUntilCheckIn());
+    
+    // Determine if check-in can be started
+    const canStart = calculateDaysUntilCheckIn() <= 2;
+    setCanStartCheckIn(canStart);
+  }, [checkInDueDateInput]); // Re-run when date input changes
+
   // Function to handle date update
   const handleUpdateCheckInDate = async () => {
     try {
@@ -298,7 +308,25 @@ const TasksTab = ({ onStartWeeklyCheckIn, onOpenFamilyMeeting }) => {
       }
       
       await updateSurveySchedule(currentWeek, newDate);
-      alert("Check-in date updated successfully!");
+      
+      // Update local state for immediate UI refresh
+      setCheckInDueDate(newDate);
+      
+      // Force recalculation of availability
+      const newDaysUntil = Math.ceil((newDate.getTime() - new Date().getTime()) / (1000 * 60 * 60 * 24));
+      setDaysUntilCheckIn(Math.max(0, newDaysUntil));
+      setCanStartCheckIn(newDaysUntil <= 2);
+      
+      // Alert in app rather than browser
+      const alertDiv = document.createElement('div');
+      alertDiv.className = 'fixed top-4 right-4 bg-green-100 border border-green-500 text-green-700 px-4 py-3 rounded z-50';
+      alertDiv.innerHTML = 'Check-in date updated successfully!';
+      document.body.appendChild(alertDiv);
+      
+      // Remove after 3 seconds
+      setTimeout(() => {
+        alertDiv.remove();
+      }, 3000);
     } catch (error) {
       console.error("Error updating check-in date:", error);
       alert("Failed to update check-in date. Please try again.");
@@ -324,6 +352,7 @@ const TasksTab = ({ onStartWeeklyCheckIn, onOpenFamilyMeeting }) => {
   const [kidTasksCompleted, setKidTasksCompleted] = useState({});
   const [taskReactions, setTaskReactions] = useState({});
   const [selectedTaskForEmoji, setSelectedTaskForEmoji] = useState(null);
+  const [kidTaskComments, setKidTaskComments] = useState({});
   
   // Effect to update check-in status when survey schedule or current week changes
   useEffect(() => {
@@ -455,8 +484,8 @@ const TasksTab = ({ onStartWeeklyCheckIn, onOpenFamilyMeeting }) => {
     });
     
     // Also count completed kid tasks
-    Object.values(kidTasksCompleted).forEach(isCompleted => {
-      if (isCompleted) count += 0.5; // Kid tasks count as half a task
+    Object.values(kidTasksCompleted).forEach(taskData => {
+      if (taskData?.completed) count += 0.5; // Kid tasks count as half a task
     });
     
     return count;
@@ -482,6 +511,30 @@ const TasksTab = ({ onStartWeeklyCheckIn, onOpenFamilyMeeting }) => {
            selectedUser.role === 'parent' && 
            (selectedUser.name === task.assignedToName || 
             selectedUser.roleType === task.assignedTo);
+  };
+  
+  // Handle kid task completion
+  const handleCompleteKidTask = (taskId, kidId, isCompleted) => {
+    // Only allow the assigned child to complete their own tasks
+    if (selectedUser && selectedUser.role === 'child' && selectedUser.id === kidId) {
+      const completedDate = isCompleted ? new Date().toISOString() : null;
+      
+      setKidTasksCompleted(prev => ({
+        ...prev,
+        [taskId]: {
+          completed: isCompleted,
+          completedDate: completedDate,
+          completedBy: selectedUser.id
+        }
+      }));
+      
+      // In a real implementation, you would save this to the database
+      console.log(`Kid task ${taskId} completion set to: ${isCompleted} by ${selectedUser.name} at ${completedDate}`);
+    } else if (selectedUser.role !== 'child') {
+      alert("Only children can complete kid tasks.");
+    } else {
+      alert("You can only complete your own tasks.");
+    }
   };
   
   // Handle adding a comment to a task or subtask
@@ -535,6 +588,18 @@ const TasksTab = ({ onStartWeeklyCheckIn, onOpenFamilyMeeting }) => {
         });
         
         setTaskRecommendations(updatedTasks);
+      } else if (commentTask.toString().startsWith('kid-task')) {
+        // It's a kid task comment
+        setKidTaskComments(prev => ({
+          ...prev,
+          [commentTask]: [...(prev[commentTask] || []), {
+            id: result.id || Date.now(),
+            userId: selectedUser.id,
+            userName: selectedUser.name,
+            text: commentText,
+            timestamp: new Date().toLocaleString()
+          }]
+        }));
       } else {
         // It's a main task comment
         const updatedTasks = taskRecommendations.map(task => {
@@ -567,17 +632,6 @@ const TasksTab = ({ onStartWeeklyCheckIn, onOpenFamilyMeeting }) => {
     }
   };
   
-  // Handle kid task completion
-  const handleCompleteKidTask = (taskId, isCompleted) => {
-    setKidTasksCompleted(prev => ({
-      ...prev,
-      [taskId]: isCompleted
-    }));
-    
-    // In a real implementation, you would save this to the database
-    console.log(`Kid task ${taskId} completion set to: ${isCompleted}`);
-  };
-
   // Open emoji picker
   const openEmojiPicker = (taskId) => {
     setSelectedTaskForEmoji(taskId);
@@ -855,21 +909,33 @@ const TasksTab = ({ onStartWeeklyCheckIn, onOpenFamilyMeeting }) => {
           <div className="mt-4 text-center">
             <button 
               className={`px-4 py-2 rounded ${
-                canStartCheckIn 
-                  ? 'bg-blue-500 text-white hover:bg-blue-600' 
-                  : 'bg-gray-300 text-gray-500 cursor-not-allowed'
+                selectedUser.weeklyCompleted && selectedUser.weeklyCompleted[currentWeek-1]?.completed
+                  ? 'bg-green-500 text-white cursor-not-allowed'
+                  : canStartCheckIn 
+                    ? 'bg-blue-500 text-white hover:bg-blue-600' 
+                    : 'bg-gray-300 text-gray-500 cursor-not-allowed'
               }`}
-              onClick={onStartWeeklyCheckIn}
-              disabled={!canStartCheckIn}
+              onClick={() => {
+                if (selectedUser.weeklyCompleted && selectedUser.weeklyCompleted[currentWeek-1]?.completed) {
+                  alert("You've already completed this week's check-in!");
+                } else if (canStartCheckIn) {
+                  onStartWeeklyCheckIn();
+                }
+              }}
+              disabled={!canStartCheckIn || (selectedUser.weeklyCompleted && selectedUser.weeklyCompleted[currentWeek-1]?.completed)}
             >
-              {canStartCheckIn ? 'Start Weekly Check-in' : 'Check-in Not Yet Available'}
+              {selectedUser.weeklyCompleted && selectedUser.weeklyCompleted[currentWeek-1]?.completed 
+                ? 'You Completed This Check-in' 
+                : canStartCheckIn 
+                  ? 'Start Weekly Check-in' 
+                  : 'Check-in Not Yet Available'}
             </button>
           </div>
         </div>
         
         {/* AI Task Intelligence Section */}
         {aiRecommendations && aiRecommendations.length > 0 && (
-          <div className="border rounded-lg p-4 mb-6 bg-gradient-to-r from-purple-50 to-blue-50">
+          <div className="border-2 border-purple-300 rounded-lg p-4 mb-6 bg-gradient-to-r from-purple-100 to-blue-100 shadow-md">
             <div className="flex items-start mb-4">
               <div className="flex-shrink-0 mr-3">
                 <div className="w-10 h-10 rounded-full bg-purple-100 flex items-center justify-center">
@@ -891,7 +957,7 @@ const TasksTab = ({ onStartWeeklyCheckIn, onOpenFamilyMeeting }) => {
               {aiRecommendations.map(task => (
                 <div 
                   key={task.id} 
-                  className={`border rounded-lg ${task.completed ? 'bg-green-50' : 'bg-white'} overflow-hidden`}
+                  className={`border-2 border-purple-200 rounded-lg ${task.completed ? 'bg-green-50' : 'bg-white'} overflow-hidden shadow-sm`}
                 >
                   <div className="p-4 flex items-start">
                     <div className={`flex-shrink-0 w-8 h-8 rounded-full flex items-center justify-center mr-3 ${
@@ -1369,10 +1435,15 @@ const TasksTab = ({ onStartWeeklyCheckIn, onOpenFamilyMeeting }) => {
                             <div className="flex items-start">
                               <div className="flex-shrink-0 mr-3">
                                 <button
-                                  className="w-6 h-6 rounded-full flex items-center justify-center bg-white border border-amber-300 hover:bg-amber-50"
-                                  onClick={() => handleCompleteKidTask(`kid-task-1-${index}`, !kidTasksCompleted[`kid-task-1-${index}`])}
+                                  className={`w-6 h-6 rounded-full flex items-center justify-center ${
+                                    selectedUser && selectedUser.id === child.id 
+                                      ? 'bg-white border border-amber-300 hover:bg-amber-50 cursor-pointer' 
+                                      : 'bg-gray-100 border border-gray-300 cursor-not-allowed'
+                                  }`}
+                                  onClick={() => handleCompleteKidTask(`kid-task-1-${index}`, child.id, !kidTasksCompleted[`kid-task-1-${index}`]?.completed)}
+                                  disabled={selectedUser?.id !== child.id}
                                 >
-                                  {kidTasksCompleted[`kid-task-1-${index}`] && <span>✓</span>}
+                                  {kidTasksCompleted[`kid-task-1-${index}`]?.completed && <span>✓</span>}
                                 </button>
                               </div>
                               
@@ -1384,8 +1455,14 @@ const TasksTab = ({ onStartWeeklyCheckIn, onOpenFamilyMeeting }) => {
                                     "Help organize a family game night"}
                                 </p>
                                 
+                                {kidTasksCompleted[`kid-task-1-${index}`]?.completed && kidTasksCompleted[`kid-task-1-${index}`]?.completedDate && (
+                                  <p className="text-xs text-green-600 mt-2">
+                                    Completed on {formatDate(kidTasksCompleted[`kid-task-1-${index}`].completedDate)}
+                                  </p>
+                                )}
+                                
                                 {/* Reactions/Cheers */}
-                                {kidTasksCompleted[`kid-task-1-${index}`] && (
+                                {kidTasksCompleted[`kid-task-1-${index}`]?.completed && (
                                   <div className="flex mt-2 flex-wrap gap-1">
                                     {taskReactions[`kid-task-1-${index}`]?.map((reaction, i) => (
                                       <div key={i} className="bg-amber-50 px-2 py-1 rounded-full text-xs flex items-center">
@@ -1396,8 +1473,29 @@ const TasksTab = ({ onStartWeeklyCheckIn, onOpenFamilyMeeting }) => {
                                   </div>
                                 )}
                                 
+                                {/* Comments */}
+                                {renderComments(kidTaskComments[`kid-task-1-${index}`])}
+                                
+                                {/* Comment form */}
+                                {commentTask === `kid-task-1-${index}` && renderCommentForm(`kid-task-1-${index}`)}
+                                
+                                {/* Add comment button */}
+                                {!commentTask && (
+                                  <div className="mt-2 flex justify-end">
+                                    <button
+                                      className="px-2 py-1 text-xs rounded border"
+                                      onClick={(e) => {
+                                        e.stopPropagation();
+                                        handleAddComment(`kid-task-1-${index}`);
+                                      }}
+                                    >
+                                      Comment
+                                    </button>
+                                  </div>
+                                )}
+                                
                                 {/* Add Reaction Button */}
-                                {kidTasksCompleted[`kid-task-1-${index}`] && (
+                                {kidTasksCompleted[`kid-task-1-${index}`]?.completed && (
                                   <button
                                     onClick={() => openEmojiPicker(`kid-task-1-${index}`)}
                                     className="mt-2 text-xs flex items-center text-blue-600 hover:text-blue-800"
@@ -1461,10 +1559,15 @@ const TasksTab = ({ onStartWeeklyCheckIn, onOpenFamilyMeeting }) => {
                           <div className="flex items-start">
                             <div className="flex-shrink-0 mr-3">
                               <button
-                                className="w-6 h-6 rounded-full flex items-center justify-center bg-white border border-green-300 hover:bg-green-50"
-                                onClick={() => handleCompleteKidTask('kid-task-2-1', !kidTasksCompleted['kid-task-2-1'])}
+                                className={`w-6 h-6 rounded-full flex items-center justify-center ${
+                                  selectedUser && selectedUser.role === 'child'
+                                    ? 'bg-white border border-green-300 hover:bg-green-50 cursor-pointer' 
+                                    : 'bg-gray-100 border border-gray-300 cursor-not-allowed'
+                                }`}
+                                onClick={() => handleCompleteKidTask('kid-task-2-1', selectedUser?.id, !kidTasksCompleted['kid-task-2-1']?.completed)}
+                                disabled={selectedUser?.role !== 'child'}
                               >
-                                {kidTasksCompleted['kid-task-2-1'] && <span>✓</span>}
+                                {kidTasksCompleted['kid-task-2-1']?.completed && <span>✓</span>}
                               </button>
                             </div>
                             
@@ -1474,8 +1577,35 @@ const TasksTab = ({ onStartWeeklyCheckIn, onOpenFamilyMeeting }) => {
                                 Keep track of who makes meals this week
                               </p>
                               
+                              {kidTasksCompleted['kid-task-2-1']?.completed && kidTasksCompleted['kid-task-2-1']?.completedDate && (
+                                <p className="text-xs text-green-600 mt-2">
+                                  Completed on {formatDate(kidTasksCompleted['kid-task-2-1'].completedDate)}
+                                </p>
+                              )}
+                              
+                              {/* Comments */}
+                              {renderComments(kidTaskComments['kid-task-2-1'])}
+                              
+                              {/* Comment form */}
+                              {commentTask === 'kid-task-2-1' && renderCommentForm('kid-task-2-1')}
+                              
+                              {/* Add comment button */}
+                              {!commentTask && (
+                                <div className="mt-2 flex justify-end">
+                                  <button
+                                    className="px-2 py-1 text-xs rounded border"
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      handleAddComment('kid-task-2-1');
+                                    }}
+                                  >
+                                    Comment
+                                  </button>
+                                </div>
+                              )}
+                              
                               {/* Reactions */}
-                              {kidTasksCompleted['kid-task-2-1'] && (
+                              {kidTasksCompleted['kid-task-2-1']?.completed && (
                                 <div className="flex mt-2 flex-wrap gap-1">
                                   {taskReactions['kid-task-2-1']?.map((reaction, i) => (
                                     <div key={i} className="bg-green-50 px-2 py-1 rounded-full text-xs flex items-center">
@@ -1487,7 +1617,7 @@ const TasksTab = ({ onStartWeeklyCheckIn, onOpenFamilyMeeting }) => {
                               )}
                               
                               {/* Add Reaction Button */}
-                              {kidTasksCompleted['kid-task-2-1'] && (
+                              {kidTasksCompleted['kid-task-2-1']?.completed && (
                                 <button
                                   onClick={() => openEmojiPicker('kid-task-2-1')}
                                   className="mt-2 text-xs flex items-center text-blue-600 hover:text-blue-800"
@@ -1503,10 +1633,15 @@ const TasksTab = ({ onStartWeeklyCheckIn, onOpenFamilyMeeting }) => {
                           <div className="flex items-start">
                             <div className="flex-shrink-0 mr-3">
                               <button
-                                className="w-6 h-6 rounded-full flex items-center justify-center bg-white border border-green-300 hover:bg-green-50"
-                                onClick={() => handleCompleteKidTask('kid-task-2-2', !kidTasksCompleted['kid-task-2-2'])}
+                                className={`w-6 h-6 rounded-full flex items-center justify-center ${
+                                  selectedUser && selectedUser.role === 'child'
+                                    ? 'bg-white border border-green-300 hover:bg-green-50 cursor-pointer' 
+                                    : 'bg-gray-100 border border-gray-300 cursor-not-allowed'
+                                }`}
+                                onClick={() => handleCompleteKidTask('kid-task-2-2', selectedUser?.id, !kidTasksCompleted['kid-task-2-2']?.completed)}
+                                disabled={selectedUser?.role !== 'child'}
                               >
-                                {kidTasksCompleted['kid-task-2-2'] && <span>✓</span>}
+                                {kidTasksCompleted['kid-task-2-2']?.completed && <span>✓</span>}
                               </button>
                             </div>
                             
@@ -1516,8 +1651,35 @@ const TasksTab = ({ onStartWeeklyCheckIn, onOpenFamilyMeeting }) => {
                                 Notice who does cleaning tasks this week
                               </p>
                               
+                              {kidTasksCompleted['kid-task-2-2']?.completed && kidTasksCompleted['kid-task-2-2']?.completedDate && (
+                                <p className="text-xs text-green-600 mt-2">
+                                  Completed on {formatDate(kidTasksCompleted['kid-task-2-2'].completedDate)}
+                                </p>
+                              )}
+                              
+                              {/* Comments */}
+                              {renderComments(kidTaskComments['kid-task-2-2'])}
+                              
+                              {/* Comment form */}
+                              {commentTask === 'kid-task-2-2' && renderCommentForm('kid-task-2-2')}
+                              
+                              {/* Add comment button */}
+                              {!commentTask && (
+                                <div className="mt-2 flex justify-end">
+                                  <button
+                                    className="px-2 py-1 text-xs rounded border"
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      handleAddComment('kid-task-2-2');
+                                    }}
+                                  >
+                                    Comment
+                                  </button>
+                                </div>
+                              )}
+                              
                               {/* Reactions */}
-                              {kidTasksCompleted['kid-task-2-2'] && (
+                              {kidTasksCompleted['kid-task-2-2']?.completed && (
                                 <div className="flex mt-2 flex-wrap gap-1">
                                   {taskReactions['kid-task-2-2']?.map((reaction, i) => (
                                     <div key={i} className="bg-green-50 px-2 py-1 rounded-full text-xs flex items-center">
@@ -1529,7 +1691,7 @@ const TasksTab = ({ onStartWeeklyCheckIn, onOpenFamilyMeeting }) => {
                               )}
                               
                               {/* Add Reaction Button */}
-                              {kidTasksCompleted['kid-task-2-2'] && (
+                              {kidTasksCompleted['kid-task-2-2']?.completed && (
                                 <button
                                   onClick={() => openEmojiPicker('kid-task-2-2')}
                                   className="mt-2 text-xs flex items-center text-blue-600 hover:text-blue-800"
