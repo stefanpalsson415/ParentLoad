@@ -31,6 +31,9 @@ export function FamilyProvider({ children }) {
   const [lastCompletedFullWeek, setLastCompletedFullWeek] = useState(0); // Last week that was fully completed (including meeting)
   const [taskRecommendations, setTaskRecommendations] = useState([]); // Store task recommendations
 
+  
+
+
   // Initialize family data from auth context
   useEffect(() => {
     if (initialFamilyData) {
@@ -489,6 +492,15 @@ console.log(`Collected ${Object.keys(weekData.surveyResponses).length} responses
       
       // 7. Calculate the next week number
       const nextWeek = weekNumber + 1;
+
+      const nextWeekDueDate = new Date();
+nextWeekDueDate.setDate(nextWeekDueDate.getDate() + 7);
+
+// Update survey schedule with the new date for the next week
+const updatedSurveySchedule = {
+  ...surveySchedule,
+  [nextWeek]: nextWeekDueDate.toISOString()
+};
       
       // 8. Generate fresh tasks for the new week
 // Generate new tasks for the next week
@@ -603,6 +615,8 @@ const generateNewWeekTasks = (weekNumber, previousTasks, previousResponses) => {
 };
 
 // Helper function to analyze survey responses and identify imbalances
+// Helper function to analyze survey responses and identify imbalances
+// Helper function to analyze survey responses and identify imbalances
 const analyzeImbalancesByCategory = (responses) => {
   // Categories we track
   const categories = {
@@ -614,27 +628,39 @@ const analyzeImbalancesByCategory = (responses) => {
   
   // Count responses by category
   Object.entries(responses || {}).forEach(([key, value]) => {
-    // Extract the question ID and find its category
-    let category = null;
+    // Extract the question ID 
+    let questionId = null;
     
-    // Handle different question ID formats
     if (key.includes('q')) {
-      const questionId = key.includes('-') ? key.split('-').pop() : key;
+      questionId = key.includes('-') ? key.split('-').pop() : key;
       
-      // Find the question in our question set
-      const question = fullQuestionSet.find(q => q.id === questionId);
-      if (question) {
-        category = question.category;
+      // Simple categorization based on question ID ranges
+      // Questions 1-20 are Visible Household Tasks
+      // Questions 21-40 are Invisible Household Tasks
+      // Questions 41-60 are Visible Parental Tasks
+      // Questions 61-80 are Invisible Parental Tasks
+      
+      const qNum = parseInt(questionId.replace('q', ''));
+      
+      let category = null;
+      if (qNum >= 1 && qNum <= 20) {
+        category = "Visible Household Tasks";
+      } else if (qNum >= 21 && qNum <= 40) {
+        category = "Invisible Household Tasks";
+      } else if (qNum >= 41 && qNum <= 60) {
+        category = "Visible Parental Tasks";
+      } else if (qNum >= 61 && qNum <= 80) {
+        category = "Invisible Parental Tasks";
       }
-    }
-    
-    // Update counts if we found a valid category
-    if (category && categories[category]) {
-      categories[category].total++;
-      if (value === 'Mama') {
-        categories[category].mama++;
-      } else if (value === 'Papa') {
-        categories[category].papa++;
+      
+      // Update counts if we found a valid category
+      if (category) {
+        categories[category].total++;
+        if (value === 'Mama') {
+          categories[category].mama++;
+        } else if (value === 'Papa') {
+          categories[category].papa++;
+        }
       }
     }
   });
@@ -696,7 +722,6 @@ const analyzeImbalancesByCategory = (responses) => {
   // Sort by imbalance score (highest first)
   return imbalances.sort((a, b) => b.imbalanceScore - a.imbalanceScore);
 };
-
 // Function to determine priority areas based on imbalances and previous focus
 const determinePriorityAreas = (imbalances, previousFocusAreas) => {
   // First, break down into specific task areas for each category
