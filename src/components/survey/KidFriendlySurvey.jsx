@@ -313,43 +313,101 @@ const KidFriendlySurvey = ({ surveyType = "initial" }) => {
   }, [currentQuestionIndex]);
   
   // Helper function to get illustration for a question
-  function getIllustrationForQuestion(question) {
+  // Helper function to get illustration for a question
+function getIllustrationForQuestion(question) {
     // This function determines which illustration to show based on keywords in the question
     const text = question.text.toLowerCase();
+    const id = question.id || '';
     
-    // Check for keywords in the question text
-    if (text.includes('clean') || text.includes('dust') || text.includes('vacuum')) {
+    // Create a simple hash from the question text or ID for consistent selection
+    const hashCode = (str) => {
+      let hash = 0;
+      for (let i = 0; i < str.length; i++) {
+        const char = str.charCodeAt(i);
+        hash = ((hash << 5) - hash) + char;
+        hash = hash & hash; // Convert to 32bit integer
+      }
+      return Math.abs(hash);
+    };
+    
+    const questionHash = hashCode(text + id);
+    
+    // More extensive keyword matching
+    // Cleaning related
+    if (text.includes('clean') || text.includes('dust') || text.includes('vacuum') || 
+        text.includes('mop') || text.includes('sweep') || text.includes('tidy') ||
+        text.includes('wash') || text.includes('dishes') || text.includes('laundry') ||
+        text.includes('clothes') || text.includes('fold')) {
       return 'cleaning';
-    } else if (text.includes('cook') || text.includes('meal') || text.includes('food')) {
+    }
+    
+    // Cooking related
+    else if (text.includes('cook') || text.includes('meal') || text.includes('food') || 
+             text.includes('dinner') || text.includes('breakfast') || text.includes('lunch') ||
+             text.includes('kitchen') || text.includes('recipe') || text.includes('grocery') ||
+             text.includes('shopping')) {
       return 'cooking';
-    } else if (text.includes('plan') || text.includes('remember')) {
+    }
+    
+    // Planning related
+    else if (text.includes('plan') || text.includes('remember') || text.includes('organize') ||
+             text.includes('arrange') || text.includes('prepare') || text.includes('manage') ||
+             text.includes('coordinate') || text.includes('oversee') || text.includes('supervise')) {
       return 'planning';
-    } else if (text.includes('schedule') || text.includes('calendar')) {
+    }
+    
+    // Scheduling related
+    else if (text.includes('schedule') || text.includes('calendar') || text.includes('appointment') ||
+             text.includes('date') || text.includes('time') || text.includes('event') || 
+             text.includes('activity')) {
       return 'scheduling';
-    } else if (text.includes('homework') || text.includes('school')) {
+    }
+    
+    // Homework/school related
+    else if (text.includes('homework') || text.includes('school') || text.includes('study') ||
+             text.includes('learn') || text.includes('education') || text.includes('teacher') ||
+             text.includes('class') || text.includes('assignment') || text.includes('project')) {
       return 'homework';
-    } else if (text.includes('drive') || text.includes('pick up') || text.includes('transport')) {
+    }
+    
+    // Driving/transportation related
+    else if (text.includes('drive') || text.includes('pick up') || text.includes('transport') ||
+             text.includes('car') || text.includes('vehicle') || text.includes('ride')) {
       return 'driving';
-    } else if (text.includes('emotional') || text.includes('support') || text.includes('feel')) {
+    }
+    
+    // Emotional support related
+    else if (text.includes('emotional') || text.includes('support') || text.includes('feel') ||
+             text.includes('comfort') || text.includes('care') || text.includes('listen') ||
+             text.includes('talk') || text.includes('discuss') || text.includes('help')) {
       return 'emotional';
-    } else if ((text.includes('plan') || text.includes('schedule')) && 
-               (text.includes('child') || text.includes('kid'))) {
+    }
+    
+    // Child planning/scheduling related
+    else if ((text.includes('plan') || text.includes('schedule') || text.includes('organize')) && 
+             (text.includes('child') || text.includes('kid') || text.includes('son') || 
+              text.includes('daughter') || text.includes('children'))) {
       return 'planning_kids';
     }
     
-    // Default illustration based on category
+    // Default illustration based on category and question hash
     if (question.category === "Visible Household Tasks") {
-      return 'cleaning';
+      // Use hash to consistently select between cleaning and cooking
+      return (questionHash % 2 === 0) ? 'cleaning' : 'cooking';
     } else if (question.category === "Invisible Household Tasks") {
-      return 'planning';
+      // Use hash to consistently select between planning and scheduling
+      return (questionHash % 2 === 0) ? 'planning' : 'scheduling';
     } else if (question.category === "Visible Parental Tasks") {
-      return 'homework';
+      // Use hash to consistently select between homework and driving
+      return (questionHash % 2 === 0) ? 'homework' : 'driving';
     } else if (question.category === "Invisible Parental Tasks") {
-      return 'emotional';
+      // Use hash to consistently select between emotional and planning_kids
+      return (questionHash % 2 === 0) ? 'emotional' : 'planning_kids';
     }
     
-    // Generic fallback
-    return 'default';
+    // Use hash-based selection as a last resort to ensure consistent variety
+    const illustrations = ['cleaning', 'cooking', 'planning', 'scheduling', 'homework', 'driving', 'emotional', 'planning_kids'];
+    return illustrations[questionHash % illustrations.length];
   }
   
   // Handle parent selection
