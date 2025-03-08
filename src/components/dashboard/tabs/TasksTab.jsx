@@ -383,6 +383,13 @@ const TasksTab = ({ onStartWeeklyCheckIn, onOpenFamilyMeeting }) => {
           try {
             tasks = await DatabaseService.getTasksForWeek(familyId, currentWeek);
             console.log(`Tasks loaded from Firebase for Week ${currentWeek}:`, tasks?.length || 0);
+            
+            // Also load kid tasks from Firebase
+            const familyData = await DatabaseService.loadFamilyData(familyId);
+            if (familyData && familyData.kidTasks) {
+              setKidTasksCompleted(familyData.kidTasks);
+              console.log("Kid tasks loaded:", familyData.kidTasks);
+            }
           } catch (error) {
             console.error("Error loading tasks:", error);
           }
@@ -417,6 +424,12 @@ const TasksTab = ({ onStartWeeklyCheckIn, onOpenFamilyMeeting }) => {
           console.log(`Fresh tasks loaded for Week ${currentWeek}:`, freshTasks?.length || 0);
           if (freshTasks && freshTasks.length > 0) {
             setTaskRecommendations(freshTasks);
+          }
+          
+          // Also reload kid tasks
+          const familyData = await DatabaseService.loadFamilyData(familyId);
+          if (familyData && familyData.kidTasks) {
+            setKidTasksCompleted(familyData.kidTasks);
           }
         }
       } catch (error) {
@@ -513,27 +526,55 @@ const TasksTab = ({ onStartWeeklyCheckIn, onOpenFamilyMeeting }) => {
             selectedUser.roleType === task.assignedTo);
   };
   
-  // Handle kid task completion
-  const handleCompleteKidTask = (taskId, kidId, isCompleted) => {
-    // Only allow the assigned child to complete their own tasks
-    if (selectedUser && selectedUser.role === 'child' && selectedUser.id === kidId) {
-      const completedDate = isCompleted ? new Date().toISOString() : null;
-      
-      setKidTasksCompleted(prev => ({
-        ...prev,
-        [taskId]: {
-          completed: isCompleted,
-          completedDate: completedDate,
-          completedBy: selectedUser.id
+  // Handle kid task completion with observations
+  const handleCompleteKidTask = async (taskId, kidId, isCompleted, observations = null) => {
+    try {
+      // Allow any child to complete any task
+      if (selectedUser && selectedUser.role === 'child') {
+        const completedDate = isCompleted ? new Date().toISOString() : null;
+        
+        // Update local state
+        setKidTasksCompleted(prev => ({
+          ...prev,
+          [taskId]: {
+            completed: isCompleted,
+            completedDate: completedDate,
+            completedBy: selectedUser.id,
+            completedByName: selectedUser.name,
+            observations: observations
+          }
+        }));
+        
+        // Save to database
+        if (familyId) {
+          // Get existing kid tasks
+          const familyData = await DatabaseService.loadFamilyData(familyId);
+          const existingKidTasks = (familyData && familyData.kidTasks) || {};
+          
+          // Create updated kid tasks object
+          const updatedKidTasks = {
+            ...existingKidTasks,
+            [taskId]: {
+              completed: isCompleted,
+              completedDate: completedDate,
+              completedBy: selectedUser.id,
+              completedByName: selectedUser.name,
+              observations: observations
+            }
+          };
+          
+          await DatabaseService.saveFamilyData({
+            kidTasks: updatedKidTasks
+          }, familyId);
+          
+          console.log(`Kid task ${taskId} saved to database: ${isCompleted} by ${selectedUser.name}`);
         }
-      }));
-      
-      // In a real implementation, you would save this to the database
-      console.log(`Kid task ${taskId} completion set to: ${isCompleted} by ${selectedUser.name} at ${completedDate}`);
-    } else if (selectedUser.role !== 'child') {
-      alert("Only children can complete kid tasks.");
-    } else {
-      alert("You can only complete your own tasks.");
+      } else if (selectedUser.role !== 'child') {
+        alert("Only children can complete kid tasks.");
+      }
+    } catch (error) {
+      console.error("Error saving kid task:", error);
+      alert("There was an error saving your task. Please try again.");
     }
   };
   
@@ -957,8 +998,19 @@ const TasksTab = ({ onStartWeeklyCheckIn, onOpenFamilyMeeting }) => {
               {aiRecommendations.map(task => (
                 <div 
                   key={task.id} 
-                  className={`border-2 border-purple-200 rounded-lg ${task.completed ? 'bg-green-50' : 'bg-white'} overflow-hidden shadow-sm`}
+                  className="border-2 border-purple-400 rounded-lg overflow-hidden shadow-lg relative"
+                  style={{
+                    background: task.completed ? '#f0fdf4' : 'linear-gradient(to right, #f5f3ff, #eef2ff)'
+                  }}
                 >
+                  {/* Add a special badge for AI tasks */}
+                  <div className="absolute top-0 right-0">
+                    <div className="bg-gradient-to-r from-purple-600 to-indigo-600 text-white px-3 py-1 rounded-bl-lg text-sm font-bold flex items-center">
+                      <Brain size={14} className="mr-1" />
+                      AI Powered
+                    </div>
+                  </div>
+                  
                   <div className="p-4 flex items-start">
                     <div className={`flex-shrink-0 w-8 h-8 rounded-full flex items-center justify-center mr-3 ${
                       task.completed ? 'bg-green-100 text-green-600' : 'bg-purple-100 text-purple-600'
@@ -996,11 +1048,18 @@ const TasksTab = ({ onStartWeeklyCheckIn, onOpenFamilyMeeting }) => {
                         </div>
                       </div>
                       
-                      {/* AI Insight Box */}
-                      <div className="bg-purple-50 p-3 rounded mt-3 flex items-start">
-                        <Info size={16} className="text-purple-600 mr-2 flex-shrink-0 mt-0.5" />
-                        <div className="text-sm text-purple-800">
-                          <strong>AI Insight:</strong> {task.insight}
+                      {/* AI Insight Box - Enhanced version */}
+                      <div className="bg-purple-100 p-4 rounded-lg mt-3 border border-purple-200">
+                        <div className="flex items-start">
+                          <Info size={20} className="text-purple-600 mr-3 flex-shrink-0 mt-0.5" />
+                          <div>
+                            <h5 className="font-bold text-purple-900 text-sm mb-1">Why This Task Matters:</h5>
+                            <p className="text-sm text-purple-800">{task.insight}</p>
+                            <p className="text-xs text-purple-700 mt-2">
+                              Our AI analyzed your family's survey data and identified this task as important for improving balance.
+                              This was selected because your responses showed a significant imbalance in {task.hiddenWorkloadType.toLowerCase()}.
+                            </p>
+                          </div>
                         </div>
                       </div>
                       
@@ -1070,40 +1129,39 @@ const TasksTab = ({ onStartWeeklyCheckIn, onOpenFamilyMeeting }) => {
                           <h4 className="font-medium text-lg">{task.title}</h4>
                           
                           {/* Task type label */}
-                          {/* Task type label */}
-<div className="flex items-center gap-2">
-  {task.taskType === 'ai' && (
-    <span className="px-2 py-0.5 bg-purple-100 text-purple-800 text-xs rounded-full flex items-center">
-      <Brain size={10} className="mr-1" />
-      AI Insight
-    </span>
-  )}
-  {task.taskType === 'survey' && (
-    <span className="px-2 py-0.5 bg-blue-100 text-blue-800 text-xs rounded-full flex items-center">
-      <CheckCircle2 size={10} className="mr-1" />
-      Survey Data
-    </span>
-  )}
-  {task.taskType === 'meeting' && (
-    <span className="px-2 py-0.5 bg-amber-100 text-amber-800 text-xs rounded-full flex items-center">
-      <Users size={10} className="mr-1" />
-      Family Meeting
-    </span>
-  )}
-  {task.taskType === 'goal' && (
-    <span className="px-2 py-0.5 bg-green-100 text-green-800 text-xs rounded-full flex items-center">
-      <Target size={10} className="mr-1" />
-      Family Goal
-    </span>
-  )}
-  <div>
-    {expandedTasks[task.id] ? (
-      <ChevronUp size={20} className="text-gray-500" />
-    ) : (
-      <ChevronDown size={20} className="text-gray-500" />
-    )}
-  </div>
-</div>
+                          <div className="flex items-center gap-2">
+                            {task.taskType === 'ai' && (
+                              <span className="px-2 py-0.5 bg-purple-100 text-purple-800 text-xs rounded-full flex items-center">
+                                <Brain size={10} className="mr-1" />
+                                AI Insight
+                              </span>
+                            )}
+                            {task.taskType === 'survey' && (
+                              <span className="px-2 py-0.5 bg-blue-100 text-blue-800 text-xs rounded-full flex items-center">
+                                <CheckCircle2 size={10} className="mr-1" />
+                                Survey Data
+                              </span>
+                            )}
+                            {task.taskType === 'meeting' && (
+                              <span className="px-2 py-0.5 bg-amber-100 text-amber-800 text-xs rounded-full flex items-center">
+                                <Users size={10} className="mr-1" />
+                                Family Meeting
+                              </span>
+                            )}
+                            {task.taskType === 'goal' && (
+                              <span className="px-2 py-0.5 bg-green-100 text-green-800 text-xs rounded-full flex items-center">
+                                <Target size={10} className="mr-1" />
+                                Family Goal
+                              </span>
+                            )}
+                            <div>
+                              {expandedTasks[task.id] ? (
+                                <ChevronUp size={20} className="text-gray-500" />
+                              ) : (
+                                <ChevronDown size={20} className="text-gray-500" />
+                              )}
+                            </div>
+                          </div>
                         </div>
                           
                         <div className="mt-2">
@@ -1121,10 +1179,16 @@ const TasksTab = ({ onStartWeeklyCheckIn, onOpenFamilyMeeting }) => {
                         
                         {/* AI Insight Box for AI tasks */}
                         {task.taskType === 'ai' && task.insight && (
-                          <div className="bg-purple-50 p-3 rounded mt-3 flex items-start">
-                            <Info size={16} className="text-purple-600 mr-2 flex-shrink-0 mt-0.5" />
-                            <div className="text-sm text-purple-800">
-                              <strong>AI Insight:</strong> {task.insight}
+                          <div className="bg-purple-100 p-4 rounded-lg mt-3 border border-purple-200">
+                            <div className="flex items-start">
+                              <Info size={20} className="text-purple-600 mr-3 flex-shrink-0 mt-0.5" />
+                              <div>
+                                <h5 className="font-bold text-purple-900 text-sm mb-1">Why This Task Matters:</h5>
+                                <p className="text-sm text-purple-800">{task.insight}</p>
+                                <p className="text-xs text-purple-700 mt-2">
+                                  Our AI analyzed your family's survey data and identified this task as important for improving balance.
+                                </p>
+                              </div>
                             </div>
                           </div>
                         )}
@@ -1252,40 +1316,39 @@ const TasksTab = ({ onStartWeeklyCheckIn, onOpenFamilyMeeting }) => {
                           <h4 className="font-medium text-lg">{task.title}</h4>
                           
                           {/* Task type label */}
-                          {/* Task type label */}
-<div className="flex items-center gap-2">
-  {task.taskType === 'ai' && (
-    <span className="px-2 py-0.5 bg-purple-100 text-purple-800 text-xs rounded-full flex items-center">
-      <Brain size={10} className="mr-1" />
-      AI Insight
-    </span>
-  )}
-  {task.taskType === 'survey' && (
-    <span className="px-2 py-0.5 bg-blue-100 text-blue-800 text-xs rounded-full flex items-center">
-      <CheckCircle2 size={10} className="mr-1" />
-      Survey Data
-    </span>
-  )}
-  {task.taskType === 'meeting' && (
-    <span className="px-2 py-0.5 bg-amber-100 text-amber-800 text-xs rounded-full flex items-center">
-      <Users size={10} className="mr-1" />
-      Family Meeting
-    </span>
-  )}
-  {task.taskType === 'goal' && (
-    <span className="px-2 py-0.5 bg-green-100 text-green-800 text-xs rounded-full flex items-center">
-      <Target size={10} className="mr-1" />
-      Family Goal
-    </span>
-  )}
-  <div>
-    {expandedTasks[task.id] ? (
-      <ChevronUp size={20} className="text-gray-500" />
-    ) : (
-      <ChevronDown size={20} className="text-gray-500" />
-    )}
-  </div>
-</div>
+                          <div className="flex items-center gap-2">
+                            {task.taskType === 'ai' && (
+                              <span className="px-2 py-0.5 bg-purple-100 text-purple-800 text-xs rounded-full flex items-center">
+                                <Brain size={10} className="mr-1" />
+                                AI Insight
+                              </span>
+                            )}
+                            {task.taskType === 'survey' && (
+                              <span className="px-2 py-0.5 bg-blue-100 text-blue-800 text-xs rounded-full flex items-center">
+                                <CheckCircle2 size={10} className="mr-1" />
+                                Survey Data
+                              </span>
+                            )}
+                            {task.taskType === 'meeting' && (
+                              <span className="px-2 py-0.5 bg-amber-100 text-amber-800 text-xs rounded-full flex items-center">
+                                <Users size={10} className="mr-1" />
+                                Family Meeting
+                              </span>
+                            )}
+                            {task.taskType === 'goal' && (
+                              <span className="px-2 py-0.5 bg-green-100 text-green-800 text-xs rounded-full flex items-center">
+                                <Target size={10} className="mr-1" />
+                                Family Goal
+                              </span>
+                            )}
+                            <div>
+                              {expandedTasks[task.id] ? (
+                                <ChevronUp size={20} className="text-gray-500" />
+                              ) : (
+                                <ChevronDown size={20} className="text-gray-500" />
+                              )}
+                            </div>
+                          </div>
                         </div>
                           
                         <div className="mt-2">
@@ -1303,10 +1366,16 @@ const TasksTab = ({ onStartWeeklyCheckIn, onOpenFamilyMeeting }) => {
                         
                         {/* AI Insight Box for AI tasks */}
                         {task.taskType === 'ai' && task.insight && (
-                          <div className="bg-purple-50 p-3 rounded mt-3 flex items-start">
-                            <Info size={16} className="text-purple-600 mr-2 flex-shrink-0 mt-0.5" />
-                            <div className="text-sm text-purple-800">
-                              <strong>AI Insight:</strong> {task.insight}
+                          <div className="bg-purple-100 p-4 rounded-lg mt-3 border border-purple-200">
+                            <div className="flex items-start">
+                              <Info size={20} className="text-purple-600 mr-3 flex-shrink-0 mt-0.5" />
+                              <div>
+                                <h5 className="font-bold text-purple-900 text-sm mb-1">Why This Task Matters:</h5>
+                                <p className="text-sm text-purple-800">{task.insight}</p>
+                                <p className="text-xs text-purple-700 mt-2">
+                                  Our AI analyzed your family's survey data and identified this task as important for improving balance.
+                                </p>
+                              </div>
                             </div>
                           </div>
                         )}
@@ -1462,12 +1531,21 @@ const TasksTab = ({ onStartWeeklyCheckIn, onOpenFamilyMeeting }) => {
                               <div className="flex-shrink-0 mr-3">
                                 <button
                                   className={`w-6 h-6 rounded-full flex items-center justify-center ${
-                                    selectedUser && selectedUser.id === child.id 
+                                    selectedUser && selectedUser.role === 'child'
                                       ? 'bg-white border border-amber-300 hover:bg-amber-50 cursor-pointer' 
                                       : 'bg-gray-100 border border-gray-300 cursor-not-allowed'
                                   }`}
-                                  onClick={() => handleCompleteKidTask(`kid-task-1-${index}`, child.id, !kidTasksCompleted[`kid-task-1-${index}`]?.completed)}
-                                  disabled={selectedUser?.id !== child.id}
+                                  onClick={() => {
+                                    if (!kidTasksCompleted[`kid-task-1-${index}`]?.completed) {
+                                      const observations = prompt("What did you do to help? Share your accomplishment!");
+                                      if (observations) {
+                                        handleCompleteKidTask(`kid-task-1-${index}`, selectedUser.id, true, observations);
+                                      }
+                                    } else {
+                                      handleCompleteKidTask(`kid-task-1-${index}`, selectedUser.id, false);
+                                    }
+                                  }}
+                                  disabled={selectedUser?.role !== 'child'}
                                 >
                                   {kidTasksCompleted[`kid-task-1-${index}`]?.completed && <span>✓</span>}
                                 </button>
@@ -1481,10 +1559,17 @@ const TasksTab = ({ onStartWeeklyCheckIn, onOpenFamilyMeeting }) => {
                                     "Help organize a family game night"}
                                 </p>
                                 
-                                {kidTasksCompleted[`kid-task-1-${index}`]?.completed && kidTasksCompleted[`kid-task-1-${index}`]?.completedDate && (
-                                  <p className="text-xs text-green-600 mt-2">
-                                    Completed on {formatDate(kidTasksCompleted[`kid-task-1-${index}`].completedDate)}
-                                  </p>
+                                {kidTasksCompleted[`kid-task-1-${index}`]?.completed && (
+                                  <div>
+                                    <p className="text-xs text-green-600 mt-2">
+                                      Completed by {kidTasksCompleted[`kid-task-1-${index}`].completedByName || 'a child'} on {formatDate(kidTasksCompleted[`kid-task-1-${index}`].completedDate)}
+                                    </p>
+                                    {kidTasksCompleted[`kid-task-1-${index}`].observations && (
+                                      <div className="mt-2 p-2 bg-amber-50 rounded text-sm">
+                                        <p className="italic text-amber-800">"{kidTasksCompleted[`kid-task-1-${index}`].observations}"</p>
+                                      </div>
+                                    )}
+                                  </div>
                                 )}
                                 
                                 {/* Reactions/Cheers */}
@@ -1590,7 +1675,16 @@ const TasksTab = ({ onStartWeeklyCheckIn, onOpenFamilyMeeting }) => {
                                     ? 'bg-white border border-green-300 hover:bg-green-50 cursor-pointer' 
                                     : 'bg-gray-100 border border-gray-300 cursor-not-allowed'
                                 }`}
-                                onClick={() => handleCompleteKidTask('kid-task-2-1', selectedUser?.id, !kidTasksCompleted['kid-task-2-1']?.completed)}
+                                onClick={() => {
+                                  if (!kidTasksCompleted['kid-task-2-1']?.completed) {
+                                    const observations = prompt("What did you observe about who cooks in your family?");
+                                    if (observations) {
+                                      handleCompleteKidTask('kid-task-2-1', selectedUser.id, true, observations);
+                                    }
+                                  } else {
+                                    handleCompleteKidTask('kid-task-2-1', selectedUser.id, false);
+                                  }
+                                }}
                                 disabled={selectedUser?.role !== 'child'}
                               >
                                 {kidTasksCompleted['kid-task-2-1']?.completed && <span>✓</span>}
@@ -1603,10 +1697,17 @@ const TasksTab = ({ onStartWeeklyCheckIn, onOpenFamilyMeeting }) => {
                                 Keep track of who makes meals this week
                               </p>
                               
-                              {kidTasksCompleted['kid-task-2-1']?.completed && kidTasksCompleted['kid-task-2-1']?.completedDate && (
-                                <p className="text-xs text-green-600 mt-2">
-                                  Completed on {formatDate(kidTasksCompleted['kid-task-2-1'].completedDate)}
-                                </p>
+                              {kidTasksCompleted['kid-task-2-1']?.completed && (
+                                <div>
+                                  <p className="text-xs text-green-600 mt-2">
+                                    Completed by {kidTasksCompleted['kid-task-2-1'].completedByName || 'a child'} on {formatDate(kidTasksCompleted['kid-task-2-1'].completedDate)}
+                                  </p>
+                                  {kidTasksCompleted['kid-task-2-1'].observations && (
+                                    <div className="mt-2 p-2 bg-green-50 rounded text-sm">
+                                      <p className="italic text-green-800">"{kidTasksCompleted['kid-task-2-1'].observations}"</p>
+                                    </div>
+                                  )}
+                                </div>
                               )}
                               
                               {/* Comments */}
@@ -1664,7 +1765,16 @@ const TasksTab = ({ onStartWeeklyCheckIn, onOpenFamilyMeeting }) => {
                                     ? 'bg-white border border-green-300 hover:bg-green-50 cursor-pointer' 
                                     : 'bg-gray-100 border border-gray-300 cursor-not-allowed'
                                 }`}
-                                onClick={() => handleCompleteKidTask('kid-task-2-2', selectedUser?.id, !kidTasksCompleted['kid-task-2-2']?.completed)}
+                                onClick={() => {
+                                  if (!kidTasksCompleted['kid-task-2-2']?.completed) {
+                                    const observations = prompt("What did you notice about who cleans in your family?");
+                                    if (observations) {
+                                      handleCompleteKidTask('kid-task-2-2', selectedUser.id, true, observations);
+                                    }
+                                  } else {
+                                    handleCompleteKidTask('kid-task-2-2', selectedUser.id, false);
+                                  }
+                                }}
                                 disabled={selectedUser?.role !== 'child'}
                               >
                                 {kidTasksCompleted['kid-task-2-2']?.completed && <span>✓</span>}
@@ -1677,10 +1787,17 @@ const TasksTab = ({ onStartWeeklyCheckIn, onOpenFamilyMeeting }) => {
                                 Notice who does cleaning tasks this week
                               </p>
                               
-                              {kidTasksCompleted['kid-task-2-2']?.completed && kidTasksCompleted['kid-task-2-2']?.completedDate && (
-                                <p className="text-xs text-green-600 mt-2">
-                                  Completed on {formatDate(kidTasksCompleted['kid-task-2-2'].completedDate)}
-                                </p>
+                              {kidTasksCompleted['kid-task-2-2']?.completed && (
+                                <div>
+                                  <p className="text-xs text-green-600 mt-2">
+                                    Completed by {kidTasksCompleted['kid-task-2-2'].completedByName || 'a child'} on {formatDate(kidTasksCompleted['kid-task-2-2'].completedDate)}
+                                  </p>
+                                  {kidTasksCompleted['kid-task-2-2'].observations && (
+                                    <div className="mt-2 p-2 bg-green-50 rounded text-sm">
+                                      <p className="italic text-green-800">"{kidTasksCompleted['kid-task-2-2'].observations}"</p>
+                                    </div>
+                                  )}
+                                </div>
                               )}
                               
                               {/* Comments */}

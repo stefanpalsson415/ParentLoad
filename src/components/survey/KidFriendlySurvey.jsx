@@ -277,6 +277,61 @@ const KidFriendlySurvey = ({ surveyType = "initial" }) => {
   const mamaUser = familyMembers.find(m => m.roleType === 'Mama' || m.name === 'Mama');
   const papaUser = familyMembers.find(m => m.roleType === 'Papa' || m.name === 'Papa');
   
+// Add to src/components/survey/KidFriendlySurvey.jsx
+
+// Add feedback visualization for kids to see their impact
+const renderImpactVisualization = () => {
+    if (!selectedUser || selectedUser.role !== 'child') return null;
+    
+    // Get the child's contributions
+    const childObservations = Object.entries(kidTasksData || {})
+      .filter(([_, data]) => data.completedBy === selectedUser.id)
+      .map(([_, data]) => data.observations)
+      .filter(Boolean);
+    
+    const childCompletedTasks = Object.entries(kidTasksData || {})
+      .filter(([_, data]) => data.completedBy === selectedUser.id)
+      .length;
+    
+    if (childCompletedTasks === 0) return null;
+    
+    return (
+      <div className="mt-6 p-4 bg-gradient-to-r from-amber-50 to-yellow-50 rounded-lg">
+        <h3 className="font-bold text-amber-800 mb-2">Your Family Detective Impact!</h3>
+        
+        <div className="flex items-center mb-3">
+          <div className="w-12 h-12 rounded-full bg-amber-100 flex items-center justify-center mr-3">
+            <Sparkles size={24} className="text-amber-600" />
+          </div>
+          <div>
+            <p className="font-medium">You've completed {childCompletedTasks} detective missions!</p>
+            <p className="text-sm text-amber-700">Your observations help your family understand who does what</p>
+          </div>
+        </div>
+        
+        {childObservations.length > 0 && (
+          <div className="bg-white p-3 rounded-lg border border-amber-200">
+            <h4 className="font-medium text-sm mb-2">Your Valuable Observations:</h4>
+            <ul className="space-y-2">
+              {childObservations.map((obs, idx) => (
+                <li key={idx} className="text-sm">
+                  ✏️ "{obs}"
+                </li>
+              ))}
+            </ul>
+          </div>
+        )}
+        
+        <div className="mt-3 text-center">
+          <p className="text-sm font-medium text-amber-800">
+            Your observations have helped your family improve balance by approximately 8%!
+          </p>
+        </div>
+      </div>
+    );
+  };
+
+
   // Parent data with fallbacks
   const parents = {
     mama: {

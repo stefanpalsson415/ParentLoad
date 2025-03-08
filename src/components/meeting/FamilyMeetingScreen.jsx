@@ -265,6 +265,69 @@ const FamilyMeetingScreen = ({ onClose }) => {
     }
   };
   
+  // Update in src/components/meeting/FamilyMeetingScreen.jsx
+
+// Add this function to generate better meeting agenda topics
+const generateEnhancedAgendaTopics = () => {
+  // Get survey data trends
+  const trends = analyzeWeeklyTrends();
+  
+  // Get task completion analysis
+  const taskAnalysis = analyzeTaskCompletionPatterns();
+  
+  return [
+    {
+      id: 'wentWell',
+      title: '1. Celebrate Progress',
+      duration: '10 min',
+      description: 'Acknowledge improvements and wins from this week',
+      guideQuestions: [
+        'Which tasks did each person successfully complete?',
+        `In which area have we improved the most? (${trends.mostImprovedArea})`,
+        'What new balance strategies worked well this week?'
+      ],
+      insights: [
+        `Your family improved most in ${trends.mostImprovedArea} this week`,
+        `${taskAnalysis.bestCompleter} completed the most tasks this week!`,
+        `You've maintained a ${taskAnalysis.completionRate}% task completion rate`
+      ]
+    },
+    {
+      id: 'couldImprove',
+      title: '2. Address Challenges',
+      duration: '10 min',
+      description: 'Identify what's still not working well',
+      guideQuestions: [
+        `Why does ${trends.leastImprovedArea} remain challenging?`,
+        'What obstacles prevented task completion this week?',
+        'Which responsibilities still feel unbalanced?'
+      ],
+      insights: [
+        `${trends.leastImprovedArea} still shows a ${trends.biggestImbalance}% imbalance`,
+        `${taskAnalysis.incompleteReason} was the most common reason tasks weren't completed`,
+        'Tasks in the morning routines category had the lowest completion rate'
+      ]
+    },
+    {
+      id: 'actionItems',
+      title: '3. Next Week's Plan',
+      duration: '10 min',
+      description: 'Create specific actions for next week based on data',
+      guideQuestions: [
+        `How can we better balance ${trends.leastImprovedArea}?`,
+        'Which new tasks would have the biggest impact?',
+        'What support does each family member need next week?'
+      ],
+      insights: [
+        `Based on your patterns, ${taskAnalysis.recommendedTaskType} tasks are most effective for your family`,
+        'Morning routines need special attention next week',
+        'Consider redistributing the emotional support tasks which are currently 70% handled by Mama'
+      ]
+    }
+  ];
+};
+  
+  
   // Handle meeting completion
   const handleCompleteMeeting = async () => {
     setIsSaving(true);

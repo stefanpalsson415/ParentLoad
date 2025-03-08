@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Filter, Info, ChevronDown, ChevronUp, TrendingUp, PieChart, Calendar, Activity, Heart } from 'lucide-react';
 import { useFamily } from '../../../contexts/FamilyContext';
+import FamilyJourneyChart from '../FamilyJourneyChart';
 import { useSurvey } from '../../../contexts/SurveyContext';
 import { 
   RadarChart, PolarGrid, PolarAngleAxis, PolarRadiusAxis, 
@@ -27,7 +28,9 @@ const DashboardTab = () => {
     history: true,
     categories: true,
     insights: true,
-    familyProgress: true  // Changed from breakdown to familyProgress
+    familyProgress: true,  // Changed from breakdown to familyProgress
+    familyJourney: true  // Add this line
+
   });
   
   // Loading states
@@ -368,17 +371,42 @@ const DashboardTab = () => {
         });
       } else {
         // Generate sample data showing improvement if no actual data
-        const previousWeek = history[history.length - 1];
-        
-        // Each week, papa takes on 5% more, mama 5% less
-        const mamaPct = Math.max(50, previousWeek.mama - 5);
-        const papaPct = 100 - mamaPct;
-        
-        history.push({
-          week: `Week ${weekNum}`,
-          mama: mamaPct,
-          papa: papaPct
-        });
+const previousWeek = history[history.length - 1];
+
+// Calculate a more gradual and realistic change
+const imbalance = Math.abs(previousWeek.mama - 50);
+const adjustmentStep = Math.max(2, Math.min(5, Math.ceil(imbalance / 10)));
+
+// Determine direction of adjustment
+if (previousWeek.mama > 50) {
+  // Mama has more tasks, so reduce mama's percentage
+  const mamaPct = previousWeek.mama - adjustmentStep;
+  const papaPct = 100 - mamaPct;
+  history.push({
+    week: `Week ${weekNum}`,
+    mama: mamaPct,
+    papa: papaPct
+  });
+} else if (previousWeek.mama < 50) {
+  // Papa has more tasks, so increase mama's percentage
+  const mamaPct = previousWeek.mama + adjustmentStep;
+  const papaPct = 100 - mamaPct;
+  history.push({
+    week: `Week ${weekNum}`,
+    mama: mamaPct,
+    papa: papaPct
+  });
+} else {
+  // Already at 50/50, add small fluctuation for realism
+  const fluctuation = Math.floor(Math.random() * 5) - 2; // -2 to +2
+  const mamaPct = 50 + fluctuation;
+  const papaPct = 100 - mamaPct;
+  history.push({
+    week: `Week ${weekNum}`,
+    mama: mamaPct,
+    papa: papaPct
+  });
+}
       }
     });
     
@@ -867,6 +895,29 @@ const DashboardTab = () => {
         )}
       </div>
       
+      {/* Family Journey Dashboard */}
+<div className="bg-white rounded-lg shadow">
+  <div 
+    className="p-4 flex justify-between items-center cursor-pointer hover:bg-gray-50"
+    onClick={() => toggleSection('familyJourney')}
+  >
+    <h3 className="text-lg font-semibold">Family Balance Journey</h3>
+    {expandedSections.familyJourney ? (
+      <ChevronUp size={20} className="text-gray-500" />
+    ) : (
+      <ChevronDown size={20} className="text-gray-500" />
+    )}
+  </div>
+  
+  {expandedSections.familyJourney && (
+    <div className="p-6 pt-0">
+      <FamilyJourneyChart />
+    </div>
+  )}
+</div>
+
+
+
       {/* Fun Data Visualizations */}
       <div className="bg-white rounded-lg shadow">
         <div 
