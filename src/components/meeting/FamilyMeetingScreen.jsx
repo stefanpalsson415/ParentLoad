@@ -101,6 +101,12 @@ const FamilyMeetingScreen = ({ onClose }) => {
   const [isCompleting, setIsCompleting] = useState(false);
   const [showCelebration, setShowCelebration] = useState(false);
   
+  // New state for suggested items
+  const [suggestedActionItems, setSuggestedActionItems] = useState([]);
+  const [suggestedGoals, setSuggestedGoals] = useState([]);
+  const [selectedActionItems, setSelectedActionItems] = useState([]);
+  const [selectedGoals, setSelectedGoals] = useState([]);
+  
   // Generate agenda topics based on family data
   const generateAgendaTopics = () => {
     // Analyze survey data to find insights (in a real app, this would be more sophisticated)
@@ -167,6 +173,34 @@ const FamilyMeetingScreen = ({ onClose }) => {
       ]
     };
   };
+  
+  // Generate suggested action items based on family data
+  const generateSuggestedItems = () => {
+    // This would use actual data in a real app
+    return {
+      actionItems: [
+        "Papa to take over all school communications for the week",
+        "Mama to teach Papa how to handle doctor appointments",
+        "Create a shared digital calendar for all family activities",
+        "Implement a 15-minute daily cleanup where everyone participates",
+        "Set up a meal planning session with both parents involved"
+      ],
+      goals: [
+        "Reduce Mama's mental load from 75% to 60% this week",
+        "Make sure both parents attend at least one school function",
+        "Complete morning routines without reminders from Mama",
+        "Create a rotating schedule for managing household finances",
+        "Have Papa handle emotional support for at least one child crisis"
+      ]
+    };
+  };
+  
+  // Initialize suggested items
+  useEffect(() => {
+    const suggestions = generateSuggestedItems();
+    setSuggestedActionItems(suggestions.actionItems);
+    setSuggestedGoals(suggestions.goals);
+  }, []);
   
   // Generate weekly report data
   const generateWeeklyReport = () => {
@@ -236,8 +270,17 @@ const FamilyMeetingScreen = ({ onClose }) => {
     setIsSaving(true);
     
     try {
+      // Combine selected and custom action items and goals
+      const combinedNotes = {
+        ...meetingNotes,
+        actionItems: selectedActionItems.join('\n') + 
+          (meetingNotes.actionItems ? '\n' + meetingNotes.actionItems : ''),
+        nextWeekGoals: selectedGoals.join('\n') + 
+          (meetingNotes.nextWeekGoals ? '\n' + meetingNotes.nextWeekGoals : '')
+      };
+      
       // Save meeting notes to database
-      await saveFamilyMeetingNotes(currentWeek, meetingNotes);
+      await saveFamilyMeetingNotes(currentWeek, combinedNotes);
       
       // Show confirmation dialog
       setShowConfirmation(true);
@@ -396,8 +439,43 @@ const FamilyMeetingScreen = ({ onClose }) => {
                 <p className="text-sm text-blue-700 mb-3">
                   What specific changes will your family commit to next week? Who will do what?
                 </p>
+                
+                {/* Suggested Action Items */}
+                <div className="mb-4">
+                  <h5 className="text-sm font-medium mb-2">Suggested Action Items (Select up to 3):</h5>
+                  <div className="space-y-2">
+                    {suggestedActionItems.map((item, index) => (
+                      <div 
+                        key={index}
+                        className={`p-2 rounded border cursor-pointer ${
+                          selectedActionItems.includes(item) 
+                            ? 'bg-blue-100 border-blue-400' 
+                            : 'bg-white hover:bg-blue-50'
+                        }`}
+                        onClick={() => {
+                          if (selectedActionItems.includes(item)) {
+                            setSelectedActionItems(prev => prev.filter(i => i !== item));
+                          } else if (selectedActionItems.length < 3) {
+                            setSelectedActionItems(prev => [...prev, item]);
+                          }
+                        }}
+                      >
+                        <div className="flex items-center">
+                          <div className={`w-5 h-5 rounded-full border flex items-center justify-center mr-2 ${
+                            selectedActionItems.includes(item) ? 'bg-blue-500 border-blue-500 text-white' : 'border-gray-400'
+                          }`}>
+                            {selectedActionItems.includes(item) && '✓'}
+                          </div>
+                          <span className="text-sm">{item}</span>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+                
+                {/* Custom Action Items */}
                 <textarea
-                  placeholder="List 2-3 concrete actions your family will take next week..."
+                  placeholder="Add your own action items here..."
                   className="w-full p-3 border border-blue-200 rounded-md h-24 bg-white"
                   value={meetingNotes.actionItems || ''}
                   onChange={(e) => handleInputChange('actionItems', e.target.value)}
@@ -413,8 +491,42 @@ const FamilyMeetingScreen = ({ onClose }) => {
                 <p className="text-sm text-purple-700 mb-3">
                   What would a successful Week {currentWeek + 1} look like for your family?
                 </p>
+                
+                {/* Suggested Goals */}
+                <div className="mb-4">
+                  <h5 className="text-sm font-medium mb-2">Suggested Goals (Select up to 2):</h5>
+                  <div className="space-y-2">
+                    {suggestedGoals.map((goal, index) => (
+                      <div 
+                        key={index}
+                        className={`p-2 rounded border cursor-pointer ${
+                          selectedGoals.includes(goal) 
+                            ? 'bg-purple-100 border-purple-400' 
+                            : 'bg-white hover:bg-purple-50'
+                        }`}
+                        onClick={() => {
+                          if (selectedGoals.includes(goal)) {
+                            setSelectedGoals(prev => prev.filter(g => g !== goal));
+                          } else if (selectedGoals.length < 2) {
+                            setSelectedGoals(prev => [...prev, goal]);
+                          }
+                        }}
+                      >
+                        <div className="flex items-center">
+                          <div className={`w-5 h-5 rounded-full border flex items-center justify-center mr-2 ${
+                            selectedGoals.includes(goal) ? 'bg-purple-500 border-purple-500 text-white' : 'border-gray-400'
+                          }`}>
+                            {selectedGoals.includes(goal) && '✓'}
+                          </div>
+                          <span className="text-sm">{goal}</span>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+                
                 <textarea
-                  placeholder="Describe your family's vision for next week..."
+                  placeholder="Add your own goals here..."
                   className="w-full p-3 border border-purple-200 rounded-md h-24 bg-white"
                   value={meetingNotes.nextWeekGoals || ''}
                   onChange={(e) => handleInputChange('nextWeekGoals', e.target.value)}

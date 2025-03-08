@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Users, Calendar, AlertCircle, CheckCircle, ChevronDown, ChevronUp, Sparkles, Brain, Info, Edit, CheckCircle2 } from 'lucide-react';
+import { Users, Calendar, AlertCircle, CheckCircle, ChevronDown, ChevronUp, Sparkles, Brain, Info, Edit, CheckCircle2, Target } from 'lucide-react';
 import { useFamily } from '../../../contexts/FamilyContext';
 import { useSurvey } from '../../../contexts/SurveyContext';
 import DatabaseService from '../../../services/DatabaseService';
@@ -1070,27 +1070,40 @@ const TasksTab = ({ onStartWeeklyCheckIn, onOpenFamilyMeeting }) => {
                           <h4 className="font-medium text-lg">{task.title}</h4>
                           
                           {/* Task type label */}
-                          <div className="flex items-center gap-2">
-                            {task.taskType === 'ai' && (
-                              <span className="px-2 py-0.5 bg-purple-100 text-purple-800 text-xs rounded-full flex items-center">
-                                <Brain size={10} className="mr-1" />
-                                AI Insight
-                              </span>
-                            )}
-                            {task.taskType === 'survey' && (
-                              <span className="px-2 py-0.5 bg-blue-100 text-blue-800 text-xs rounded-full flex items-center">
-                                <CheckCircle2 size={10} className="mr-1" />
-                                Survey Data
-                              </span>
-                            )}
-                            <div>
-                              {expandedTasks[task.id] ? (
-                                <ChevronUp size={20} className="text-gray-500" />
-                              ) : (
-                                <ChevronDown size={20} className="text-gray-500" />
-                              )}
-                            </div>
-                          </div>
+                          {/* Task type label */}
+<div className="flex items-center gap-2">
+  {task.taskType === 'ai' && (
+    <span className="px-2 py-0.5 bg-purple-100 text-purple-800 text-xs rounded-full flex items-center">
+      <Brain size={10} className="mr-1" />
+      AI Insight
+    </span>
+  )}
+  {task.taskType === 'survey' && (
+    <span className="px-2 py-0.5 bg-blue-100 text-blue-800 text-xs rounded-full flex items-center">
+      <CheckCircle2 size={10} className="mr-1" />
+      Survey Data
+    </span>
+  )}
+  {task.taskType === 'meeting' && (
+    <span className="px-2 py-0.5 bg-amber-100 text-amber-800 text-xs rounded-full flex items-center">
+      <Users size={10} className="mr-1" />
+      Family Meeting
+    </span>
+  )}
+  {task.taskType === 'goal' && (
+    <span className="px-2 py-0.5 bg-green-100 text-green-800 text-xs rounded-full flex items-center">
+      <Target size={10} className="mr-1" />
+      Family Goal
+    </span>
+  )}
+  <div>
+    {expandedTasks[task.id] ? (
+      <ChevronUp size={20} className="text-gray-500" />
+    ) : (
+      <ChevronDown size={20} className="text-gray-500" />
+    )}
+  </div>
+</div>
                         </div>
                           
                         <div className="mt-2">
@@ -1239,27 +1252,40 @@ const TasksTab = ({ onStartWeeklyCheckIn, onOpenFamilyMeeting }) => {
                           <h4 className="font-medium text-lg">{task.title}</h4>
                           
                           {/* Task type label */}
-                          <div className="flex items-center gap-2">
-                            {task.taskType === 'ai' && (
-                              <span className="px-2 py-0.5 bg-purple-100 text-purple-800 text-xs rounded-full flex items-center">
-                                <Brain size={10} className="mr-1" />
-                                AI Insight
-                              </span>
-                            )}
-                            {task.taskType === 'survey' && (
-                              <span className="px-2 py-0.5 bg-blue-100 text-blue-800 text-xs rounded-full flex items-center">
-                                <CheckCircle2 size={10} className="mr-1" />
-                                Survey Data
-                              </span>
-                            )}
-                            <div>
-                              {expandedTasks[task.id] ? (
-                                <ChevronUp size={20} className="text-gray-500" />
-                              ) : (
-                                <ChevronDown size={20} className="text-gray-500" />
-                              )}
-                            </div>
-                          </div>
+                          {/* Task type label */}
+<div className="flex items-center gap-2">
+  {task.taskType === 'ai' && (
+    <span className="px-2 py-0.5 bg-purple-100 text-purple-800 text-xs rounded-full flex items-center">
+      <Brain size={10} className="mr-1" />
+      AI Insight
+    </span>
+  )}
+  {task.taskType === 'survey' && (
+    <span className="px-2 py-0.5 bg-blue-100 text-blue-800 text-xs rounded-full flex items-center">
+      <CheckCircle2 size={10} className="mr-1" />
+      Survey Data
+    </span>
+  )}
+  {task.taskType === 'meeting' && (
+    <span className="px-2 py-0.5 bg-amber-100 text-amber-800 text-xs rounded-full flex items-center">
+      <Users size={10} className="mr-1" />
+      Family Meeting
+    </span>
+  )}
+  {task.taskType === 'goal' && (
+    <span className="px-2 py-0.5 bg-green-100 text-green-800 text-xs rounded-full flex items-center">
+      <Target size={10} className="mr-1" />
+      Family Goal
+    </span>
+  )}
+  <div>
+    {expandedTasks[task.id] ? (
+      <ChevronUp size={20} className="text-gray-500" />
+    ) : (
+      <ChevronDown size={20} className="text-gray-500" />
+    )}
+  </div>
+</div>
                         </div>
                           
                         <div className="mt-2">

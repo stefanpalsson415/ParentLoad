@@ -576,6 +576,7 @@ setTaskRecommendations(newTasks); // Update tasks with the new ones
 
   // Helper function to generate new tasks for the next week
 // Helper function to generate new tasks for the next week
+// Helper function to generate new tasks for the next week
 const generateNewWeekTasks = (weekNumber, previousTasks, previousResponses) => {
   console.log(`Generating AI-driven tasks for Week ${weekNumber} based on family data`);
   
@@ -588,6 +589,34 @@ const generateNewWeekTasks = (weekNumber, previousTasks, previousResponses) => {
     .filter(task => task.isAIGenerated)
     .map(task => task.focusArea);
   
+  // Get meeting notes from previous week to incorporate action items and goals
+  const prevWeekNum = weekNumber - 1;
+  let meetingActionItems = [];
+  let meetingGoals = [];
+  
+  // Attempt to get meeting notes for the previous week
+  try {
+    const meetingNotes = weekHistory[`week${prevWeekNum}`]?.meetingNotes || {};
+    
+    // Extract action items and goals
+    if (meetingNotes.actionItems) {
+      meetingActionItems = meetingNotes.actionItems
+        .split('\n')
+        .filter(item => item.trim().length > 0);
+    }
+    
+    if (meetingNotes.nextWeekGoals) {
+      meetingGoals = meetingNotes.nextWeekGoals
+        .split('\n')
+        .filter(goal => goal.trim().length > 0);
+    }
+    
+    console.log("Extracted meeting action items:", meetingActionItems);
+    console.log("Extracted meeting goals:", meetingGoals);
+  } catch (error) {
+    console.error("Error getting meeting notes:", error);
+  }
+  
   // Determine priority areas to focus on this week
   const priorityAreas = determinePriorityAreas(categoryImbalances, previousFocusAreas);
   console.log("Priority areas for this week:", priorityAreas);
@@ -595,35 +624,114 @@ const generateNewWeekTasks = (weekNumber, previousTasks, previousResponses) => {
   // Generate tasks based on the family's specific needs
   const tasks = [];
   
-  // 1. Survey-based task for Papa (from highest priority area)
-  const papaFocusAreas = priorityAreas.filter(area => area.assignTo === "Papa");
-  if (papaFocusAreas.length > 0) {
-    const surveyTask = generateTaskForArea(`${weekNumber}-1`, "Papa", papaFocusAreas[0], weekNumber);
-    surveyTask.taskType = "survey-based";
-    surveyTask.description = `${surveyTask.description} (Based on your family's survey data)`;
-    tasks.push(surveyTask);
+  // 1. Convert meeting action items to tasks
+  meetingActionItems.forEach((item, index) => {
+    // Determine who should be assigned the task
+    // Simple heuristic: assign to Papa if contains "Papa", Mama if contains "Mama", alternate otherwise
+    const assignTo = item.includes("Papa") ? "Papa" : 
+                      item.includes("Mama") ? "Mama" : 
+                      index % 2 === 0 ? "Papa" : "Mama";
+    
+    tasks.push({
+      id: `${weekNumber}-meeting-${index + 1}`,
+      title: `Week ${weekNumber}: Meeting Action Item`,
+      description: item,
+      assignedTo: assignTo,
+      assignedToName: assignTo,
+      taskType: "meeting",
+      focusArea: "Family Meeting Decision",
+      completed: false,
+      completedDate: null,
+      comments: [],
+      subTasks: [
+        {
+          id: `${weekNumber}-meeting-${index + 1}-1`,
+          title: "Make a plan",
+          description: "Plan how to accomplish this action item",
+          completed: false,
+          completedDate: null
+        },
+        {
+          id: `${weekNumber}-meeting-${index + 1}-2`,
+          title: "Execute the plan",
+          description: "Carry out the action item as discussed",
+          completed: false,
+          completedDate: null
+        },
+        {
+          id: `${weekNumber}-meeting-${index + 1}-3`,
+          title: "Report back to family",
+          description: "Share your progress with the family",
+          completed: false,
+          completedDate: null
+        }
+      ]
+    });
+  });
+  
+  // Only add AI and survey tasks if we need more to reach 4 total tasks
+  const tasksNeeded = Math.max(0, 4 - tasks.length);
+  
+  if (tasksNeeded > 0) {
+    // 2. Survey-based task for Papa (from highest priority area)
+    const papaFocusAreas = priorityAreas.filter(area => area.assignTo === "Papa");
+    if (papaFocusAreas.length > 0) {
+      const surveyTask = generateTaskForArea(`${weekNumber}-1`, "Papa", papaFocusAreas[0], weekNumber);
+      surveyTask.taskType = "survey-based";
+      surveyTask.description = `${surveyTask.description} (Based on your family's survey data)`;
+      tasks.push(surveyTask);
+    }
+    
+    // 3. AI-based task for Papa
+    if (tasksNeeded > 1) {
+      const papaInsightTask = generateAIInsightTask(`${weekNumber}-ai-1`, "Papa", priorityAreas, weekNumber);
+      tasks.push(papaInsightTask);
+    }
+    
+    // 4. Survey-based task for Mama (from highest priority area)
+    if (tasksNeeded > 2) {
+      const mamaFocusAreas = priorityAreas.filter(area => area.assignTo === "Mama");
+      if (mamaFocusAreas.length > 0) {
+        const surveyTask = generateTaskForArea(`${weekNumber}-2`, "Mama", mamaFocusAreas[0], weekNumber);
+        surveyTask.taskType = "survey-based";
+        surveyTask.description = `${surveyTask.description} (Based on your family's survey data)`;
+        tasks.push(surveyTask);
+      }
+    }
+    
+    // 5. AI-based task for Mama
+    if (tasksNeeded > 3) {
+      const mamaInsightTask = generateAIInsightTask(`${weekNumber}-ai-2`, "Mama", priorityAreas, weekNumber);
+      tasks.push(mamaInsightTask);
+    }
   }
   
-  // 2. AI-based task for Papa
-  const papaInsightTask = generateAIInsightTask(`${weekNumber}-ai-1`, "Papa", priorityAreas, weekNumber);
-  tasks.push(papaInsightTask);
-  
-  // 3. Survey-based task for Mama (from highest priority area)
-  const mamaFocusAreas = priorityAreas.filter(area => area.assignTo === "Mama");
-  if (mamaFocusAreas.length > 0) {
-    const surveyTask = generateTaskForArea(`${weekNumber}-2`, "Mama", mamaFocusAreas[0], weekNumber);
-    surveyTask.taskType = "survey-based";
-    surveyTask.description = `${surveyTask.description} (Based on your family's survey data)`;
-    tasks.push(surveyTask);
+  // Set task priorities based on family goals
+  if (meetingGoals.length > 0) {
+    // Add a goal-tracking task if we have family goals
+    tasks.push({
+      id: `${weekNumber}-goal-1`,
+      title: `Week ${weekNumber}: Family Goals`,
+      description: `Track progress toward this week's family goals: ${meetingGoals.join('; ')}`,
+      assignedTo: "Mama", // Alternate this between parents
+      assignedToName: "Mama",
+      taskType: "goal",
+      focusArea: "Family Goals",
+      completed: false,
+      completedDate: null,
+      comments: [],
+      subTasks: meetingGoals.map((goal, index) => ({
+        id: `${weekNumber}-goal-1-${index + 1}`,
+        title: `Goal ${index + 1}`,
+        description: goal,
+        completed: false,
+        completedDate: null
+      }))
+    });
   }
-  
-  // 4. AI-based task for Mama
-  const mamaInsightTask = generateAIInsightTask(`${weekNumber}-ai-2`, "Mama", priorityAreas, weekNumber);
-  tasks.push(mamaInsightTask);
   
   return tasks;
-};
-// Helper function to analyze survey responses and identify imbalances
+};// Helper function to analyze survey responses and identify imbalances
 // Helper function to analyze survey responses and identify imbalances
 // Helper function to analyze survey responses and identify imbalances
 const analyzeImbalancesByCategory = (responses) => {
