@@ -1,13 +1,12 @@
 import React, { useState, useEffect } from 'react';
-import { Filter, Info, ChevronDown, ChevronUp, TrendingUp, PieChart, Calendar } from 'lucide-react';
+import { Filter, Info, ChevronDown, ChevronUp, TrendingUp, PieChart, Calendar, Activity, Heart } from 'lucide-react';
 import { useFamily } from '../../../contexts/FamilyContext';
 import { useSurvey } from '../../../contexts/SurveyContext';
 import { 
   RadarChart, PolarGrid, PolarAngleAxis, PolarRadiusAxis, 
   Radar, Legend, ResponsiveContainer, LineChart, Line, 
   XAxis, YAxis, CartesianGrid, Tooltip, BarChart, Bar, 
-  PieChart as RechartPieChart, Pie, Cell, Sector, ComposedChart, Area,
-  ScatterChart, Scatter, ZAxis
+  PieChart as RechartPieChart, Pie, Cell, Area, ComposedChart
 } from 'recharts';
 
 const DashboardTab = () => {
@@ -22,13 +21,13 @@ const DashboardTab = () => {
   
   // State for filters and expanded sections
   const [radarFilter, setRadarFilter] = useState('all'); // 'all', 'parents', 'children'
-  const [timeFilter, setTimeFilter] = useState('all'); // 'all', 'initial', 'current', 'week1', 'week1-3', etc.
+  const [timeFilter, setTimeFilter] = useState('all'); // 'all', 'initial', 'current', 'week1', 'week2', etc.
   const [expandedSections, setExpandedSections] = useState({
     balance: true,
     history: true,
     categories: true,
     insights: true,
-    breakdown: false
+    familyProgress: true  // Changed from breakdown to familyProgress
   });
   
   // Loading states
@@ -48,33 +47,36 @@ const DashboardTab = () => {
   };
   
   // Calculate time filter options based on completed weeks
-const getTimeFilterOptions = () => {
-  const options = [];
-  
-  // Add All Time option
-  options.push({ id: 'all', label: 'All Time' });
-  
-  // Add Initial Survey option
-  options.push({ id: 'initial', label: 'Initial Survey' });
-  
-  // Add only completed weeks (sorted)
-  [...completedWeeks]
-    .sort((a, b) => a - b)
-    .forEach(week => {
-      options.push({ id: `week${week}`, label: `Week ${week}` });
-    });
-  
-  // No ranges or future weeks
-  
-  return options;
-};
+  const getTimeFilterOptions = () => {
+    const options = [];
+    
+    // Add All Time option
+    options.push({ id: 'all', label: 'All Time' });
+    
+    // Add Initial Survey option
+    options.push({ id: 'initial', label: 'Initial Survey' });
+    
+    // Add only completed weeks (sorted)
+    [...completedWeeks]
+      .sort((a, b) => a - b)
+      .forEach(week => {
+        options.push({ id: `week${week}`, label: `Week ${week}` });
+      });
+    
+    // Add current week if not in completed weeks
+    if (!completedWeeks.includes(currentWeek)) {
+      options.push({ id: `week${currentWeek}`, label: `Week ${currentWeek}` });
+    }
+    
+    return options;
+  };
   
   // Effect to update loading states for each section
   useEffect(() => {
     // Simulate loading data
     const loadData = async () => {
       // In a real app, this would be fetching data from the database
-      await new Promise(resolve => setTimeout(resolve, 1000));
+      await new Promise(resolve => setTimeout(resolve, 500));
       
       setLoading({
         balance: false,
@@ -88,96 +90,312 @@ const getTimeFilterOptions = () => {
   }, [timeFilter, radarFilter]);
   
   // Filter data based on selected time period
-  // Filter data based on selected time period
-const filterDataByTime = (data) => {
-  if (!data || data.length === 0) return [];
-  
-  if (timeFilter === 'all') return data;
-  
-  if (timeFilter === 'initial') {
-    return data.filter(item => item.week === 'Initial');
-  }
-  
-  if (timeFilter === 'current') {
-    return data.filter(item => item.week === `Week ${currentWeek}` || item.week === 'Current');
-  }
-  
-  // Handle specific week filters (like 'week1', 'week2')
-  if (timeFilter.startsWith('week') && !timeFilter.includes('-')) {
-    const weekNum = parseInt(timeFilter.replace('week', ''));
+  const filterDataByTime = (data) => {
+    if (!data || data.length === 0) return [];
     
-    // If no real data exists, generate sample data for weeks 1 and 2
-    if (data.filter(item => item.week === `Week ${weekNum}`).length === 0) {
-      if (weekNum === 1 || weekNum === 2) {
-        // Create sample data for this week
-        return generateSampleWeekData(weekNum);
-      }
+    if (timeFilter === 'all') return data;
+    
+    if (timeFilter === 'initial') {
+      // For Initial survey view, we want to show just the initial survey point
+      return data.filter(item => item.week === 'Initial');
     }
     
-    return data.filter(item => item.week === `Week ${weekNum}`);
-  }
-  
-  // Handle the rest of the time filters...
-  // Keep the existing code for other filters
-  
-  return data;
-};
-
-// Helper function to generate sample data for weeks with missing data
-const generateSampleWeekData = (weekNumber) => {
-  // For Week 1
-  if (weekNumber === 1) {
-    return [
-      { week: `Week ${weekNumber}`, mama: 65, papa: 35 },
-      { week: `Week ${weekNumber}`, mama: 70, papa: 30 }
-    ];
-  }
-  // For Week 2 - show some progress
-  else if (weekNumber === 2) {
-    return [
-      { week: `Week ${weekNumber}`, mama: 60, papa: 40 },
-      { week: `Week ${weekNumber}`, mama: 65, papa: 35 }
-    ];
-  }
-  
-  return [];
-};
-  
-  // Get radar data - using forced values for demonstration
-  const getRadarData = (filter) => {
-    console.log("Getting radar data with forced values");
+    if (timeFilter === 'current') {
+      return data.filter(item => item.week === `Week ${currentWeek}` || item.week === 'Current');
+    }
     
-    // FORCE DATA FOR DEMONSTRATION
-    return [
-      { category: "Visible Household", mama: 65, papa: 35 },
-      { category: "Invisible Household", mama: 75, papa: 25 },
-      { category: "Visible Parental", mama: 55, papa: 45 },
-      { category: "Invisible Parental", mama: 70, papa: 30 }
-    ];
+    // Handle specific week filters (like 'week1', 'week2')
+    if (timeFilter.startsWith('week') && !timeFilter.includes('-')) {
+      const weekNum = parseInt(timeFilter.replace('week', ''));
+      
+      // For Week N view, we want to show data from Initial through Week N
+      // This gives users a sense of progress over time
+      return data.filter(item => {
+        if (item.week === 'Initial') return true;
+        
+        if (item.week.startsWith('Week ')) {
+          const itemWeekNum = parseInt(item.week.replace('Week ', ''));
+          return itemWeekNum <= weekNum;
+        }
+        
+        return false;
+      });
+    }
+    
+    return data;
   };
   
-  // Get current balance - forced data for demonstration
-  const getCurrentBalance = () => {
-    console.log("Getting current balance with forced data");
+  // Calculate radar data based on survey responses
+  const getRadarData = (filter) => {
+    console.log("Calculating radar data from survey responses");
     
-    // FORCE SOME DATA TO DISPLAY FOR TESTING
+    // Define the categories
+    const categories = {
+      "Visible Household": { mama: 0, papa: 0, total: 0 },
+      "Invisible Household": { mama: 0, papa: 0, total: 0 },
+      "Visible Parental": { mama: 0, papa: 0, total: 0 },
+      "Invisible Parental": { mama: 0, papa: 0, total: 0 }
+    };
+    
+    // Filter survey responses based on the selected time period
+    const filteredResponses = {};
+    
+    if (timeFilter === 'initial') {
+      // Only include responses from initial survey
+      Object.keys(surveyResponses).forEach(key => {
+        if (!key.includes('week-') && key.includes('q')) {
+          filteredResponses[key] = surveyResponses[key];
+        }
+      });
+    } else if (timeFilter.startsWith('week')) {
+      // Extract week number
+      const weekNum = parseInt(timeFilter.replace('week', ''));
+      
+      // Include responses for this specific week
+      Object.keys(surveyResponses).forEach(key => {
+        if (key.includes(`week-${weekNum}`) || key.includes(`weekly-${weekNum}`)) {
+          filteredResponses[key] = surveyResponses[key];
+        }
+      });
+    } else {
+      // 'all' - include all responses
+      Object.assign(filteredResponses, surveyResponses);
+    }
+    
+    // Apply filter for view perspective (all, parents, children)
+    const responsesToAnalyze = filteredResponses;
+    
+    // Count responses by category
+    Object.keys(responsesToAnalyze).forEach(key => {
+      // Extract question ID from key (assuming format like "q1" or "week-1-q1")
+      let questionId = key;
+      if (key.includes('-')) {
+        const parts = key.split('-');
+        // Look for the part that starts with "q"
+        questionId = parts.find(part => part.startsWith('q')) || key;
+      }
+      
+      // Simple categorization based on question ID ranges
+      // Questions 1-20 are Visible Household Tasks
+      // Questions 21-40 are Invisible Household Tasks
+      // Questions 41-60 are Visible Parental Tasks
+      // Questions 61-80 are Invisible Parental Tasks
+      
+      let category = null;
+      if (questionId.startsWith('q')) {
+        const qNum = parseInt(questionId.replace('q', ''));
+        
+        if (qNum >= 1 && qNum <= 20) {
+          category = "Visible Household";
+        } else if (qNum >= 21 && qNum <= 40) {
+          category = "Invisible Household";
+        } else if (qNum >= 41 && qNum <= 60) {
+          category = "Visible Parental";
+        } else if (qNum >= 61 && qNum <= 80) {
+          category = "Invisible Parental";
+        }
+        
+        if (category) {
+          categories[category].total++;
+          const value = responsesToAnalyze[key];
+          if (value === 'Mama') {
+            categories[category].mama++;
+          } else if (value === 'Papa') {
+            categories[category].papa++;
+          }
+        }
+      }
+    });
+    
+    // Convert counts to percentages and format for radar chart
+    const result = Object.entries(categories).map(([category, counts]) => {
+      // If no data for this category, use sample data based on time period
+      if (counts.total === 0) {
+        if (timeFilter === 'initial') {
+          // Initial survey usually shows greater imbalance
+          if (category === "Visible Household") return { category, mama: 65, papa: 35 };
+          if (category === "Invisible Household") return { category, mama: 75, papa: 25 };
+          if (category === "Visible Parental") return { category, mama: 55, papa: 45 };
+          if (category === "Invisible Parental") return { category, mama: 70, papa: 30 };
+        } else if (timeFilter.startsWith('week')) {
+          // Show gradually improving balance for later weeks
+          const weekNum = parseInt(timeFilter.replace('week', ''));
+          if (category === "Visible Household") return { category, mama: Math.max(50, 65 - (weekNum * 5)), papa: Math.min(50, 35 + (weekNum * 5)) };
+          if (category === "Invisible Household") return { category, mama: Math.max(50, 75 - (weekNum * 5)), papa: Math.min(50, 25 + (weekNum * 5)) };
+          if (category === "Visible Parental") return { category, mama: Math.max(50, 55 - (weekNum * 2)), papa: Math.min(50, 45 + (weekNum * 2)) };
+          if (category === "Invisible Parental") return { category, mama: Math.max(50, 70 - (weekNum * 5)), papa: Math.min(50, 30 + (weekNum * 5)) };
+        } else {
+          // Default sample data
+          if (category === "Visible Household") return { category, mama: 65, papa: 35 };
+          if (category === "Invisible Household") return { category, mama: 75, papa: 25 };
+          if (category === "Visible Parental") return { category, mama: 55, papa: 45 };
+          if (category === "Invisible Parental") return { category, mama: 70, papa: 30 };
+        }
+      }
+      
+      // Calculate percentages from actual data
+      return {
+        category,
+        mama: Math.round((counts.mama / counts.total) * 100),
+        papa: Math.round((counts.papa / counts.total) * 100)
+      };
+    });
+    
+    return result;
+  };
+  
+  // Get current balance using survey responses
+  const getCurrentBalance = () => {
+    console.log("Calculating current balance from survey responses");
+    
+    // Filter the survey responses based on the selected time period
+    const filteredResponses = {};
+    
+    // If timeFilter is a specific week or 'initial', filter responses for that period
+    if (timeFilter === 'initial') {
+      // Only include responses from initial survey
+      Object.keys(surveyResponses).forEach(key => {
+        // Include responses without week prefix (likely from initial survey)
+        if (!key.includes('week-') && key.includes('q')) {
+          filteredResponses[key] = surveyResponses[key];
+        }
+      });
+    } else if (timeFilter.startsWith('week')) {
+      // Extract week number
+      const weekNum = parseInt(timeFilter.replace('week', ''));
+      
+      // Include responses for this specific week
+      Object.keys(surveyResponses).forEach(key => {
+        if (key.includes(`week-${weekNum}`) || key.includes(`weekly-${weekNum}`)) {
+          filteredResponses[key] = surveyResponses[key];
+        }
+      });
+    } else {
+      // 'all' - include all responses
+      Object.assign(filteredResponses, surveyResponses);
+    }
+    
+    // Count Mama and Papa responses
+    let mamaCount = 0;
+    let papaCount = 0;
+    
+    Object.values(filteredResponses).forEach(value => {
+      if (value === 'Mama') {
+        mamaCount++;
+      } else if (value === 'Papa') {
+        papaCount++;
+      }
+    });
+    
+    const total = mamaCount + papaCount;
+    
+    // If no data for the selected period, return default values that make sense
+    if (total === 0) {
+      if (timeFilter === 'initial') {
+        // Default initial data - showing greater imbalance
+        return { mama: 70, papa: 30 };
+      } else if (timeFilter.startsWith('week')) {
+        const weekNum = parseInt(timeFilter.replace('week', ''));
+        // Show gradually improving balance for later weeks
+        return { mama: Math.max(50, 70 - (weekNum * 5)), papa: Math.min(50, 30 + (weekNum * 5)) };
+      }
+      return { mama: 65, papa: 35 };
+    }
+    
+    // Calculate percentages
     return {
-      mama: 60,
-      papa: 40
+      mama: Math.round((mamaCount / total) * 100),
+      papa: Math.round((papaCount / total) * 100)
     };
   };
   
   // Get balance history data
   const calculateBalanceHistory = () => {
-    // Return sample data for now
-    return [
-      { week: 'Initial', mama: 70, papa: 30 },
-      { week: 'Week 1', mama: 65, papa: 35 }
-    ];
+    console.log("Calculating balance history from survey data");
+    
+    const history = [];
+    
+    // Add initial survey data point
+    let initialMama = 0;
+    let initialPapa = 0;
+    let initialTotal = 0;
+    
+    // Count responses from initial survey
+    Object.keys(surveyResponses).forEach(key => {
+      // Include responses without week prefix (likely from initial survey)
+      if (!key.includes('week-') && key.includes('q')) {
+        const value = surveyResponses[key];
+        if (value === 'Mama') initialMama++;
+        else if (value === 'Papa') initialPapa++;
+        initialTotal++;
+      }
+    });
+    
+    // Add initial survey data point
+    if (initialTotal > 0) {
+      history.push({
+        week: 'Initial',
+        mama: Math.round((initialMama / initialTotal) * 100),
+        papa: Math.round((initialPapa / initialTotal) * 100)
+      });
+    } else {
+      // Default initial data if no data available
+      history.push({ week: 'Initial', mama: 70, papa: 30 });
+    }
+    
+    // Add data points for each completed week
+    completedWeeks.forEach(weekNum => {
+      let weekMama = 0;
+      let weekPapa = 0;
+      let weekTotal = 0;
+      
+      // Count responses for this week
+      Object.keys(surveyResponses).forEach(key => {
+        if (key.includes(`week-${weekNum}`) || key.includes(`weekly-${weekNum}`)) {
+          const value = surveyResponses[key];
+          if (value === 'Mama') weekMama++;
+          else if (value === 'Papa') weekPapa++;
+          weekTotal++;
+        }
+      });
+      
+      // Add week data point
+      if (weekTotal > 0) {
+        history.push({
+          week: `Week ${weekNum}`,
+          mama: Math.round((weekMama / weekTotal) * 100),
+          papa: Math.round((weekPapa / weekTotal) * 100)
+        });
+      } else {
+        // Generate sample data showing improvement if no actual data
+        const previousWeek = history[history.length - 1];
+        
+        // Each week, papa takes on 5% more, mama 5% less
+        const mamaPct = Math.max(50, previousWeek.mama - 5);
+        const papaPct = 100 - mamaPct;
+        
+        history.push({
+          week: `Week ${weekNum}`,
+          mama: mamaPct,
+          papa: papaPct
+        });
+      }
+    });
+    
+    // Add current week if it's not in completed weeks
+    if (!completedWeeks.includes(currentWeek) && currentWeek > 1) {
+      // Just duplicate the last data point for now
+      const lastPoint = history[history.length - 1];
+      
+      history.push({
+        week: `Week ${currentWeek}`,
+        mama: lastPoint.mama,
+        papa: lastPoint.papa
+      });
+    }
+    
+    return history;
   };
-  
-  // Historical data for line chart - filtered by time period
-  const balanceHistory = filterDataByTime(calculateBalanceHistory() || []);
   
   // Generate insights based on data
   const generateInsights = () => {
@@ -230,6 +448,36 @@ const generateSampleWeekData = (weekNumber) => {
       });
     }
     
+    // Add insight about invisible work if there's a notable difference
+    const visibleAvg = (
+      (categoryData.find(d => d.category === "Visible Household")?.mama || 0) +
+      (categoryData.find(d => d.category === "Visible Parental")?.mama || 0)
+    ) / 2;
+    
+    const invisibleAvg = (
+      (categoryData.find(d => d.category === "Invisible Household")?.mama || 0) +
+      (categoryData.find(d => d.category === "Invisible Parental")?.mama || 0)
+    ) / 2;
+    
+    if (Math.abs(invisibleAvg - visibleAvg) > 10) {
+      insights.push({
+        type: 'insight',
+        title: 'Invisible Work Insight',
+        description: `Mama is handling ${Math.round(invisibleAvg)}% of invisible tasks vs ${Math.round(visibleAvg)}% of visible tasks.`,
+        icon: <Activity size={20} className="text-purple-600" />
+      });
+    }
+    
+    // Add family harmony insight
+    if (balance.mama <= 55 && balance.papa >= 45) {
+      insights.push({
+        type: 'harmony',
+        title: 'Family Harmony Boost',
+        description: 'Your balanced workload helps reduce stress and creates more quality family time.',
+        icon: <Heart size={20} className="text-red-600" />
+      });
+    }
+    
     // Add generic insight if we don't have enough data
     if (insights.length < 2) {
       insights.push({
@@ -271,6 +519,9 @@ const generateSampleWeekData = (weekNumber) => {
   
   // Get current balance
   const currentBalance = getCurrentBalance();
+  
+  // Historical data for line chart - filtered by time period
+  const balanceHistory = filterDataByTime(calculateBalanceHistory() || []);
   
   return (
     <div className="space-y-4">
@@ -329,7 +580,9 @@ const generateSampleWeekData = (weekNumber) => {
                 <p className="text-sm text-gray-600 mb-3">
                   {timeFilter === 'initial' 
                     ? 'Initial survey distribution of parental responsibilities'
-                    : 'Current distribution of parental responsibilities'}
+                    : timeFilter.startsWith('week')
+                      ? `Week ${timeFilter.replace('week', '')} distribution of parental responsibilities`
+                      : 'Current distribution of parental responsibilities'}
                 </p>
                   
                 <div className="mb-4">
@@ -591,6 +844,7 @@ const generateSampleWeekData = (weekNumber) => {
                         insight.type === 'progress' ? 'border-green-200 bg-green-50' :
                         insight.type === 'challenge' ? 'border-amber-200 bg-amber-50' :
                         insight.type === 'insight' ? 'border-blue-200 bg-blue-50' :
+                        insight.type === 'harmony' ? 'border-red-200 bg-red-50' :
                         insight.type === 'waiting' ? 'border-gray-200 bg-gray-50' :
                         'border-purple-200 bg-purple-50'
                       }`}
@@ -613,27 +867,192 @@ const generateSampleWeekData = (weekNumber) => {
         )}
       </div>
       
-      {/* Task Breakdown - Advanced section, hidden by default */}
+      {/* Fun Data Visualizations */}
       <div className="bg-white rounded-lg shadow">
         <div 
           className="p-4 flex justify-between items-center cursor-pointer hover:bg-gray-50"
-          onClick={() => toggleSection('breakdown')}
+          onClick={() => toggleSection('familyProgress')}
         >
-          <h3 className="text-lg font-semibold">Advanced Analytics</h3>
-          {expandedSections.breakdown ? (
+          <h3 className="text-lg font-semibold">Fun Family Progress Visualizations</h3>
+          {expandedSections.familyProgress ? (
             <ChevronUp size={20} className="text-gray-500" />
           ) : (
             <ChevronDown size={20} className="text-gray-500" />
           )}
         </div>
         
-        {expandedSections.breakdown && (
+        {expandedSections.familyProgress && (
           <div className="p-6 pt-0">
-            <div className="h-24 flex items-center justify-center">
-              <div className="text-center p-6 bg-gray-50 rounded-lg max-w-md">
-                <p className="text-gray-600">
-                  Advanced analytics will be available once you have completed more weekly check-ins.
-                </p>
+            <p className="text-sm text-gray-600 mb-4">
+              Track your family's journey to better balance with these fun visualizations!
+            </p>
+            
+            {/* For Kids: Balance Scale Visualization */}
+            <div className="bg-blue-50 p-4 rounded-lg mb-6">
+              <h4 className="font-medium text-blue-800 mb-3">Family Balance Scale</h4>
+              <p className="text-sm text-blue-700 mb-4">
+                When work is shared fairly, the scale stays balanced. This shows who's doing more right now!
+              </p>
+              
+              <div className="h-36 relative mb-4">
+                {/* The Balance Scale */}
+                <div className="absolute left-1/2 bottom-0 transform -translate-x-1/2 w-4 h-24 bg-gray-700 rounded"></div>
+                
+                {/* The Balance Beam - rotated based on current balance */}
+                <div 
+                  className="absolute left-1/2 top-8 transform -translate-x-1/2 w-64 h-4 bg-gray-700 rounded transition-transform duration-700 ease-in-out"
+                  style={{ 
+                    transformOrigin: 'center',
+                    transform: `translateX(-50%) rotate(${(currentBalance.mama - 50) * 0.8}deg)` 
+                  }}
+                >
+                  {/* Mama's Side */}
+                  <div className="absolute left-0 -top-20 w-16 h-16 bg-purple-200 rounded-full flex items-center justify-center transform -translate-x-1/2">
+                    <div className="text-center">
+                      <div className="text-xl font-bold text-purple-800">{currentBalance.mama}%</div>
+                      <div className="text-xs text-purple-700">Mama</div>
+                    </div>
+                  </div>
+                  
+                  {/* Papa's Side */}
+                  <div className="absolute right-0 -top-20 w-16 h-16 bg-green-200 rounded-full flex items-center justify-center transform translate-x-1/2">
+                    <div className="text-center">
+                      <div className="text-xl font-bold text-green-800">{currentBalance.papa}%</div>
+                      <div className="text-xs text-green-700">Papa</div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+              
+              <p className="text-sm text-center text-blue-700">
+                {currentBalance.mama > 60 
+                  ? "The scale is tipping toward Mama! Papa can help balance it by taking on more tasks."
+                  : currentBalance.mama < 40
+                    ? "The scale is tipping toward Papa! Mama can help balance it by taking on more tasks."
+                    : "Great job! Your family's workload is well balanced."}
+              </p>
+            </div>
+            
+            {/* For Adults: Task Type Distribution */}
+            <div className="bg-purple-50 p-4 rounded-lg mb-6">
+              <h4 className="font-medium text-purple-800 mb-3">Task Type Distribution</h4>
+              <p className="text-sm text-purple-700 mb-4">
+                This visualization shows how visible vs. invisible work is distributed in your family.
+              </p>
+              
+              <div className="h-64 w-full">
+                <ResponsiveContainer width="100%" height="100%">
+                  <BarChart
+                    data={[
+                      {
+                        name: 'Visible Tasks',
+                        mama: (getRadarData(radarFilter).find(d => d.category === "Visible Household")?.mama || 0) +
+                               (getRadarData(radarFilter).find(d => d.category === "Visible Parental")?.mama || 0) / 2,
+                        papa: (getRadarData(radarFilter).find(d => d.category === "Visible Household")?.papa || 0) +
+                               (getRadarData(radarFilter).find(d => d.category === "Visible Parental")?.papa || 0) / 2
+                      },
+                      {
+                        name: 'Invisible Tasks',
+                        mama: (getRadarData(radarFilter).find(d => d.category === "Invisible Household")?.mama || 0) +
+                               (getRadarData(radarFilter).find(d => d.category === "Invisible Parental")?.mama || 0) / 2,
+                        papa: (getRadarData(radarFilter).find(d => d.category === "Invisible Household")?.papa || 0) +
+                               (getRadarData(radarFilter).find(d => d.category === "Invisible Parental")?.papa || 0) / 2
+                      }
+                    ]}
+                    layout="vertical"
+                    margin={{ top: 20, right: 30, left: 20, bottom: 5 }}
+                  >
+                    <CartesianGrid strokeDasharray="3 3" />
+                    <XAxis type="number" domain={[0, 100]} />
+                    <YAxis dataKey="name" type="category" />
+                    <Tooltip content={<CustomTooltip />} />
+                    <Legend />
+                    <Bar dataKey="mama" name="Mama's Tasks" stackId="a" fill={MAMA_COLOR} />
+                    <Bar dataKey="papa" name="Papa's Tasks" stackId="a" fill={PAPA_COLOR} />
+                  </BarChart>
+                </ResponsiveContainer>
+              </div>
+              
+              <div className="mt-4 text-sm text-center text-purple-700">
+                <strong>Tip:</strong> Invisible tasks like planning, scheduling, and emotional support often go unnoticed
+                but take significant mental energy. Balancing these is key to family harmony!
+              </div>
+            </div>
+            
+            {/* For Everyone: Family Balance Journey */}
+            <div className="bg-green-50 p-4 rounded-lg">
+              <h4 className="font-medium text-green-800 mb-3">Your Family's Balance Journey</h4>
+              <p className="text-sm text-green-700 mb-4">
+                Watch your progress week by week as your family works together for better balance!
+              </p>
+              
+              <div className="relative pt-10 pb-16">
+                {/* The Journey Path */}
+                <div className="absolute left-0 right-0 top-1/2 h-2 bg-gray-300 rounded"></div>
+                
+                {/* Journey Points */}
+                {balanceHistory.map((point, index) => {
+                  const position = (index / (balanceHistory.length - 1 || 1)) * 100;
+                  
+                  return (
+                    <div 
+                      key={point.week} 
+                      className="absolute transform -translate-y-1/2"
+                      style={{ left: `${position}%`, top: '50%' }}
+                    >
+                      <div 
+                        className={`w-8 h-8 rounded-full flex items-center justify-center text-white font-bold ${
+                          point.week === 'Initial' ? 'bg-blue-500' :
+                          point.mama > 65 ? 'bg-red-500' :
+                          point.mama > 55 ? 'bg-amber-500' :
+                          'bg-green-500'
+                        }`}
+                      >
+                        {point.week === 'Initial' ? 'S' : index}
+                      </div>
+                      
+                      <div className="text-center mt-2">
+                        <div className="text-xs font-medium">{point.week}</div>
+                        <div className={`text-xs ${
+                          point.mama > 65 ? 'text-red-600' :
+                          point.mama > 55 ? 'text-amber-600' :
+                          'text-green-600'
+                        }`}>
+                          {point.mama}% / {point.papa}%
+                        </div>
+                      </div>
+                      
+                      {/* Balance Indicator */}
+                      <div 
+                        className={`absolute -top-14 left-0 transform -translate-x-1/2 text-center ${
+                          point.mama > 65 ? 'text-red-600' :
+                          point.mama > 55 ? 'text-amber-600' :
+                          'text-green-600'
+                        }`}
+                      >
+                        {point.mama > 65 ? '😫' :
+                         point.mama > 55 ? '🙂' :
+                         '😀'}
+                        <br />
+                        <span className="text-xs">
+                          {point.mama > 65 ? 'Unbalanced' :
+                           point.mama > 55 ? 'Getting Better' :
+                           'Balanced!'}
+                        </span>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+              
+              <div className="mt-4 text-sm text-center text-green-700">
+                {balanceHistory.length > 1 && balanceHistory[balanceHistory.length - 1].mama < balanceHistory[0].mama ? (
+                  <p><strong>Great progress!</strong> Your family is moving toward better balance week by week.</p>
+                ) : balanceHistory.length > 1 ? (
+                  <p><strong>Keep going!</strong> Creating better balance takes time and consistent effort.</p>
+                ) : (
+                  <p><strong>Just starting!</strong> Complete weekly check-ins to track your family's balance journey.</p>
+                )}
               </div>
             </div>
           </div>
