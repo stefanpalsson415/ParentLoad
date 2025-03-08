@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { HelpCircle, Volume2, ArrowRight, ArrowLeft, Star, Medal, Info, ChevronDown, ChevronUp } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
 import { useFamily } from '../../contexts/FamilyContext';
 import { useSurvey } from '../../contexts/SurveyContext';
 
@@ -134,16 +135,30 @@ const TaskIllustrations = {
   )
 };
 
-const KidFriendlySurvey = ({ onComplete }) => {
-  const { fullQuestionSet, updateSurveyResponse, getSurveyProgress } = useSurvey();
-  const { selectedUser, familyMembers } = useFamily();
+const KidFriendlySurvey = ({ surveyType = "initial" }) => {
+  const navigate = useNavigate();
+  const { 
+    fullQuestionSet, 
+    updateSurveyResponse, 
+    resetSurvey, 
+    getSurveyProgress,
+    generateWeeklyQuestions,
+    currentSurveyResponses
+  } = useSurvey();
+  
+  const { 
+    selectedUser, 
+    familyMembers, 
+    completeInitialSurvey,
+    completeWeeklyCheckIn,
+    currentWeek 
+  } = useFamily();
   
   // State
   const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0);
   const [selectedParent, setSelectedParent] = useState(null);
   const [showExplanation, setShowExplanation] = useState(false);
   const [userResponses, setUserResponses] = useState({});
-  const [showAudioPlaying, setShowAudioPlaying] = useState(false);
   const [gameStatus, setGameStatus] = useState({
     mamaPosition: 0,
     papaPosition: 0,
@@ -153,18 +168,39 @@ const KidFriendlySurvey = ({ onComplete }) => {
   const [totalStars, setTotalStars] = useState(0);
   const [filterQuestions, setFilterQuestions] = useState(false);
   const [showAnimatedProgress, setShowAnimatedProgress] = useState(false);
-  const [showCharacters, setShowCharacters] = useState(false);
   const [animation, setAnimation] = useState(null);
   
   // Create a filtered list of questions for kids if needed
   const [questions, setQuestions] = useState([]);
   const questionTimerRef = useRef(null);
   
-  // Set up questions for kids - use a simplified subset for younger children
+  // Redirect if no user is selected
+  useEffect(() => {
+    if (!selectedUser) {
+      navigate('/');
+    }
+  }, [selectedUser, navigate]);
+  
+  // Reset survey when component mounts - only once!
+  useEffect(() => {
+    resetSurvey();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []); 
+  
+  // Set up questions for kids based on survey type
   useEffect(() => {
     if (!fullQuestionSet || fullQuestionSet.length === 0) return;
     
-    let filteredList = fullQuestionSet;
+    let questionSet;
+    
+    // Determine which questions to use based on the survey type
+    if (surveyType === "weekly") {
+      questionSet = generateWeeklyQuestions(currentWeek);
+    } else {
+      questionSet = fullQuestionSet;
+    }
+    
+    let filteredList = questionSet;
     
     // For very young children, use a much smaller set of simpler questions
     if (selectedUser && selectedUser.role === 'child' && selectedUser.age < 8) {
@@ -178,9 +214,9 @@ const KidFriendlySurvey = ({ onComplete }) => {
       
       const simpleQuestions = [];
       categories.forEach(category => {
-        const categoryQuestions = fullQuestionSet.filter(q => q.category === category);
+        const categoryQuestions = questionSet.filter(q => q.category === category);
         // Pick 5 questions that are more concrete and observable
-        const selected = categoryQuestions.slice(0, 5); 
+        const selected = categoryQuestions.slice(0, Math.min(5, categoryQuestions.length)); 
         simpleQuestions.push(...selected);
       });
       
@@ -197,9 +233,9 @@ const KidFriendlySurvey = ({ onComplete }) => {
       
       const mediumQuestions = [];
       categories.forEach(category => {
-        const categoryQuestions = fullQuestionSet.filter(q => q.category === category);
+        const categoryQuestions = questionSet.filter(q => q.category === category);
         // Pick 10 questions per category
-        const selected = categoryQuestions.slice(0, 10);
+        const selected = categoryQuestions.slice(0, Math.min(10, categoryQuestions.length));
         mediumQuestions.push(...selected);
       });
       
@@ -235,7 +271,7 @@ const KidFriendlySurvey = ({ onComplete }) => {
     
     setQuestions(childFriendlyQuestions);
     
-  }, [fullQuestionSet, selectedUser]);
+  }, [fullQuestionSet, selectedUser, surveyType, currentWeek, generateWeeklyQuestions]);
   
   // Find Mama and Papa users from family members
   const mamaUser = familyMembers.find(m => m.roleType === 'Mama' || m.name === 'Mama');
@@ -385,53 +421,42 @@ const KidFriendlySurvey = ({ onComplete }) => {
   };
   
   // Handle survey completion
-  const handleCompleteSurvey = () => {
+  const handleCompleteSurvey = async () => {
     // Show a big celebration!
     setShowReward(true);
     
-    // Hide the reward after 5 seconds and complete
-    setTimeout(() => {
-      setShowReward(false);
-      
-      // Call the completion handler from props
-      if (onComplete) {
-        onComplete(userResponses);
+    try {
+      // Save survey responses to database based on survey type
+      if (surveyType === "weekly") {
+        // Navigate to loading screen
+        setTimeout(() => {
+          navigate('/loading');
+        }, 2000);
+        
+        // Save weekly check-in
+        await completeWeeklyCheckIn(selectedUser.id, currentWeek, currentSurveyResponses);
+      } else {
+        // Navigate to loading screen
+        setTimeout(() => {
+          navigate('/loading');
+        }, 2000);
+        
+        // Save initial survey
+        await completeInitialSurvey(selectedUser.id, currentSurveyResponses);
       }
-    }, 5000);
-  };
-  
-  // Function to play audio
-  const playQuestionAudio = () => {
-    // Show audio playing indicator
-    setShowAudioPlaying(true);
-    
-    // Use the Web Speech API to read the question
-    if ('speechSynthesis' in window) {
-      // Cancel any ongoing speech
-      window.speechSynthesis.cancel();
       
-      // Use the child-friendly text if available
-      const textToSpeak = currentQuestion.childText || currentQuestion.text;
-      const utterance = new SpeechSynthesisUtterance(textToSpeak);
-      
-      // Use a slightly slower, child-friendly voice
-      utterance.rate = 0.9;
-      
-      // Speak the text
-      window.speechSynthesis.speak(utterance);
-      
-      // Set up event listener to know when speech is done
-      utterance.onend = () => {
-        setShowAudioPlaying(false);
-      };
-    } else {
-      // Fallback for browsers without speech synthesis
-      console.log(`Would play audio for: ${currentQuestion.text}`);
-      
-      // Simulate audio playing for 2 seconds
+      // Navigate to dashboard after delay
       setTimeout(() => {
-        setShowAudioPlaying(false);
-      }, 2000);
+        navigate('/dashboard');
+      }, 3000);
+    } catch (error) {
+      console.error(`Error completing ${surveyType} survey:`, error);
+      alert('There was an error saving your responses. Please try again.');
+      
+      // Even on error, go back to dashboard
+      setTimeout(() => {
+        navigate('/dashboard');
+      }, 3000);
     }
   };
   
@@ -468,7 +493,7 @@ const KidFriendlySurvey = ({ onComplete }) => {
             />
           </div>
           <div>
-            <h2 className="font-bold text-indigo-800">{selectedUser?.name}'s Survey</h2>
+            <h2 className="font-bold text-indigo-800">{selectedUser?.name}'s {surveyType === "weekly" ? "Weekly" : "Survey"}</h2>
             <div className="flex items-center">
               {[...Array(totalStars)].map((_, i) => (
                 <Star key={i} size={14} className="text-amber-400 fill-amber-400" />
@@ -584,22 +609,6 @@ const KidFriendlySurvey = ({ onComplete }) => {
           <p className="text-gray-500 text-sm mt-1">
             {currentQuestion.category}
           </p>
-        </div>
-        
-        {/* Audio helper button */}
-        <div className="flex justify-center mb-4">
-          <button 
-            className={`px-3 py-2 rounded-full ${
-              showAudioPlaying 
-                ? 'bg-amber-100 text-amber-800 animate-pulse' 
-                : 'bg-blue-100 text-blue-700 hover:bg-blue-200'
-            } flex items-center`}
-            onClick={playQuestionAudio}
-            disabled={showAudioPlaying}
-          >
-            <Volume2 size={16} className="mr-2" />
-            {showAudioPlaying ? 'Listening...' : 'Hear the Question'}
-          </button>
         </div>
         
         {/* Task Illustration */}
