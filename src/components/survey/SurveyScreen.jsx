@@ -4,6 +4,7 @@ import { LogOut } from 'lucide-react';
 import { useFamily } from '../../contexts/FamilyContext';
 import { useSurvey } from '../../contexts/SurveyContext';
 
+
 const SurveyScreen = () => {
   const navigate = useNavigate();
   const { 
