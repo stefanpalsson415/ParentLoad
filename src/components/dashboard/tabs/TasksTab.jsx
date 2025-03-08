@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Users, Calendar, AlertCircle, CheckCircle, ChevronDown, ChevronUp, Sparkles, Brain, Info } from 'lucide-react';
+import { Users, Calendar, AlertCircle, CheckCircle, ChevronDown, ChevronUp, Sparkles, Brain, Info, Edit, CheckCircle2 } from 'lucide-react';
 import { useFamily } from '../../../contexts/FamilyContext';
 import { useSurvey } from '../../../contexts/SurveyContext';
 import DatabaseService from '../../../services/DatabaseService';
@@ -59,6 +59,7 @@ const generateTaskRecommendations = (weekNumber = 1) => {
       description: `Take charge of planning family meals for the week${weekNumber ? ` (Week ${weekNumber} Focus)` : ""}`,
       assignedTo: "Papa",
       assignedToName: "Papa",
+      taskType: "survey", // Marking this as survey-based
       completed: false,
       completedDate: null,
       comments: [],
@@ -91,16 +92,57 @@ const generateTaskRecommendations = (weekNumber = 1) => {
     },
     {
       id: `${taskPrefix}2`,
+      title: `${weekNumber ? `Week ${weekNumber}: ` : ""}Papa's AI Challenge`,
+      description: `Discover and address hidden family workload patterns${weekNumber ? ` (Week ${weekNumber} Focus)` : ""}`,
+      assignedTo: "Papa",
+      assignedToName: "Papa",
+      taskType: "ai", // Marking this as AI-based
+      isAIGenerated: true,
+      hiddenWorkloadType: "Invisible Parental Tasks",
+      completed: false,
+      completedDate: null,
+      comments: [],
+      insight: "Our AI analysis detected that Papa could help more with emotional support tasks.",
+      subTasks: [
+        {
+          id: `${taskPrefix}2-1`,
+          title: "Notice emotional needs",
+          description: "Pay attention to when family members need support",
+          completed: false,
+          completedDate: null,
+          comments: []
+        },
+        {
+          id: `${taskPrefix}2-2`,
+          title: "Have meaningful conversations",
+          description: "Schedule one-on-one time with each child",
+          completed: false,
+          completedDate: null,
+          comments: []
+        },
+        {
+          id: `${taskPrefix}2-3`,
+          title: "Create support system",
+          description: "Develop a way to ensure ongoing emotional support",
+          completed: false,
+          completedDate: null,
+          comments: []
+        }
+      ]
+    },
+    {
+      id: `${taskPrefix}3`,
       title: `${weekNumber ? `Week ${weekNumber}: ` : ""}School Communication`,
       description: `Handle communication with schools and teachers${weekNumber ? ` (Week ${weekNumber} Focus)` : ""}`,
       assignedTo: "Mama",
       assignedToName: "Mama",
+      taskType: "survey", // Marking this as survey-based
       completed: false,
       completedDate: null,
       comments: [],
       subTasks: [
         {
-          id: `${taskPrefix}2-1`,
+          id: `${taskPrefix}3-1`,
           title: "Check school emails",
           description: "Review and respond to school communications",
           completed: false,
@@ -108,7 +150,7 @@ const generateTaskRecommendations = (weekNumber = 1) => {
           comments: []
         },
         {
-          id: `${taskPrefix}2-2`,
+          id: `${taskPrefix}3-2`,
           title: "Update calendar",
           description: "Add school events to the family calendar",
           completed: false,
@@ -116,7 +158,7 @@ const generateTaskRecommendations = (weekNumber = 1) => {
           comments: []
         },
         {
-          id: `${taskPrefix}2-3`,
+          id: `${taskPrefix}3-3`,
           title: "Coordinate with teachers",
           description: "Reach out to teachers with any questions",
           completed: false,
@@ -126,71 +168,39 @@ const generateTaskRecommendations = (weekNumber = 1) => {
       ]
     },
     {
-      id: `${taskPrefix}3`,
-      title: `${weekNumber ? `Week ${weekNumber}: ` : ""}Family Calendar Management`,
-      description: `Coordinate and maintain the family's schedule${weekNumber ? ` (Week ${weekNumber} Focus)` : ""}`,
-      assignedTo: "Papa",
-      assignedToName: "Papa",
-      completed: false,
-      completedDate: null,
-      comments: [],
-      subTasks: [
-        {
-          id: `${taskPrefix}3-1`,
-          title: "Review upcoming events",
-          description: "Look ahead at the next two weeks of activities",
-          completed: false,
-          completedDate: null,
-          comments: []
-        },
-        {
-          id: `${taskPrefix}3-2`,
-          title: "Coordinate transportation",
-          description: "Plan who will drive to each activity",
-          completed: false,
-          completedDate: null,
-          comments: []
-        },
-        {
-          id: `${taskPrefix}3-3`,
-          title: "Share with family",
-          description: "Make sure everyone knows the schedule",
-          completed: false,
-          completedDate: null,
-          comments: []
-        }
-      ]
-    },
-    {
       id: `${taskPrefix}4`,
-      title: `${weekNumber ? `Week ${weekNumber}: ` : ""}Morning Routine Help`,
-      description: `Take lead on getting kids ready in the morning${weekNumber ? ` (Week ${weekNumber} Focus)` : ""}`,
+      title: `${weekNumber ? `Week ${weekNumber}: ` : ""}Mama's AI Challenge`,
+      description: `Discover and implement better household task delegation${weekNumber ? ` (Week ${weekNumber} Focus)` : ""}`,
       assignedTo: "Mama",
       assignedToName: "Mama",
+      taskType: "ai", // Marking this as AI-based
+      isAIGenerated: true,
+      hiddenWorkloadType: "Invisible Household Tasks",
       completed: false,
       completedDate: null,
       comments: [],
+      insight: "Our AI analysis found that Mama could benefit from sharing more household planning responsibilities.",
       subTasks: [
         {
           id: `${taskPrefix}4-1`,
-          title: "Coordinate breakfast",
-          description: "Prepare or oversee breakfast for the kids",
+          title: "Identify invisible tasks",
+          description: "List household tasks that often go unnoticed",
           completed: false,
           completedDate: null,
           comments: []
         },
         {
           id: `${taskPrefix}4-2`,
-          title: "Ensure backpacks are ready",
-          description: "Check that homework and supplies are packed",
+          title: "Create delegation plan",
+          description: "Determine which tasks can be shared with others",
           completed: false,
           completedDate: null,
           comments: []
         },
         {
           id: `${taskPrefix}4-3`,
-          title: "Manage departure time",
-          description: "Keep track of time to ensure on-time departure",
+          title: "Implement sharing system",
+          description: "Put your plan into action and follow up",
           completed: false,
           completedDate: null,
           comments: []
@@ -213,6 +223,7 @@ const TasksTab = ({ onStartWeeklyCheckIn, onOpenFamilyMeeting }) => {
     updateTaskCompletion,
     updateSubtaskCompletion,
     surveySchedule,
+    updateSurveySchedule,
     taskRecommendations: initialTaskRecommendations,
     loadCurrentWeekTasks,
     surveyResponses,
@@ -265,6 +276,35 @@ const TasksTab = ({ onStartWeeklyCheckIn, onOpenFamilyMeeting }) => {
   const [checkInDueDate, setCheckInDueDate] = useState(calculateDueDate());
   const [currentDate] = useState(new Date());
   
+  // State for date input
+  const [checkInDueDateInput, setCheckInDueDateInput] = useState(
+    checkInDueDate ? checkInDueDate.toISOString().split('T')[0] : ''
+  );
+
+  // Update input when due date changes
+  useEffect(() => {
+    if (checkInDueDate) {
+      setCheckInDueDateInput(checkInDueDate.toISOString().split('T')[0]);
+    }
+  }, [checkInDueDate]);
+
+  // Function to handle date update
+  const handleUpdateCheckInDate = async () => {
+    try {
+      const newDate = new Date(checkInDueDateInput);
+      if (isNaN(newDate.getTime())) {
+        alert("Please enter a valid date");
+        return;
+      }
+      
+      await updateSurveySchedule(currentWeek, newDate);
+      alert("Check-in date updated successfully!");
+    } catch (error) {
+      console.error("Error updating check-in date:", error);
+      alert("Failed to update check-in date. Please try again.");
+    }
+  };
+  
   // State for task recommendations
   const [taskRecommendations, setTaskRecommendations] = useState([]);
   
@@ -279,6 +319,11 @@ const TasksTab = ({ onStartWeeklyCheckIn, onOpenFamilyMeeting }) => {
   const [commentTask, setCommentTask] = useState(null);
   const [commentText, setCommentText] = useState('');
   const [isSubmittingComment, setIsSubmittingComment] = useState(false);
+  
+  // Kids tasks state
+  const [kidTasksCompleted, setKidTasksCompleted] = useState({});
+  const [taskReactions, setTaskReactions] = useState({});
+  const [selectedTaskForEmoji, setSelectedTaskForEmoji] = useState(null);
   
   // Effect to update check-in status when survey schedule or current week changes
   useEffect(() => {
@@ -408,6 +453,12 @@ const TasksTab = ({ onStartWeeklyCheckIn, onOpenFamilyMeeting }) => {
         count++;
       }
     });
+    
+    // Also count completed kid tasks
+    Object.values(kidTasksCompleted).forEach(isCompleted => {
+      if (isCompleted) count += 0.5; // Kid tasks count as half a task
+    });
+    
     return count;
   };
   
@@ -514,6 +565,44 @@ const TasksTab = ({ onStartWeeklyCheckIn, onOpenFamilyMeeting }) => {
     } finally {
       setIsSubmittingComment(false);
     }
+  };
+  
+  // Handle kid task completion
+  const handleCompleteKidTask = (taskId, isCompleted) => {
+    setKidTasksCompleted(prev => ({
+      ...prev,
+      [taskId]: isCompleted
+    }));
+    
+    // In a real implementation, you would save this to the database
+    console.log(`Kid task ${taskId} completion set to: ${isCompleted}`);
+  };
+
+  // Open emoji picker
+  const openEmojiPicker = (taskId) => {
+    setSelectedTaskForEmoji(taskId);
+  };
+
+  // Add reaction/cheer to a task
+  const addReaction = (taskId, emoji) => {
+    // Create a new reaction
+    const reaction = {
+      emoji,
+      from: selectedUser.name,
+      timestamp: new Date().toISOString()
+    };
+    
+    // Add it to the task's reactions
+    setTaskReactions(prev => ({
+      ...prev,
+      [taskId]: [...(prev[taskId] || []), reaction]
+    }));
+    
+    // Close the emoji picker
+    setSelectedTaskForEmoji(null);
+    
+    // In a real implementation, you would save this to the database
+    console.log(`Added reaction ${emoji} to task ${taskId} from ${selectedUser.name}`);
   };
   
   // Handle completion of AI task
@@ -716,6 +805,23 @@ const TasksTab = ({ onStartWeeklyCheckIn, onOpenFamilyMeeting }) => {
               </p>
             </div>
             
+            {/* Date editor added from Surveys tab */}
+            <div className="flex items-center mt-2 mb-3">
+              <span className="text-sm mr-2">Change date:</span>
+              <input
+                type="date"
+                value={checkInDueDateInput}
+                onChange={(e) => setCheckInDueDateInput(e.target.value)}
+                className="border rounded px-2 py-1 text-sm"
+              />
+              <button
+                onClick={handleUpdateCheckInDate}
+                className="ml-2 px-2 py-1 bg-blue-100 text-blue-600 rounded text-sm hover:bg-blue-200"
+              >
+                Update
+              </button>
+            </div>
+            
             {!canStartCheckIn && (
               <div className="flex items-center mb-3 text-amber-700 bg-amber-50 p-2 rounded">
                 <AlertCircle size={16} className="mr-2" />
@@ -896,12 +1002,28 @@ const TasksTab = ({ onStartWeeklyCheckIn, onOpenFamilyMeeting }) => {
                       <div className="flex-1">
                         <div className="flex justify-between items-center">
                           <h4 className="font-medium text-lg">{task.title}</h4>
-                          <div>
-                            {expandedTasks[task.id] ? (
-                              <ChevronUp size={20} className="text-gray-500" />
-                            ) : (
-                              <ChevronDown size={20} className="text-gray-500" />
+                          
+                          {/* Task type label */}
+                          <div className="flex items-center gap-2">
+                            {task.taskType === 'ai' && (
+                              <span className="px-2 py-0.5 bg-purple-100 text-purple-800 text-xs rounded-full flex items-center">
+                                <Brain size={10} className="mr-1" />
+                                AI Insight
+                              </span>
                             )}
+                            {task.taskType === 'survey' && (
+                              <span className="px-2 py-0.5 bg-blue-100 text-blue-800 text-xs rounded-full flex items-center">
+                                <CheckCircle2 size={10} className="mr-1" />
+                                Survey Data
+                              </span>
+                            )}
+                            <div>
+                              {expandedTasks[task.id] ? (
+                                <ChevronUp size={20} className="text-gray-500" />
+                              ) : (
+                                <ChevronDown size={20} className="text-gray-500" />
+                              )}
+                            </div>
                           </div>
                         </div>
                           
@@ -917,6 +1039,16 @@ const TasksTab = ({ onStartWeeklyCheckIn, onOpenFamilyMeeting }) => {
                             </p>
                           )}
                         </div>
+                        
+                        {/* AI Insight Box for AI tasks */}
+                        {task.taskType === 'ai' && task.insight && (
+                          <div className="bg-purple-50 p-3 rounded mt-3 flex items-start">
+                            <Info size={16} className="text-purple-600 mr-2 flex-shrink-0 mt-0.5" />
+                            <div className="text-sm text-purple-800">
+                              <strong>AI Insight:</strong> {task.insight}
+                            </div>
+                          </div>
+                        )}
                         
                         {/* Main task comments */}
                         {renderComments(task.comments)}
@@ -1039,12 +1171,28 @@ const TasksTab = ({ onStartWeeklyCheckIn, onOpenFamilyMeeting }) => {
                       <div className="flex-1">
                         <div className="flex justify-between items-center">
                           <h4 className="font-medium text-lg">{task.title}</h4>
-                          <div>
-                            {expandedTasks[task.id] ? (
-                              <ChevronUp size={20} className="text-gray-500" />
-                            ) : (
-                              <ChevronDown size={20} className="text-gray-500" />
+                          
+                          {/* Task type label */}
+                          <div className="flex items-center gap-2">
+                            {task.taskType === 'ai' && (
+                              <span className="px-2 py-0.5 bg-purple-100 text-purple-800 text-xs rounded-full flex items-center">
+                                <Brain size={10} className="mr-1" />
+                                AI Insight
+                              </span>
                             )}
+                            {task.taskType === 'survey' && (
+                              <span className="px-2 py-0.5 bg-blue-100 text-blue-800 text-xs rounded-full flex items-center">
+                                <CheckCircle2 size={10} className="mr-1" />
+                                Survey Data
+                              </span>
+                            )}
+                            <div>
+                              {expandedTasks[task.id] ? (
+                                <ChevronUp size={20} className="text-gray-500" />
+                              ) : (
+                                <ChevronDown size={20} className="text-gray-500" />
+                              )}
+                            </div>
                           </div>
                         </div>
                           
@@ -1060,6 +1208,16 @@ const TasksTab = ({ onStartWeeklyCheckIn, onOpenFamilyMeeting }) => {
                             </p>
                           )}
                         </div>
+                        
+                        {/* AI Insight Box for AI tasks */}
+                        {task.taskType === 'ai' && task.insight && (
+                          <div className="bg-purple-50 p-3 rounded mt-3 flex items-start">
+                            <Info size={16} className="text-purple-600 mr-2 flex-shrink-0 mt-0.5" />
+                            <div className="text-sm text-purple-800">
+                              <strong>AI Insight:</strong> {task.insight}
+                            </div>
+                          </div>
+                        )}
                         
                         {/* Main task comments */}
                         {renderComments(task.comments)}
@@ -1159,58 +1317,318 @@ const TasksTab = ({ onStartWeeklyCheckIn, onOpenFamilyMeeting }) => {
                 ))}
             </div>
           </div>
-        </div>
-      </div>
-        
-      {/* Family Meeting Card - at the bottom */}
-      <div className="bg-white rounded-lg shadow p-6 mt-8">
-        <div className="flex items-start">
-          <div className="flex-shrink-0 mr-4">
-            <div className="w-10 h-10 rounded-full bg-amber-100 flex items-center justify-center">
-              <Users size={20} className="text-amber-600" />
+          
+          {/* Kids' Tasks */}
+          <div className="border-l-4 border-amber-500 p-2 mt-6">
+            <h4 className="font-medium mb-2 text-lg flex items-center">
+              <span className="mr-2">🌟</span> Kids' Tasks <span className="ml-2">🌟</span>
+            </h4>
+            <div className="bg-gradient-to-r from-amber-50 to-yellow-50 p-4 rounded-lg mb-4 text-sm">
+              <p>Hey kids! These fun activities help your family work better as a team. Complete them to earn stars!</p>
+            </div>
+            <div className="space-y-3">
+              {/* First Kid Task - Helper Task */}
+              <div className="rounded-lg border bg-white">
+                <div 
+                  className="p-4 flex items-start cursor-pointer"
+                  onClick={() => toggleTaskExpansion('kid-task-1')}
+                >
+                  <div className="flex-shrink-0 w-8 h-8 rounded-full flex items-center justify-center mr-3 bg-amber-100 text-amber-600">
+                    🏆
+                  </div>
+                    
+                  <div className="flex-1">
+                    <div className="flex justify-between items-center">
+                      <h4 className="font-medium text-lg">Family Helper Challenge</h4>
+                      <div>
+                        {expandedTasks['kid-task-1'] ? (
+                          <ChevronUp size={20} className="text-gray-500" />
+                        ) : (
+                          <ChevronDown size={20} className="text-gray-500" />
+                        )}
+                      </div>
+                    </div>
+                      
+                    <div className="mt-2">
+                      <p className="text-gray-600">
+                        Help your parents with special tasks this week and become a Family Hero!
+                      </p>
+                    </div>
+                  </div>
+                </div>
+                
+                {/* Subtasks */}
+                {expandedTasks['kid-task-1'] && (
+                  <div className="border-t">
+                    <div className="p-4">
+                      <h5 className="font-medium text-sm mb-3">Your Mission:</h5>
+                      <div className="space-y-4 pl-4">
+                        {/* Kid Subtasks */}
+                        {familyMembers.filter(member => member.role === 'child').map((child, index) => (
+                          <div key={`kid-subtask-${index}`} className="border rounded-md p-3 bg-white">
+                            <div className="flex items-start">
+                              <div className="flex-shrink-0 mr-3">
+                                <button
+                                  className="w-6 h-6 rounded-full flex items-center justify-center bg-white border border-amber-300 hover:bg-amber-50"
+                                  onClick={() => handleCompleteKidTask(`kid-task-1-${index}`, !kidTasksCompleted[`kid-task-1-${index}`])}
+                                >
+                                  {kidTasksCompleted[`kid-task-1-${index}`] && <span>✓</span>}
+                                </button>
+                              </div>
+                              
+                              <div className="flex-1">
+                                <h6 className="font-medium text-sm">{child.name}'s Special Task</h6>
+                                <p className="text-sm text-gray-600 mt-1">
+                                  {index % 2 === 0 ? 
+                                    "Help set the table for dinner this week" : 
+                                    "Help organize a family game night"}
+                                </p>
+                                
+                                {/* Reactions/Cheers */}
+                                {kidTasksCompleted[`kid-task-1-${index}`] && (
+                                  <div className="flex mt-2 flex-wrap gap-1">
+                                    {taskReactions[`kid-task-1-${index}`]?.map((reaction, i) => (
+                                      <div key={i} className="bg-amber-50 px-2 py-1 rounded-full text-xs flex items-center">
+                                        <span className="mr-1">{reaction.emoji}</span>
+                                        <span className="text-amber-700">{reaction.from}</span>
+                                      </div>
+                                    ))}
+                                  </div>
+                                )}
+                                
+                                {/* Add Reaction Button */}
+                                {kidTasksCompleted[`kid-task-1-${index}`] && (
+                                  <button
+                                    onClick={() => openEmojiPicker(`kid-task-1-${index}`)}
+                                    className="mt-2 text-xs flex items-center text-blue-600 hover:text-blue-800"
+                                  >
+                                    <span className="mr-1">🎉</span> Add a cheer!
+                                  </button>
+                                )}
+                              </div>
+                            </div>
+                          </div>
+                        ))}
+
+                        {/* If no children, show message */}
+                        {familyMembers.filter(member => member.role === 'child').length === 0 && (
+                          <p className="text-sm text-gray-500 italic">No children added to your family yet</p>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                )}
+              </div>
+              
+              {/* Second Kid Task - Fun Survey Challenge */}
+              <div className="rounded-lg border bg-white">
+                <div 
+                  className="p-4 flex items-start cursor-pointer"
+                  onClick={() => toggleTaskExpansion('kid-task-2')}
+                >
+                  <div className="flex-shrink-0 w-8 h-8 rounded-full flex items-center justify-center mr-3 bg-green-100 text-green-600">
+                    🔍
+                  </div>
+                    
+                  <div className="flex-1">
+                    <div className="flex justify-between items-center">
+                      <h4 className="font-medium text-lg">Family Detective Challenge</h4>
+                      <div>
+                        {expandedTasks['kid-task-2'] ? (
+                          <ChevronUp size={20} className="text-gray-500" />
+                        ) : (
+                          <ChevronDown size={20} className="text-gray-500" />
+                        )}
+                      </div>
+                    </div>
+                      
+                    <div className="mt-2">
+                      <p className="text-gray-600">
+                        Become a family detective! Observe who does what in your family this week!
+                      </p>
+                    </div>
+                  </div>
+                </div>
+                
+                {/* Subtasks */}
+                {expandedTasks['kid-task-2'] && (
+                  <div className="border-t">
+                    <div className="p-4">
+                      <h5 className="font-medium text-sm mb-3">Your Mission:</h5>
+                      <div className="space-y-4 pl-4">
+                        {/* Detective Subtasks */}
+                        <div className="border rounded-md p-3 bg-white">
+                          <div className="flex items-start">
+                            <div className="flex-shrink-0 mr-3">
+                              <button
+                                className="w-6 h-6 rounded-full flex items-center justify-center bg-white border border-green-300 hover:bg-green-50"
+                                onClick={() => handleCompleteKidTask('kid-task-2-1', !kidTasksCompleted['kid-task-2-1'])}
+                              >
+                                {kidTasksCompleted['kid-task-2-1'] && <span>✓</span>}
+                              </button>
+                            </div>
+                            
+                            <div className="flex-1">
+                              <h6 className="font-medium text-sm">Watch Who Cooks</h6>
+                              <p className="text-sm text-gray-600 mt-1">
+                                Keep track of who makes meals this week
+                              </p>
+                              
+                              {/* Reactions */}
+                              {kidTasksCompleted['kid-task-2-1'] && (
+                                <div className="flex mt-2 flex-wrap gap-1">
+                                  {taskReactions['kid-task-2-1']?.map((reaction, i) => (
+                                    <div key={i} className="bg-green-50 px-2 py-1 rounded-full text-xs flex items-center">
+                                      <span className="mr-1">{reaction.emoji}</span>
+                                      <span className="text-green-700">{reaction.from}</span>
+                                    </div>
+                                  ))}
+                                </div>
+                              )}
+                              
+                              {/* Add Reaction Button */}
+                              {kidTasksCompleted['kid-task-2-1'] && (
+                                <button
+                                  onClick={() => openEmojiPicker('kid-task-2-1')}
+                                  className="mt-2 text-xs flex items-center text-blue-600 hover:text-blue-800"
+                                >
+                                  <span className="mr-1">🎉</span> Add a cheer!
+                                </button>
+                              )}
+                            </div>
+                          </div>
+                        </div>
+
+                        <div className="border rounded-md p-3 bg-white">
+                          <div className="flex items-start">
+                            <div className="flex-shrink-0 mr-3">
+                              <button
+                                className="w-6 h-6 rounded-full flex items-center justify-center bg-white border border-green-300 hover:bg-green-50"
+                                onClick={() => handleCompleteKidTask('kid-task-2-2', !kidTasksCompleted['kid-task-2-2'])}
+                              >
+                                {kidTasksCompleted['kid-task-2-2'] && <span>✓</span>}
+                              </button>
+                            </div>
+                            
+                            <div className="flex-1">
+                              <h6 className="font-medium text-sm">Count Who Cleans</h6>
+                              <p className="text-sm text-gray-600 mt-1">
+                                Notice who does cleaning tasks this week
+                              </p>
+                              
+                              {/* Reactions */}
+                              {kidTasksCompleted['kid-task-2-2'] && (
+                                <div className="flex mt-2 flex-wrap gap-1">
+                                  {taskReactions['kid-task-2-2']?.map((reaction, i) => (
+                                    <div key={i} className="bg-green-50 px-2 py-1 rounded-full text-xs flex items-center">
+                                      <span className="mr-1">{reaction.emoji}</span>
+                                      <span className="text-green-700">{reaction.from}</span>
+                                    </div>
+                                  ))}
+                                </div>
+                              )}
+                              
+                              {/* Add Reaction Button */}
+                              {kidTasksCompleted['kid-task-2-2'] && (
+                                <button
+                                  onClick={() => openEmojiPicker('kid-task-2-2')}
+                                  className="mt-2 text-xs flex items-center text-blue-600 hover:text-blue-800"
+                                >
+                                  <span className="mr-1">🎉</span> Add a cheer!
+                                </button>
+                              )}
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                )}
+              </div>
             </div>
           </div>
+        </div>
           
-          <div className="flex-1">
-            <h3 className="text-lg font-semibold">Family Meeting</h3>
-            <p className="text-sm text-gray-600 mt-1">
-              Hold a 30-minute family meeting to discuss progress and set goals
-            </p>
-            
-            <div className="mt-3">
-              {!canStartFamilyMeeting && (
-                <div className="text-sm bg-amber-50 text-amber-800 p-3 rounded mb-3">
-                  <div className="flex items-center mb-1">
-                    <AlertCircle size={16} className="mr-2" />
-                    <span className="font-medium">Family meeting not yet available</span>
-                  </div>
-                  <p>
-                    Complete the weekly check-in and at least 3 tasks to unlock the family meeting agenda.
-                  </p>
-                </div>
-              )}
-              
-              <div className="text-sm text-gray-600 flex items-center">
-                <span>Recommended: 30 minutes</span>
+        {/* Family Meeting Card - at the bottom */}
+        <div className="bg-white rounded-lg shadow p-6 mt-8">
+          <div className="flex items-start">
+            <div className="flex-shrink-0 mr-4">
+              <div className="w-10 h-10 rounded-full bg-amber-100 flex items-center justify-center">
+                <Users size={20} className="text-amber-600" />
               </div>
             </div>
             
-            <div className="mt-4">
+            <div className="flex-1">
+              <h3 className="text-lg font-semibold">Family Meeting</h3>
+              <p className="text-sm text-gray-600 mt-1">
+                Hold a 30-minute family meeting to discuss progress and set goals
+              </p>
+              
+              <div className="mt-3">
+                {!canStartFamilyMeeting && (
+                  <div className="text-sm bg-amber-50 text-amber-800 p-3 rounded mb-3">
+                    <div className="flex items-center mb-1">
+                      <AlertCircle size={16} className="mr-2" />
+                      <span className="font-medium">Family meeting not yet available</span>
+                    </div>
+                    <p>
+                      Complete the weekly check-in and at least 3 tasks to unlock the family meeting agenda.
+                    </p>
+                  </div>
+                )}
+                
+                <div className="text-sm text-gray-600 flex items-center">
+                  <span>Recommended: 30 minutes</span>
+                </div>
+              </div>
+              
+              <div className="mt-4">
+                <button
+                  onClick={onOpenFamilyMeeting}
+                  disabled={!canStartFamilyMeeting}
+                  className={`px-4 py-2 rounded-md flex items-center ${
+                    canStartFamilyMeeting 
+                      ? 'bg-amber-100 text-amber-800 hover:bg-amber-200' 
+                      : 'bg-gray-100 text-gray-400 cursor-not-allowed'
+                  }`}
+                >
+                  View Meeting Agenda & Topics
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* Emoji Picker Modal */}
+      {selectedTaskForEmoji && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
+          <div className="bg-white rounded-lg p-6 max-w-sm w-full">
+            <h3 className="text-lg font-medium mb-4">Add a cheer!</h3>
+            
+            <div className="grid grid-cols-5 gap-3 mb-4">
+              {['👍', '❤️', '🎉', '👏', '⭐', '🌟', '🏆', '💯', '🙌', '🤩'].map(emoji => (
+                <button
+                  key={emoji}
+                  className="text-2xl p-2 hover:bg-gray-100 rounded"
+                  onClick={() => addReaction(selectedTaskForEmoji, emoji)}
+                >
+                  {emoji}
+                </button>
+              ))}
+            </div>
+            
+            <div className="flex justify-end">
               <button
-                onClick={onOpenFamilyMeeting}
-                disabled={!canStartFamilyMeeting}
-                className={`px-4 py-2 rounded-md flex items-center ${
-                  canStartFamilyMeeting 
-                    ? 'bg-amber-100 text-amber-800 hover:bg-amber-200' 
-                    : 'bg-gray-100 text-gray-400 cursor-not-allowed'
-                }`}
+                className="px-4 py-2 text-gray-600 hover:text-gray-800"
+                onClick={() => setSelectedTaskForEmoji(null)}
               >
-                View Meeting Agenda & Topics
+                Cancel
               </button>
             </div>
           </div>
         </div>
-      </div>
+      )}
     </div>
   );
 };

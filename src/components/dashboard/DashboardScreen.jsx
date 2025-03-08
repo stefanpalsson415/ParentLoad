@@ -3,7 +3,6 @@ import { LogOut, Filter, Settings } from 'lucide-react';
 import { useFamily } from '../../contexts/FamilyContext';
 import DashboardTab from './tabs/DashboardTab';
 import TasksTab from './tabs/TasksTab';
-import SurveysTab from './tabs/SurveysTab';
 import WeekHistoryTab from './tabs/WeekHistoryTab';
 import HowThisWorksScreen from '../education/HowThisWorksScreen';
 import PersonalizedApproachScreen from '../education/PersonalizedApproachScreen';
@@ -241,8 +240,7 @@ useEffect(() => {
         return <HowThisWorksScreen />;
       case 'personalized':
         return <PersonalizedApproachScreen />;
-      case 'surveys':
-        return <SurveysTab onStartWeeklyCheckIn={handleStartWeeklyCheckIn} />;
+
       case 'dashboard':
         return <DashboardTab />;
       case 'tasks':
@@ -322,12 +320,7 @@ useEffect(() => {
           >
             Your Personalized Approach
           </button>
-          <button 
-            className={`px-4 py-2 font-medium whitespace-nowrap ${activeTab === 'surveys' ? 'border-b-2 border-blue-500 text-blue-600' : 'text-gray-600'}`}
-            onClick={() => setActiveTab('surveys')}
-          >
-            Surveys
-          </button>
+       
           <button 
             className={`px-4 py-2 font-medium whitespace-nowrap ${activeTab === 'dashboard' ? 'border-b-2 border-blue-500 text-blue-600' : 'text-gray-600'}`}
             onClick={() => setActiveTab('dashboard')}

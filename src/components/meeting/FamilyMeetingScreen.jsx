@@ -88,12 +88,13 @@ const FamilyMeetingScreen = ({ onClose }) => {
   const { fullQuestionSet } = useSurvey();
   
   const [meetingNotes, setMeetingNotes] = useState({
-    taskCompletion: '',
-    surveyResults: '',
+    wentWell: '',
+    couldImprove: '',
+    actionItems: '',
     nextWeekGoals: '',
     additionalNotes: ''
   });
-  const [expandedSection, setExpandedSection] = useState('taskCompletion'); // Default expanded section
+  const [expandedSection, setExpandedSection] = useState('wentWell'); // Default expanded section
   const [viewMode, setViewMode] = useState('agenda'); // 'agenda' or 'report'
   const [isSaving, setIsSaving] = useState(false);
   const [showConfirmation, setShowConfirmation] = useState(false);
@@ -107,40 +108,40 @@ const FamilyMeetingScreen = ({ onClose }) => {
     
     return [
       {
-        id: 'taskCompletion',
-        title: '1. Review Task Completion',
+        id: 'wentWell',
+        title: '1. What Went Well',
         duration: '10 min',
-        description: 'Discuss which tasks were completed and how they went',
+        description: 'Celebrate your family\'s wins this week',
         guideQuestions: [
-          'Which tasks did each parent complete this week?',
-          'Were there any challenges in completing the tasks?',
-          'How did completing these tasks affect the family balance?'
+          'What tasks did each parent successfully complete?',
+          'What worked well in terms of sharing responsibilities?',
+          'When did you feel most balanced as a family this week?'
         ],
-        insights: insights.taskInsights
+        insights: insights.successInsights
       },
       {
-        id: 'surveyResults',
-        title: '2. Survey Results Discussion',
+        id: 'couldImprove',
+        title: '2. What Could Improve',
         duration: '10 min',
-        description: 'Review this week\'s survey results and notable changes',
+        description: 'Identify opportunities for better balance',
         guideQuestions: [
-          'What areas showed the most improvement?',
-          'Are there any tasks that one parent is doing significantly more than the other?',
-          'How do the children\'s perceptions compare to the parents\' perceptions?'
+          'What challenges did you face with task completion?',
+          'Where did the workload feel unbalanced?',
+          'What obstacles prevented better sharing of responsibilities?'
         ],
-        insights: insights.surveyInsights
+        insights: insights.challengeInsights
       },
       {
-        id: 'nextWeekGoals',
-        title: '3. Next Week\'s Goals',
+        id: 'actionItems',
+        title: '3. Action Items for Next Week',
         duration: '10 min',
-        description: 'Set intentions for the coming week and discuss new tasks',
+        description: 'Commit to specific improvements',
         guideQuestions: [
-          'What specific tasks will each parent focus on next week?',
-          'Are there any upcoming events that require special planning?',
-          'How can we better support each other in the coming week?'
+          'What specific tasks will each parent take ownership of?',
+          'How will you address the challenges identified earlier?',
+          'What support does each family member need next week?'
         ],
-        insights: insights.goalInsights
+        insights: insights.actionInsights
       }
     ];
   };
@@ -149,20 +150,20 @@ const FamilyMeetingScreen = ({ onClose }) => {
   const analyzeData = () => {
     // In a real app, this would analyze actual survey responses to find patterns
     return {
-      taskInsights: [
-        "Papa has completed 2 of 3 assigned tasks",
-        "Mama has completed 1 of 2 assigned tasks",
-        "The 'Meal Planning' task seems to have made the biggest impact so far"
+      successInsights: [
+        "Papa completed 2 of 3 assigned tasks this week",
+        "Mama successfully took on more meal planning",
+        "The family had more balanced evenings together"
       ],
-      surveyInsights: [
-        "Papa has taken more responsibility for meal planning",
-        "Everyone agrees that Mama still handles most of the invisible household tasks",
-        "The children's perception of task distribution is closer to reality this week"
+      challengeInsights: [
+        "School-related communication is still 80% handled by Mama",
+        "Morning routines remain unbalanced",
+        "Unexpected work demands made task completion difficult"
       ],
-      goalInsights: [
-        "Focus on balancing the Invisible Household Tasks category",
-        "Papa should work on family calendar management next week",
-        "Mama could delegate more of the mental load tasks"
+      actionInsights: [
+        "Focus on evening routine sharing",
+        "Papa can take lead on school communications next week",
+        "Set up family calendar to better coordinate schedules"
       ]
     };
   };
@@ -336,76 +337,100 @@ const FamilyMeetingScreen = ({ onClose }) => {
               </p>
             </div>
             
-            {/* Agenda Topics */}
-            <div className="space-y-4">
-              {agendaTopics.map(topic => (
-                <div 
-                  key={topic.id} 
-                  className="border rounded-lg overflow-hidden"
-                >
-                  <div 
-                    className="p-4 bg-gray-50 flex justify-between items-center cursor-pointer hover:bg-gray-100"
-                    onClick={() => toggleSection(topic.id)}
-                  >
-                    <div>
-                      <h3 className="font-medium flex items-center">
-                        {topic.title}
-                        <span className="ml-2 text-sm text-gray-500">({topic.duration})</span>
-                      </h3>
-                      <p className="text-sm text-gray-600 mt-1">{topic.description}</p>
-                    </div>
-                    {expandedSection === topic.id ? (
-                      <ChevronUp size={20} className="text-gray-500" />
-                    ) : (
-                      <ChevronDown size={20} className="text-gray-500" />
-                    )}
-                  </div>
-                  
-                  {expandedSection === topic.id && (
-                    <div className="p-4 border-t">
-                      {/* AI-generated insights */}
-                      <div className="mb-4 bg-amber-50 p-3 rounded">
-                        <h4 className="text-sm font-medium text-amber-800 mb-2">This Week's Insights:</h4>
-                        <ul className="list-disc pl-5 space-y-1 text-sm text-amber-800">
-                          {topic.insights.map((insight, idx) => (
-                            <li key={idx}>{insight}</li>
-                          ))}
-                        </ul>
-                      </div>
-                      
-                      <div className="mb-4">
-                        <h4 className="text-sm font-medium mb-2">Discussion Questions:</h4>
-                        <ul className="list-disc pl-5 space-y-1 text-sm text-gray-700">
-                          {topic.guideQuestions.map((question, idx) => (
-                            <li key={idx}>{question}</li>
-                          ))}
-                        </ul>
-                      </div>
-                      
-                      <div>
-                        <h4 className="text-sm font-medium mb-2">Meeting Notes:</h4>
-                        <textarea
-                          placeholder="Add your family's discussion notes here..."
-                          className="w-full p-3 border rounded-md h-24"
-                          value={meetingNotes[topic.id]}
-                          onChange={(e) => handleInputChange(topic.id, e.target.value)}
-                        />
-                      </div>
-                    </div>
-                  )}
-                </div>
-              ))}
+            {/* Family Retrospective Info */}
+            <div className="p-4 border rounded-lg mb-4 bg-gradient-to-r from-blue-50 to-indigo-50">
+              <h4 className="font-medium mb-3 text-blue-800">About Sprint Retrospectives</h4>
+              <p className="text-sm text-blue-700 mb-2">
+                We're using a format that professional teams use to improve how they work together! This simple 
+                structure helps families reflect on what's working and what needs improvement.
+              </p>
+              <div className="flex flex-wrap gap-2 mt-3">
+                <span className="bg-green-100 text-green-800 text-xs px-2 py-1 rounded">✓ What Went Well</span>
+                <span className="bg-amber-100 text-amber-800 text-xs px-2 py-1 rounded">⚠ What Could Improve</span>
+                <span className="bg-blue-100 text-blue-800 text-xs px-2 py-1 rounded">→ Action Items</span>
+              </div>
             </div>
             
-            {/* Additional Notes */}
-            <div className="border rounded-lg p-4">
-              <h3 className="font-medium mb-2">Additional Notes</h3>
-              <textarea
-                placeholder="Any other comments or observations from the family meeting..."
-                className="w-full p-3 border rounded-md h-24"
-                value={meetingNotes.additionalNotes}
-                onChange={(e) => handleInputChange('additionalNotes', e.target.value)}
-              />
+            {/* Retrospective Sections */}
+            <div className="space-y-6">
+              {/* What Went Well Section */}
+              <div className="p-4 border rounded-lg bg-green-50">
+                <h4 className="font-medium mb-2 flex items-center text-green-800">
+                  <span className="w-6 h-6 rounded-full bg-green-100 flex items-center justify-center mr-2 text-green-600">✓</span>
+                  What Went Well
+                </h4>
+                <p className="text-sm text-green-700 mb-3">
+                  Celebrate your family's wins this week! What are you proud of? What balanced tasks did you accomplish?
+                </p>
+                <textarea
+                  placeholder="Share your family's successes this week..."
+                  className="w-full p-3 border border-green-200 rounded-md h-24 bg-white"
+                  value={meetingNotes.wentWell || ''}
+                  onChange={(e) => handleInputChange('wentWell', e.target.value)}
+                />
+              </div>
+              
+              {/* What Could Improve Section */}
+              <div className="p-4 border rounded-lg bg-amber-50">
+                <h4 className="font-medium mb-2 flex items-center text-amber-800">
+                  <span className="w-6 h-6 rounded-full bg-amber-100 flex items-center justify-center mr-2 text-amber-600">⚠</span>
+                  What Could Improve
+                </h4>
+                <p className="text-sm text-amber-700 mb-3">
+                  What challenges did your family face? Where do you see room for better balance?
+                </p>
+                <textarea
+                  placeholder="Discuss areas where your family could improve next week..."
+                  className="w-full p-3 border border-amber-200 rounded-md h-24 bg-white"
+                  value={meetingNotes.couldImprove || ''}
+                  onChange={(e) => handleInputChange('couldImprove', e.target.value)}
+                />
+              </div>
+              
+              {/* Action Items Section */}
+              <div className="p-4 border rounded-lg bg-blue-50">
+                <h4 className="font-medium mb-2 flex items-center text-blue-800">
+                  <span className="w-6 h-6 rounded-full bg-blue-100 flex items-center justify-center mr-2 text-blue-600">→</span>
+                  Action Items
+                </h4>
+                <p className="text-sm text-blue-700 mb-3">
+                  What specific changes will your family commit to next week? Who will do what?
+                </p>
+                <textarea
+                  placeholder="List 2-3 concrete actions your family will take next week..."
+                  className="w-full p-3 border border-blue-200 rounded-md h-24 bg-white"
+                  value={meetingNotes.actionItems || ''}
+                  onChange={(e) => handleInputChange('actionItems', e.target.value)}
+                />
+              </div>
+              
+              {/* Next Week Goals Section */}
+              <div className="p-4 border rounded-lg bg-purple-50">
+                <h4 className="font-medium mb-2 flex items-center text-purple-800">
+                  <span className="w-6 h-6 rounded-full bg-purple-100 flex items-center justify-center mr-2 text-purple-600">🎯</span>
+                  Next Week's Goals
+                </h4>
+                <p className="text-sm text-purple-700 mb-3">
+                  What would a successful Week {currentWeek + 1} look like for your family?
+                </p>
+                <textarea
+                  placeholder="Describe your family's vision for next week..."
+                  className="w-full p-3 border border-purple-200 rounded-md h-24 bg-white"
+                  value={meetingNotes.nextWeekGoals || ''}
+                  onChange={(e) => handleInputChange('nextWeekGoals', e.target.value)}
+                />
+              </div>
+              
+              {/* Additional Notes */}
+              <div className="p-4 border rounded-lg">
+                <h4 className="font-medium mb-2">Additional Notes</h4>
+                <textarea
+                  placeholder="Any other comments or observations from the family meeting..."
+                  className="w-full p-3 border rounded-md h-24"
+                  value={meetingNotes.additionalNotes}
+                  onChange={(e) => handleInputChange('additionalNotes', e.target.value)}
+                />
+              </div>
             </div>
             
             {/* Action Buttons */}
