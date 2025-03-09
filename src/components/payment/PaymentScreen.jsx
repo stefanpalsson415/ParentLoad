@@ -2,17 +2,14 @@
 
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { CardElement, useStripe, useElements } from '@stripe/react-stripe-js';
 
 const PaymentScreen = () => {
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState(null);
-  const [couponCode, setCouponCode] = useState('');
-  const [couponApplied, setCouponApplied] = useState(false);
-  
-  const stripe = useStripe();
-  const elements = useElements();
-  const navigate = useNavigate();
+    const [loading, setLoading] = useState(false);
+    const [error, setError] = useState(null);
+    const [couponCode, setCouponCode] = useState('');
+    const [couponApplied, setCouponApplied] = useState(false);
+    
+    const navigate = useNavigate();
   
   const handleSubmit = async (event) => {
     event.preventDefault();
@@ -80,12 +77,20 @@ setLoading(false);  };
           </div>
         ) : (
           <form onSubmit={handleSubmit}>
-            <div className="mb-4">
-              <label className="block text-sm font-medium mb-2">Card Information</label>
-              <div className="border rounded p-3">
-                <CardElement options={{style: {base: {fontSize: '16px'}}}} />
-              </div>
-            </div>
+<div className="mb-4">
+  <label className="block text-sm font-medium mb-2">Card Information</label>
+  <div className="border rounded p-3">
+    <input 
+      type="text" 
+      className="w-full" 
+      placeholder="Card number" 
+    />
+    <div className="flex mt-2">
+      <input type="text" className="w-1/2 mr-2" placeholder="MM/YY" />
+      <input type="text" className="w-1/2" placeholder="CVC" />
+    </div>
+  </div>
+</div>
             
             <div className="mb-6">
               <label className="block text-sm font-medium mb-2">Have a coupon?</label>

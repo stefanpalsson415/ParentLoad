@@ -56,36 +56,7 @@ const getDefaultProfileImage = (member) => {
 };
 
 
-  const handleImageUpload = async (e) => {
-    // Upload code unchanged...
-    const file = e.target.files[0];
-    if (file && uploadForMember) {
-      setIsUploading(true);
-      try {
-        const storageRef = ref(storage, `profiles/${uploadForMember.id}/${Date.now()}_${file.name}`);
-        const snapshot = await uploadBytes(storageRef, file);
-        const imageUrl = await getDownloadURL(snapshot.ref);
-        await updateMemberProfile(uploadForMember.id, { profilePicture: imageUrl });
-        setShowProfileUpload(false);
-      } catch (error) {
-        console.error("Error uploading image:", error);
-        let errorMessage = "Failed to upload image. Please try again.";
-        
-        if (error.code === 'storage/unauthorized') {
-          errorMessage = "You don't have permission to upload files.";
-        } else if (error.code === 'storage/canceled') {
-          errorMessage = "Upload was canceled.";
-        } else if (error.code === 'storage/unknown') {
-          errorMessage = "An unknown error occurred during upload.";
-        }
-        
-        alert(errorMessage);
-      } finally {
-        setIsUploading(false);
-      }
-    }
-  };
-
+  
   const handleSelectUser = (member) => {
     selectFamilyMember(member);
     
