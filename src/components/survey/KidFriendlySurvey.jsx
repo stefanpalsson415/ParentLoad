@@ -169,6 +169,7 @@ const KidFriendlySurvey = ({ surveyType = "initial" }) => {
   const [filterQuestions, setFilterQuestions] = useState(false);
   const [showAnimatedProgress, setShowAnimatedProgress] = useState(false);
   const [animation, setAnimation] = useState(null);
+  const [isProcessing, setIsProcessing] = useState(false);
   
   // Create a filtered list of questions for kids if needed
   const [questions, setQuestions] = useState([]);
@@ -186,6 +187,25 @@ const KidFriendlySurvey = ({ surveyType = "initial" }) => {
     resetSurvey();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []); 
+  
+  // Cleanup function to run when component unmounts
+  useEffect(() => {
+    return () => {
+      // Clear any pending timers
+      if (questionTimerRef.current) {
+        clearTimeout(questionTimerRef.current);
+        questionTimerRef.current = null;
+      }
+      
+      // Clear any other possible timeouts
+      const allTimeouts = [];
+      for (let i = setTimeout(() => {}, 0); i > 0; i--) {
+        clearTimeout(i);
+      }
+      
+      console.log("Kid survey component unmounted, all timers cleared");
+    };
+  }, []);
   
   // Set up questions for kids based on survey type
   useEffect(() => {
@@ -215,9 +235,11 @@ const KidFriendlySurvey = ({ surveyType = "initial" }) => {
       const simpleQuestions = [];
       categories.forEach(category => {
         const categoryQuestions = questionSet.filter(q => q.category === category);
-        // Pick 5 questions that are more concrete and observable
-        const selected = categoryQuestions.slice(0, Math.min(5, categoryQuestions.length)); 
-        simpleQuestions.push(...selected);
+        // Pick 5 questions from each category
+        for (let i = 0; i < 5; i++) {
+          const index = (i < categoryQuestions.length) ? i : i % categoryQuestions.length;
+          simpleQuestions.push(categoryQuestions[index]);
+        }
       });
       
       filteredList = simpleQuestions;
@@ -235,8 +257,10 @@ const KidFriendlySurvey = ({ surveyType = "initial" }) => {
       categories.forEach(category => {
         const categoryQuestions = questionSet.filter(q => q.category === category);
         // Pick 10 questions per category
-        const selected = categoryQuestions.slice(0, Math.min(10, categoryQuestions.length));
-        mediumQuestions.push(...selected);
+        for (let i = 0; i < 10; i++) {
+          const index = (i < categoryQuestions.length) ? i : i % categoryQuestions.length;
+          mediumQuestions.push(categoryQuestions[index]);
+        }
       });
       
       filteredList = mediumQuestions;
@@ -277,61 +301,6 @@ const KidFriendlySurvey = ({ surveyType = "initial" }) => {
   const mamaUser = familyMembers.find(m => m.roleType === 'Mama' || m.name === 'Mama');
   const papaUser = familyMembers.find(m => m.roleType === 'Papa' || m.name === 'Papa');
   
-// Add to src/components/survey/KidFriendlySurvey.jsx
-
-// Add feedback visualization for kids to see their impact
-const renderImpactVisualization = () => {
-    if (!selectedUser || selectedUser.role !== 'child') return null;
-    
-    // Get the child's contributions
-    const childObservations = Object.entries(kidTasksData || {})
-      .filter(([_, data]) => data.completedBy === selectedUser.id)
-      .map(([_, data]) => data.observations)
-      .filter(Boolean);
-    
-    const childCompletedTasks = Object.entries(kidTasksData || {})
-      .filter(([_, data]) => data.completedBy === selectedUser.id)
-      .length;
-    
-    if (childCompletedTasks === 0) return null;
-    
-    return (
-      <div className="mt-6 p-4 bg-gradient-to-r from-amber-50 to-yellow-50 rounded-lg">
-        <h3 className="font-bold text-amber-800 mb-2">Your Family Detective Impact!</h3>
-        
-        <div className="flex items-center mb-3">
-          <div className="w-12 h-12 rounded-full bg-amber-100 flex items-center justify-center mr-3">
-            <Sparkles size={24} className="text-amber-600" />
-          </div>
-          <div>
-            <p className="font-medium">You've completed {childCompletedTasks} detective missions!</p>
-            <p className="text-sm text-amber-700">Your observations help your family understand who does what</p>
-          </div>
-        </div>
-        
-        {childObservations.length > 0 && (
-          <div className="bg-white p-3 rounded-lg border border-amber-200">
-            <h4 className="font-medium text-sm mb-2">Your Valuable Observations:</h4>
-            <ul className="space-y-2">
-              {childObservations.map((obs, idx) => (
-                <li key={idx} className="text-sm">
-                  ✏️ "{obs}"
-                </li>
-              ))}
-            </ul>
-          </div>
-        )}
-        
-        <div className="mt-3 text-center">
-          <p className="text-sm font-medium text-amber-800">
-            Your observations have helped your family improve balance by approximately 8%!
-          </p>
-        </div>
-      </div>
-    );
-  };
-
-
   // Parent data with fallbacks
   const parents = {
     mama: {
@@ -368,8 +337,7 @@ const renderImpactVisualization = () => {
   }, [currentQuestionIndex]);
   
   // Helper function to get illustration for a question
-  // Helper function to get illustration for a question
-function getIllustrationForQuestion(question) {
+  function getIllustrationForQuestion(question) {
     // This function determines which illustration to show based on keywords in the question
     const text = question.text.toLowerCase();
     const id = question.id || '';
@@ -467,6 +435,9 @@ function getIllustrationForQuestion(question) {
   
   // Handle parent selection
   const handleSelectParent = (parent) => {
+    if (isProcessing) return; // Prevent multiple selections while processing
+    setIsProcessing(true);
+    
     // Clear any pending timers
     if (questionTimerRef.current) {
       clearTimeout(questionTimerRef.current);
@@ -475,7 +446,7 @@ function getIllustrationForQuestion(question) {
     
     setSelectedParent(parent);
     
-    // Update game state - move character forward
+    // Immediately update game state
     setGameStatus(prev => {
       const newState = {
         ...prev,
@@ -515,21 +486,23 @@ function getIllustrationForQuestion(question) {
         setAnimation(null);
       }, 800);
       
-      // Move to next question with a delay
+      // Move to next question with a shorter delay
       questionTimerRef.current = setTimeout(() => {
         if (currentQuestionIndex < questions.length - 1) {
           // Show progress animation between questions
           setShowAnimatedProgress(true);
+          
           setTimeout(() => {
             setCurrentQuestionIndex(prevIndex => prevIndex + 1);
             setSelectedParent(null);
             setShowAnimatedProgress(false);
+            setIsProcessing(false); // Reset processing state
           }, 800);
         } else {
           // Survey completed
           handleCompleteSurvey();
         }
-      }, 1000);
+      }, 500); // Reduced from 1000ms to 500ms for better responsiveness
     }
   };
   
@@ -539,37 +512,33 @@ function getIllustrationForQuestion(question) {
     setShowReward(true);
     
     try {
-      // Save survey responses to database based on survey type
+      // First try to save the data before any navigation
       if (surveyType === "weekly") {
-        // Navigate to loading screen
-        setTimeout(() => {
-          navigate('/loading');
-        }, 2000);
-        
         // Save weekly check-in
         await completeWeeklyCheckIn(selectedUser.id, currentWeek, currentSurveyResponses);
+        console.log("Weekly check-in saved successfully");
       } else {
-        // Navigate to loading screen
-        setTimeout(() => {
-          navigate('/loading');
-        }, 2000);
-        
         // Save initial survey
         await completeInitialSurvey(selectedUser.id, currentSurveyResponses);
+        console.log("Initial survey saved successfully");
       }
       
-      // Navigate to dashboard after delay
+      // Only navigate after confirmed save
       setTimeout(() => {
-        navigate('/dashboard');
-      }, 3000);
+        navigate('/loading');
+        
+        // Navigate to dashboard after delay
+        setTimeout(() => {
+          navigate('/dashboard');
+        }, 1500);
+      }, 2000);
     } catch (error) {
       console.error(`Error completing ${surveyType} survey:`, error);
       alert('There was an error saving your responses. Please try again.');
       
-      // Even on error, go back to dashboard
-      setTimeout(() => {
-        navigate('/dashboard');
-      }, 3000);
+      // Don't navigate away on error
+      setShowReward(false);
+      setIsProcessing(false);
     }
   };
   
@@ -758,13 +727,14 @@ function getIllustrationForQuestion(question) {
           {/* Mama */}
           <div className="flex flex-col items-center">
             <button
-              onClick={() => handleSelectParent('Mama')}
+              onClick={() => !isProcessing && handleSelectParent('Mama')}
               className={`w-32 h-32 sm:w-40 sm:h-40 rounded-full focus:outline-none border-4 overflow-hidden transition-all transform hover:scale-105 ${
                 selectedParent === 'Mama' 
                   ? 'border-purple-500 scale-110 animate-pulse' 
                   : 'border-purple-200 hover:border-purple-300'
-              }`}
+              } ${isProcessing ? 'opacity-70 cursor-not-allowed' : ''}`}
               aria-label="Select Mama"
+              disabled={isProcessing}
             >
               <img 
                 src={parents.mama.image}
@@ -787,13 +757,14 @@ function getIllustrationForQuestion(question) {
           {/* Papa */}
           <div className="flex flex-col items-center">
             <button
-              onClick={() => handleSelectParent('Papa')}
+              onClick={() => !isProcessing && handleSelectParent('Papa')}
               className={`w-32 h-32 sm:w-40 sm:h-40 rounded-full focus:outline-none border-4 overflow-hidden transition-all transform hover:scale-105 ${
                 selectedParent === 'Papa' 
                   ? 'border-blue-500 scale-110 animate-pulse' 
                   : 'border-blue-200 hover:border-blue-300'
-              }`}
+              } ${isProcessing ? 'opacity-70 cursor-not-allowed' : ''}`}
               aria-label="Select Papa"
+              disabled={isProcessing}
             >
               <img 
                 src={parents.papa.image}
@@ -811,6 +782,8 @@ function getIllustrationForQuestion(question) {
       <div className="flex justify-between items-center bg-indigo-50 p-4 rounded-lg">
         <button 
           onClick={() => {
+            if (isProcessing) return;
+            
             // Clear any pending timers
             if (questionTimerRef.current) {
               clearTimeout(questionTimerRef.current);
@@ -823,9 +796,9 @@ function getIllustrationForQuestion(question) {
               setSelectedParent(userResponses[questions[currentQuestionIndex - 1].id] || null);
             }
           }}
-          disabled={currentQuestionIndex === 0}
+          disabled={currentQuestionIndex === 0 || isProcessing}
           className={`px-4 py-2 rounded-md flex items-center ${
-            currentQuestionIndex === 0 
+            currentQuestionIndex === 0 || isProcessing
               ? 'bg-gray-100 text-gray-400 cursor-not-allowed' 
               : 'bg-white text-indigo-700 hover:bg-indigo-100 border border-indigo-200'
           }`}
@@ -844,6 +817,8 @@ function getIllustrationForQuestion(question) {
         
         <button 
           onClick={() => {
+            if (isProcessing) return;
+            
             // Clear any pending timers
             if (questionTimerRef.current) {
               clearTimeout(questionTimerRef.current);
@@ -858,7 +833,12 @@ function getIllustrationForQuestion(question) {
               handleCompleteSurvey();
             }
           }}
-          className="px-4 py-2 rounded-md bg-indigo-100 text-indigo-700 hover:bg-indigo-200 border border-indigo-200 flex items-center"
+          disabled={isProcessing}
+          className={`px-4 py-2 rounded-md ${
+            isProcessing 
+              ? 'bg-gray-100 text-gray-400 cursor-not-allowed'
+              : 'bg-indigo-100 text-indigo-700 hover:bg-indigo-200 border border-indigo-200 flex items-center'
+          }`}
         >
           Skip
           <ArrowRight size={16} className="ml-1" />
