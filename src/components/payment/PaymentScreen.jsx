@@ -27,11 +27,14 @@ const PaymentScreen = () => {
       return;
     }
     
-    // Handle Stripe payment logic here
-    // This is simplified - you'll need to implement the actual Stripe payment flow
+ // New code
+// Handle Stripe payment logic here
+// This is simplified - you'll need to implement the actual Stripe payment flow
     
-    setLoading(false);
-  };
+// Add navigation to dashboard after successful payment
+navigate('/dashboard');
+    
+setLoading(false);  };
   
   const applyCoupon = () => {
     if (couponCode === 'olytheawesome') {

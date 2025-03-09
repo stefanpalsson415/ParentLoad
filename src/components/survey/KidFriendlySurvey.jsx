@@ -531,8 +531,8 @@ const KidFriendlySurvey = ({ surveyType = "initial" }) => {
         
         // Navigate to dashboard after delay
         setTimeout(() => {
-          navigate('/dashboard');
-        }, 1500);
+            navigate('/payment');
+          }, 1500);
       }, 2000);
     } catch (error) {
       console.error(`Error completing ${surveyType} survey:`, error);

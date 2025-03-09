@@ -7,6 +7,7 @@ import { useFamily } from './contexts/FamilyContext';
 import { Elements } from '@stripe/react-stripe-js';
 import { loadStripe } from '@stripe/stripe-js';
 
+
 // Components
 import FamilySelectionScreen from './components/user/FamilySelectionScreen';
 import SurveyScreen from './components/survey/SurveyScreen';
@@ -15,6 +16,11 @@ import WeeklyCheckInScreen from './components/survey/WeeklyCheckInScreen';
 import LoadingScreen from './components/common/LoadingScreen';
 import UserSignupScreen from './components/user/UserSignupScreen';
 import KidFriendlySurvey from './components/survey/KidFriendlySurvey';
+import PaymentScreen from './components/payment/PaymentScreen';
+// New code - Add missing imports
+import LandingPage from './components/marketing/LandingPage';
+import OnboardingFlow from './components/onboarding/OnboardingFlow';
+
 
 // App Routes Component - Used after context providers are set up
 function AppRoutes() {
@@ -29,12 +35,14 @@ function AppRoutes() {
       <Route path="/onboarding" element={<OnboardingFlow />} />
       <Route path="/signup" element={<UserSignupScreen />} />
       
-      {/* Route for initial survey - directs kids to kid-friendly version */}
-      <Route path="/survey" element={
-        selectedUser?.role === 'child' 
-          ? <KidFriendlySurvey surveyType="initial" /> 
-          : <SurveyScreen />
-      } />
+      // New code - Add payment route
+<Route path="/survey" element={
+  selectedUser?.role === 'child' 
+    ? <KidFriendlySurvey surveyType="initial" /> 
+    : <SurveyScreen />
+} />
+<Route path="/payment" element={<PaymentScreen />} />
+// rest of routes...
       // rest of routes...
       
       <Route path="/dashboard" element={<DashboardScreen />} />

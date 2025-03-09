@@ -111,9 +111,11 @@ const SurveyScreen = () => {
       navigate('/loading');
       
       // Navigate to dashboard after a delay
-      setTimeout(() => {
-        navigate('/dashboard');
-      }, 1500);
+// New code
+// Navigate to payment page after a delay
+setTimeout(() => {
+  navigate('/payment');
+}, 1500);
     } catch (error) {
       console.error('Error completing survey:', error);
       alert('There was an error saving your survey. Please try again.');
