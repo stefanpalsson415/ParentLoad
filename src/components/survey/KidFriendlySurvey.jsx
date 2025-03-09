@@ -446,29 +446,6 @@ const KidFriendlySurvey = ({ surveyType = "initial" }) => {
     
     setSelectedParent(parent);
     
-    // Immediately update game state
-    setGameStatus(prev => {
-      const newState = {
-        ...prev,
-        [`${parent.toLowerCase()}Position`]: prev[`${parent.toLowerCase()}Position`] + 1,
-        // Add a star every 5 questions
-        stars: (currentQuestionIndex + 1) % 5 === 0 ? prev.stars + 1 : prev.stars
-      };
-      
-      // Show rewards animation every 5 questions
-      if ((currentQuestionIndex + 1) % 5 === 0) {
-        setShowReward(true);
-        setTotalStars(prev => prev + 1);
-        
-        // Hide reward after 3 seconds
-        setTimeout(() => {
-          setShowReward(false);
-        }, 3000);
-      }
-      
-      return newState;
-    });
-    
     // Save response
     if (currentQuestion) {
       const updatedResponses = {
@@ -491,6 +468,31 @@ const KidFriendlySurvey = ({ surveyType = "initial" }) => {
         if (currentQuestionIndex < questions.length - 1) {
           // Show progress animation between questions
           setShowAnimatedProgress(true);
+          
+          // Now update game state ONLY when actually advancing to next question
+          setGameStatus(prev => {
+            const newState = {
+              ...prev,
+              // Use currentQuestionIndex + 1 for positions to match the next question
+              mamaPosition: parent === 'Mama' ? currentQuestionIndex + 1 : prev.mamaPosition,
+              papaPosition: parent === 'Papa' ? currentQuestionIndex + 1 : prev.papaPosition,
+              // Add a star every 5 questions
+              stars: (currentQuestionIndex + 1) % 5 === 0 ? prev.stars + 1 : prev.stars
+            };
+            
+            return newState;
+          });
+          
+          // Show rewards animation every 5 questions
+          if ((currentQuestionIndex + 1) % 5 === 0) {
+            setShowReward(true);
+            setTotalStars(prev => prev + 1);
+            
+            // Hide reward after 3 seconds
+            setTimeout(() => {
+              setShowReward(false);
+            }, 3000);
+          }
           
           setTimeout(() => {
             setCurrentQuestionIndex(prevIndex => prevIndex + 1);
@@ -631,7 +633,7 @@ const KidFriendlySurvey = ({ surveyType = "initial" }) => {
               animation === 'selected-mama' ? 'animate-bounce' : ''
             }`}
             style={{ 
-              left: `calc(${(gameStatus.mamaPosition / questions.length) * 100}% - 16px)`,
+              left: `calc(${Math.min(gameStatus.mamaPosition, questions.length - 1) / (questions.length - 1) * 100}% - 16px)`,
               maxLeft: 'calc(100% - 32px)'
             }}
           >
@@ -650,7 +652,7 @@ const KidFriendlySurvey = ({ surveyType = "initial" }) => {
               animation === 'selected-papa' ? 'animate-bounce' : ''
             }`}
             style={{ 
-              left: `calc(${(gameStatus.papaPosition / questions.length) * 100}% - 16px)`,
+              left: `calc(${Math.min(gameStatus.papaPosition, questions.length - 1) / (questions.length - 1) * 100}% - 16px)`,
               maxLeft: 'calc(100% - 32px)'
             }}
           >
