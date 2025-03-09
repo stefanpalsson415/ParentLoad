@@ -30,7 +30,7 @@ const UserSettingsScreen = ({ onClose }) => {
     try {
       await updateFamilyName(newFamilyName);
       // Update document title with family name
-      document.title = `${newFamilyName} Family AI Balancer`;
+      document.title = `${newFamilyName} Family Allie`;
     } catch (error) {
       console.error("Error updating family name:", error);
       alert("Failed to update family name. Please try again.");

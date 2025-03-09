@@ -40,6 +40,22 @@ export const FamilySelectionScreen = () => {
     setShowProfileUpload(true);
   };
   
+// Add this function near the beginning of the FamilySelectionScreen component
+const getDefaultProfileImage = (member) => {
+  if (!member.profilePicture) {
+    if (member.role === 'parent') {
+      return member.roleType === 'Mama' 
+        ? 'data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAyNTYgMjU2Ij48Y2lyY2xlIGN4PSIxMjgiIGN5PSIxMjgiIHI9IjEyOCIgZmlsbD0iI2U5YjFkYSIvPjxjaXJjbGUgY3g9IjEyOCIgY3k9IjkwIiByPSI0MCIgZmlsbD0iI2ZmZiIvPjxwYXRoIGQ9Ik0yMTUsMTcyLjVjMCwzNS05NSwzNS05NSwzNXMtOTUsMC05NS0zNWMwLTIzLjMsOTUtMTAsOTUtMTBTMjE1LDE0OS4yLDIxNSwxNzIuNVoiIGZpbGw9IiNmZmYiLz48L3N2Zz4=' 
+        : 'data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAyNTYgMjU2Ij48Y2lyY2xlIGN4PSIxMjgiIGN5PSIxMjgiIHI9IjEyOCIgZmlsbD0iIzg0YzRlMiIvPjxjaXJjbGUgY3g9IjEyOCIgY3k9IjkwIiByPSI0MCIgZmlsbD0iI2ZmZiIvPjxwYXRoIGQ9Ik0yMTUsMTcyLjVjMCwzNS05NSwzNS05NSwzNXMtOTUsMC05NS0zNWMwLTIzLjMsOTUtMTAsOTUtMTBTMjE1LDE0OS4yLDIxNSwxNzIuNVoiIGZpbGw9IiNmZmYiLz48L3N2Zz4=';
+    } else {
+      // Child icon
+      return 'data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAyNTYgMjU2Ij48Y2lyY2xlIGN4PSIxMjgiIGN5PSIxMjgiIHI9IjEyOCIgZmlsbD0iI2ZkZTY4YSIvPjxjaXJjbGUgY3g9IjEyOCIgY3k9IjkwIiByPSI0MCIgZmlsbD0iI2ZmZiIvPjxwYXRoIGQ9Ik0yMTUsMTcyLjVjMCwzNS05NSwzNS05NSwzNXMtOTUsMC05NS0zNWMwLTIzLjMsOTUtMTAsOTUtMTBTMjE1LDE0OS4yLDIxNSwxNzIuNVoiIGZpbGw9IiNmZmYiLz48L3N2Zz4=';
+    }
+  }
+  return member.profilePicture;
+};
+
+
   const handleImageUpload = async (e) => {
     // Upload code unchanged...
     const file = e.target.files[0];
@@ -113,6 +129,130 @@ export const FamilySelectionScreen = () => {
       className: "text-green-600"
     };
   };
+  
+  // Add this new function to enable camera capture
+const openCameraCapture = () => {
+  const videoElement = document.createElement('video');
+  const canvasElement = document.createElement('canvas');
+  
+  navigator.mediaDevices.getUserMedia({ video: true })
+    .then(stream => {
+      videoElement.srcObject = stream;
+      videoElement.play();
+      
+      // Create camera UI
+      const cameraModal = document.createElement('div');
+      cameraModal.className = 'fixed inset-0 bg-black bg-opacity-75 flex items-center justify-center z-50';
+      
+      const cameraContainer = document.createElement('div');
+      cameraContainer.className = 'bg-white p-4 rounded-lg max-w-md w-full';
+      
+      const title = document.createElement('h3');
+      title.textContent = 'Take a Profile Picture';
+      title.className = 'text-lg font-medium mb-4';
+      
+      const videoContainer = document.createElement('div');
+      videoContainer.className = 'relative mb-4';
+      videoContainer.appendChild(videoElement);
+      videoElement.className = 'w-full rounded';
+      
+      const buttonContainer = document.createElement('div');
+      buttonContainer.className = 'flex justify-between';
+      
+      const captureButton = document.createElement('button');
+      captureButton.textContent = 'Take Photo';
+      captureButton.className = 'px-4 py-2 bg-blue-600 text-white rounded';
+      
+      const cancelButton = document.createElement('button');
+      cancelButton.textContent = 'Cancel';
+      cancelButton.className = 'px-4 py-2 border rounded';
+      
+      buttonContainer.appendChild(cancelButton);
+      buttonContainer.appendChild(captureButton);
+      
+      cameraContainer.appendChild(title);
+      cameraContainer.appendChild(videoContainer);
+      cameraContainer.appendChild(buttonContainer);
+      cameraModal.appendChild(cameraContainer);
+      
+      document.body.appendChild(cameraModal);
+      
+      // Handle capture
+      captureButton.addEventListener('click', () => {
+        // Set canvas dimensions to match video
+        canvasElement.width = videoElement.videoWidth;
+        canvasElement.height = videoElement.videoHeight;
+        
+        // Draw current video frame to canvas
+        canvasElement.getContext('2d').drawImage(
+          videoElement, 0, 0, canvasElement.width, canvasElement.height
+        );
+        
+        // Convert to blob
+        canvasElement.toBlob(blob => {
+          // Stop all tracks to close camera
+          videoElement.srcObject.getTracks().forEach(track => track.stop());
+          
+          // Remove modal
+          document.body.removeChild(cameraModal);
+          
+          // Process the image blob
+          const file = new File([blob], "camera-photo.jpg", { type: "image/jpeg" });
+          handleImageFile(file);
+        }, 'image/jpeg');
+      });
+      
+      // Handle cancel
+      cancelButton.addEventListener('click', () => {
+        // Stop all tracks to close camera
+        videoElement.srcObject.getTracks().forEach(track => track.stop());
+        
+        // Remove modal
+        document.body.removeChild(cameraModal);
+      });
+    })
+    .catch(error => {
+      console.error("Error accessing camera:", error);
+      alert("Could not access camera. Please check permissions or use file upload instead.");
+    });
+};
+
+// Modify the handleImageUpload function
+const handleImageUpload = async (e) => {
+  const file = e.target.files[0];
+  if (file && uploadForMember) {
+    handleImageFile(file);
+  }
+};
+
+// Add this new helper function to handle the file processing
+const handleImageFile = async (file) => {
+  setIsUploading(true);
+  try {
+    const storageRef = ref(storage, `profiles/${uploadForMember.id}/${Date.now()}_${file.name}`);
+    const snapshot = await uploadBytes(storageRef, file);
+    const imageUrl = await getDownloadURL(snapshot.ref);
+    await updateMemberProfile(uploadForMember.id, { profilePicture: imageUrl });
+    setShowProfileUpload(false);
+  } catch (error) {
+    console.error("Error uploading image:", error);
+    let errorMessage = "Failed to upload image. Please try again.";
+    
+    if (error.code === 'storage/unauthorized') {
+      errorMessage = "You don't have permission to upload files.";
+    } else if (error.code === 'storage/canceled') {
+      errorMessage = "Upload was canceled.";
+    } else if (error.code === 'storage/unknown') {
+      errorMessage = "An unknown error occurred during upload.";
+    }
+    
+    alert(errorMessage);
+  } finally {
+    setIsUploading(false);
+  }
+};
+  
+  
   
   // Handle login submission
   const handleLogin = async (e) => {
@@ -322,32 +462,6 @@ export const FamilySelectionScreen = () => {
                 </div>
               )}
               
-{/* DEBUG SECTION */}
-<div className="mt-8 p-4 border rounded bg-gray-100">
-  <h3 className="font-bold">Debug Information</h3>
-  <div className="text-xs mt-2">
-    <p>Current User ID: {currentUser?.uid || 'None'}</p>
-    <p>Available Families: {availableFamilies?.length || 0}</p>
-    <pre className="mt-2 overflow-auto max-h-40">
-      {JSON.stringify(availableFamilies, null, 2)}
-    </pre>
-    
-    {/* Direct Debug Link */}
-    <div className="mt-4">
-      <p className="font-bold">Direct Access Links:</p>
-      {availableFamilies?.map(family => (
-        <div key={family.familyId} className="mt-2">
-          <a 
-            href={`/dashboard?forceFamilyId=${family.familyId}`}
-            className="text-blue-600 underline"
-          >
-            DIRECT: {family.familyName} ({family.familyId})
-          </a>
-        </div>
-      ))}
-    </div>
-  </div>
-</div>
 
               <div className="space-y-4">
                 <button
@@ -426,11 +540,11 @@ export const FamilySelectionScreen = () => {
                   <div className="flex items-center">
                     <div className="flex-shrink-0 mr-4 relative">
                       <div className="w-16 h-16 rounded-full overflow-hidden border-2 border-blue-200">
-                        <img 
-                          src={member.profilePicture} 
-                          alt={`${member.name}'s profile`}
-                          className="w-full h-full object-cover"
-                        />
+                                            <img 
+                        src={getDefaultProfileImage(member)} 
+                        alt={`${member.name}'s profile`}
+                        className="w-full h-full object-cover"
+                      />
                       </div>
                       <button
                         className="absolute bottom-0 right-0 bg-blue-500 text-white p-1 rounded-full"
@@ -482,38 +596,42 @@ export const FamilySelectionScreen = () => {
         </div>
       </div>
 
-      {/* Progress summary */}
-      <div className="p-4 border-t bg-white">
-        <div className="w-full max-w-md mx-auto">
-          <h3 className="font-medium mb-2 text-center">Family Progress</h3>
-          <div className="bg-blue-50 p-3 rounded">
-            <p className="text-sm text-center mb-2">
-              All family members must complete the initial survey to generate reports
-            </p>
-            <div className="flex justify-between items-center">
-              <span className="text-sm font-medium">Completed:</span>
-              <div className="flex gap-1">
-                {familyMembers.map(member => (
-                  <div 
-                    key={member.id} 
-                    className={`w-8 h-8 rounded-full flex items-center justify-center text-xs ${
-                      member.completed ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-400'
-                    }`}
-                    title={`${member.name}: ${member.completed ? 'Completed' : 'Not completed'}`}
-                  >
-                    {member.completed ? '✓' : member.name.charAt(0)}
-                  </div>
-                ))}
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
+     
 
       {/* Footer */}
       <div className="p-4 text-center text-sm text-gray-500">
         <p>ParentLoad v1.0 - Balancing family responsibilities together</p>
       </div>
+
+{/* Add a camera button alongside the file upload */}
+<div className="flex items-center justify-center mb-4">
+  {isUploading ? (
+    <div className="px-4 py-2 bg-gray-100 text-gray-700 rounded border flex items-center">
+      <div className="w-4 h-4 border-2 border-t-transparent border-blue-600 rounded-full animate-spin mr-2"></div>
+      <span className="text-sm">Uploading...</span>
+    </div>
+  ) : (
+    <div className="flex space-x-3">
+      <label 
+        htmlFor="image-upload" 
+        className="flex flex-col items-center px-4 py-3 bg-blue-50 text-blue-700 rounded cursor-pointer border border-blue-300 hover:bg-blue-100"
+      >
+        <Upload size={20} className="mb-1" />
+        <span className="text-sm">Upload Photo</span>
+      </label>
+      
+      <button
+        onClick={openCameraCapture}
+        className="flex flex-col items-center px-4 py-3 bg-green-50 text-green-700 rounded cursor-pointer border border-green-300 hover:bg-green-100"
+      >
+        <Camera size={20} className="mb-1" />
+        <span className="text-sm">Take Photo</span>
+      </button>
+    </div>
+  )}
+</div>
+
+
 
       {/* Profile picture upload modal */}
       {showProfileUpload && (

@@ -4,6 +4,8 @@ import { AuthProvider } from './contexts/AuthContext';
 import { FamilyProvider } from './contexts/FamilyContext';
 import { SurveyProvider } from './contexts/SurveyContext';
 import { useFamily } from './contexts/FamilyContext';
+import { Elements } from '@stripe/react-stripe-js';
+import { loadStripe } from '@stripe/stripe-js';
 
 // Components
 import FamilySelectionScreen from './components/user/FamilySelectionScreen';
@@ -17,10 +19,14 @@ import KidFriendlySurvey from './components/survey/KidFriendlySurvey';
 // App Routes Component - Used after context providers are set up
 function AppRoutes() {
   const { selectedUser } = useFamily();
+  const stripePromise = loadStripe('pk_test_YOUR_TEST_KEY');
+
 
   return (
     <Routes>
-      <Route path="/" element={<FamilySelectionScreen />} />
+      <Route path="/" element={<LandingPage />} />
+      <Route path="/login" element={<FamilySelectionScreen />} />
+      <Route path="/onboarding" element={<OnboardingFlow />} />
       <Route path="/signup" element={<UserSignupScreen />} />
       
       {/* Route for initial survey - directs kids to kid-friendly version */}
@@ -29,6 +35,7 @@ function AppRoutes() {
           ? <KidFriendlySurvey surveyType="initial" /> 
           : <SurveyScreen />
       } />
+      // rest of routes...
       
       <Route path="/dashboard" element={<DashboardScreen />} />
       
@@ -51,9 +58,13 @@ function App() {
       <AuthProvider>
         <FamilyProvider>
           <SurveyProvider>
+            <Elements stripe={stripePromise}>
+
             <div className="App">
               <AppRoutes />
             </div>
+            </Elements>
+
           </SurveyProvider>
         </FamilyProvider>
       </AuthProvider>

@@ -113,9 +113,10 @@ const UserSignupScreen = () => {
         console.log("Stored family ID in localStorage:", result.familyId);
       }
       
-      // Navigate to family selection screen
-      console.log("Navigating to family selection screen");
-      navigate('/'); // Fixed: removed any login-related code here
+// Navigate to family selection screen with the newly created family
+console.log("Navigating to family selection screen with new family");
+localStorage.setItem('selectedFamilyId', result.familyId);
+navigate('/login');
     } catch (error) {
       console.error("Detailed error creating family:", error);
       alert("There was an error creating your family: " + (error.message || "Unknown error"));
