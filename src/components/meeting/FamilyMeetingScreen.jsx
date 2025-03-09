@@ -264,7 +264,29 @@ const FamilyMeetingScreen = ({ onClose }) => {
       setExpandedSection(sectionId);
     }
   };
-  
+  // Helper function to analyze weekly trends in survey data
+const analyzeWeeklyTrends = () => {
+  // In a real implementation, this would analyze actual survey data
+  return {
+    mostImprovedArea: "Visible Household Tasks",
+    leastImprovedArea: "Invisible Parental Tasks",
+    biggestImbalance: 25,
+    overallTrend: "improving"
+  };
+};
+
+// Helper function to analyze task completion patterns
+const analyzeTaskCompletionPatterns = () => {
+  // In a real implementation, this would analyze actual task data
+  return {
+    completionRate: 68,
+    bestCompleter: "Papa",
+    incompleteReason: "Lack of time",
+    recommendedTaskType: "Visible Household"
+  };
+};
+
+
   // Update in src/components/meeting/FamilyMeetingScreen.jsx
 
 // Add this function to generate better meeting agenda topics
@@ -280,7 +302,7 @@ const generateEnhancedAgendaTopics = () => {
       id: 'wentWell',
       title: '1. Celebrate Progress',
       duration: '10 min',
-      description: 'Acknowledge improvements and wins from this week',
+      description: "Acknowledge improvements and wins from this week",
       guideQuestions: [
         'Which tasks did each person successfully complete?',
         `In which area have we improved the most? (${trends.mostImprovedArea})`,
@@ -296,7 +318,7 @@ const generateEnhancedAgendaTopics = () => {
       id: 'couldImprove',
       title: '2. Address Challenges',
       duration: '10 min',
-      description: 'Identify what's still not working well',
+      description: "Identify what's still not working well",
       guideQuestions: [
         `Why does ${trends.leastImprovedArea} remain challenging?`,
         'What obstacles prevented task completion this week?',
@@ -310,9 +332,9 @@ const generateEnhancedAgendaTopics = () => {
     },
     {
       id: 'actionItems',
-      title: '3. Next Week's Plan',
+      title: "3. Next Week's Plan",
       duration: '10 min',
-      description: 'Create specific actions for next week based on data',
+      description: "Create specific actions for next week based on data",
       guideQuestions: [
         `How can we better balance ${trends.leastImprovedArea}?`,
         'Which new tasks would have the biggest impact?',

@@ -42,6 +42,11 @@ export function SurveyProvider({ children }) {
         "Who sets the table for meals?",
         "Who shovels snow in winter?",
         "Who cleans the refrigerator?",
+        "Who sets up new technology devices (TVs, computers, smart home devices) in your home?",
+        "Who handles troubleshooting when household technology or appliances malfunction?",
+        "Who installs software updates on family computers and devices?",
+        "Who manages the home's internet network (router setup, addressing connectivity issues)?",
+        "Who organizes and maintains digital equipment and accessories (cables, chargers, etc.)?",
         "Who organizes closets and storage spaces?"
       ],
       "Invisible Household Tasks": [
@@ -64,7 +69,12 @@ export function SurveyProvider({ children }) {
         "Who plans for holidays and special events?",
         "Who tracks maintenance schedules for appliances?",
         "Who manages family health needs?",
-        "Who guides family values and addresses behavioral issues?"
+        "Who guides family values and addresses behavioral issues?",
+        "Who researches and makes decisions about technology purchases for the home?",
+        "Who manages digital subscriptions and accounts (Netflix, Spotify, utilities, etc.)?",
+        "Who keeps track of digital passwords and login information for household accounts?",
+        "Who monitors and manages the family's digital security (updates, antivirus, backups)?",
+        "Who researches solutions when family members have technology questions or problems?"
       ],
       "Visible Parental Tasks": [
         "Who drives kids to school and activities?",
@@ -86,6 +96,11 @@ export function SurveyProvider({ children }) {
         "Who teaches life skills?",
         "Who disciplines and sets behavioral expectations?",
         "Who assists with college or career preparation?",
+        "Who helps children with technology homework or school digital platforms?",
+        "Who supervises children's screen time and enforces technology boundaries?",
+        "Who teaches children how to use new apps, devices, or digital tools?",
+        "Who participates in virtual parent-teacher conferences or online school communications?",
+        "Who helps children navigate social media or their online presence?",
         "Who engages in recreational activities with kids?"
       ],
       "Invisible Parental Tasks": [
@@ -108,7 +123,12 @@ export function SurveyProvider({ children }) {
         "Who encourages children's personal interests?",
         "Who decides on appropriate screen time rules?",
         "Who helps children navigate social relationships?",
-        "Who supports the co-parent emotionally and practically?"
+        "Who supports the co-parent emotionally and practically?",
+        "Who anticipates children's emotional needs before they're explicitly expressed?",
+        "Who researches strategies for supporting children through emotional challenges?",
+        "Who notices subtle changes in children's emotional wellbeing and follows up?",
+        "Who coordinates the 'emotional climate' of the family during stressful periods?",
+        "Who keeps mental track of each child's emotional triggers and coping mechanisms?"
       ]
     };
       
@@ -212,3 +232,5 @@ export function SurveyProvider({ children }) {
     </SurveyContext.Provider>
   );
 }
+
+
