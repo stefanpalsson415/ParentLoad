@@ -8,6 +8,8 @@ const PaymentScreen = () => {
     const [error, setError] = useState(null);
     const [couponCode, setCouponCode] = useState('');
     const [couponApplied, setCouponApplied] = useState(false);
+    const [discount, setDiscount] = useState(0);
+
     
     const navigate = useNavigate();
   
@@ -20,6 +22,14 @@ const PaymentScreen = () => {
       // Skip payment process and proceed directly
       console.log('Free coupon applied');
       setCouponApplied(true);
+      navigate('/dashboard');
+      return;
+    }
+    if (couponCode.toLowerCase() === 'stefan') {
+      // 100% discount code
+      console.log('Free coupon applied');
+      setCouponApplied(true);
+      setDiscount(100);
       navigate('/dashboard');
       return;
     }
@@ -114,12 +124,12 @@ setLoading(false);  };
             </div>
             
             <button
-              type="submit"
-              disabled={!stripe || loading}
-              className="w-full py-3 bg-blue-600 text-white rounded-md"
-            >
-              {loading ? 'Processing...' : 'Subscribe - $1/month'}
-            </button>
+  type="submit"
+  disabled={loading}
+  className="w-full py-3 bg-blue-600 text-white rounded-md"
+>
+  {loading ? 'Processing...' : 'Subscribe - $20/month'}
+</button>
           </form>
         )}
       </div>

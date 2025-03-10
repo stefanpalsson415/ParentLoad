@@ -8,6 +8,8 @@ import AboutUsPage from './components/marketing/AboutUsPage';
 import HowThisWorksScreen from './components/education/HowThisWorksScreen';
 
 // Components
+import MiniSurvey from './components/survey/MiniSurvey';
+import MiniResultsScreen from './components/survey/MiniResultsScreen';
 import FamilySelectionScreen from './components/user/FamilySelectionScreen';
 import SurveyScreen from './components/survey/SurveyScreen';
 import DashboardScreen from './components/dashboard/DashboardScreen';
@@ -39,6 +41,8 @@ function AppRoutes() {
       ? <KidFriendlySurvey surveyType="initial" /> 
       : <SurveyScreen />
   } />
+    <Route path="/mini-survey" element={<MiniSurvey />} />
+    <Route path="/mini-results" element={<MiniResultsScreen />} />
   <Route path="/payment" element={<PaymentScreen />} />
   <Route path="/dashboard" element={<DashboardScreen />} />
   
