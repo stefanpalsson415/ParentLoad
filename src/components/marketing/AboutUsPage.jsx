@@ -72,7 +72,7 @@ const AboutUsPage = () => {
             <div>
               <h2 className="text-3xl font-bold mb-6">Our Journey</h2>
               <p className="text-lg mb-4">
-                ParentLoad began as a personal project to solve our own family's challenges with distributing household and parenting responsibilities fairly.
+                Allie began as a personal project to solve our own family's challenges with distributing household and parenting responsibilities fairly.
               </p>
               <p className="text-lg mb-4">
                 We realized that many of our arguments centered around mismatched expectations and "invisible work" that went unacknowledged. When we started tracking and measuring these responsibilities, our family dynamics improved dramatically.
@@ -82,7 +82,7 @@ const AboutUsPage = () => {
               </p>
             </div>
             <div className="bg-blue-50 p-8 rounded-lg">
-              <h3 className="text-xl font-semibold mb-4 text-blue-800">Why We Built ParentLoad</h3>
+              <h3 className="text-xl font-semibold mb-4 text-blue-800">Why We Built Allie</h3>
               <ul className="space-y-4">
                 <li className="flex">
                   <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6 text-blue-600 mr-2 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -120,7 +120,7 @@ const AboutUsPage = () => {
           <h2 className="text-3xl font-bold mb-8 text-center">Our Science-Based Approach</h2>
           <div className="bg-white p-8 rounded-lg shadow-md">
             <p className="text-lg mb-6">
-              ParentLoad is built on a foundation of research in family dynamics, behavioral psychology, and organizational management. Our AI-powered system draws from these disciplines to create a holistic approach to family balance.
+              Allie is built on a foundation of research in family dynamics, behavioral psychology, and organizational management. Our AI-powered system draws from these disciplines to create a holistic approach to family balance.
             </p>
             <div className="grid md:grid-cols-2 gap-8">
               <div className="border-l-4 border-blue-500 pl-4">
@@ -155,7 +155,7 @@ const AboutUsPage = () => {
       {/* Meet the Team */}
       <section className="py-16">
         <div className="max-w-4xl mx-auto px-6">
-          <h2 className="text-3xl font-bold mb-8 text-center">The Team Behind ParentLoad</h2>
+          <h2 className="text-3xl font-bold mb-8 text-center">The Team Behind Allie</h2>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
             <div className="bg-white p-6 rounded-lg shadow-md text-center">
             <div className="w-24 h-24 rounded-full overflow-hidden mx-auto mb-4 border-2 border-gray-300">
@@ -164,7 +164,7 @@ const AboutUsPage = () => {
               <h3 className="text-xl font-semibold">The Palsson Family</h3>
               <p className="text-gray-600 mb-4">Founders</p>
               <p className="text-sm">
-                A family of five that experienced firsthand the challenges of balancing responsibilities and created ParentLoad to solve them.
+                A family of five that experienced firsthand the challenges of balancing responsibilities and created Allie to solve them.
               </p>
             </div>
             <div className="bg-white p-6 rounded-lg shadow-md text-center">
@@ -188,7 +188,7 @@ const AboutUsPage = () => {
       {/* CTA Section */}
       <section className="py-16 bg-blue-600 text-white">
         <div className="max-w-4xl mx-auto px-6 text-center">
-          <h2 className="text-3xl font-bold mb-4">Join the ParentLoad Community</h2>
+          <h2 className="text-3xl font-bold mb-4">Join the Allie Community</h2>
           <p className="text-xl mb-8">Experience the benefits of a more balanced family life today.</p>
           <button 
             onClick={() => navigate('/onboarding')}

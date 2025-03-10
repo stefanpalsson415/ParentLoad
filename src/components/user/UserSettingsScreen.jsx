@@ -354,7 +354,7 @@ const UserSettingsScreen = ({ onClose }) => {
               
               {/* About */}
               <div>
-                <h4 className="font-medium mb-2">About ParentLoad</h4>
+                <h4 className="font-medium mb-2">About Allie</h4>
                 <p className="text-sm text-gray-600">
                   Version 1.0.0<br />
                   Helping families balance responsibilities since 2025.

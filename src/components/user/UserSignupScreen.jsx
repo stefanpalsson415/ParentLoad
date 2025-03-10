@@ -113,7 +113,6 @@ const UserSignupScreen = () => {
         console.log("Stored family ID in localStorage:", result.familyId);
       }
       
-// Navigate to family selection screen with the newly created family
 // Navigate directly to dashboard with the newly created family
 console.log("Navigating to dashboard with new family");
 localStorage.setItem('selectedFamilyId', result.familyId);
@@ -350,7 +349,7 @@ navigate('/dashboard');
       <div className="container mx-auto px-4 max-w-lg">
         {/* Header with logo */}
         <div className="text-center mb-8">
-          <h1 className="text-3xl font-bold text-blue-800 mb-2">ParentLoad</h1>
+          <h1 className="text-3xl font-bold text-blue-800 mb-2">Allie</h1>
           <p className="text-gray-600">
             Balancing family responsibilities together
           </p>
@@ -427,7 +426,7 @@ navigate('/dashboard');
         
         {/* Footer */}
         <div className="text-center mt-8 text-sm text-gray-500">
-          <p>ParentLoad v1.0 - All your data stays private to your family</p>
+          <p>Allie v1.0 - All your data stays private to your family</p>
         </div>
       </div>
     </div>

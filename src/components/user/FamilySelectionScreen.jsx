@@ -255,7 +255,7 @@ const handleImageFile = async (file) => {
   const handleLogout = async () => {
     try {
       await logout();
-      setShowLoginForm(true);
+      navigate('/login'); // Direct to onboarding flow instead
     } catch (error) {
       console.error("Logout error:", error);
     }
@@ -264,12 +264,12 @@ const handleImageFile = async (file) => {
   // Login Form Screen
   const renderLoginForm = () => {
     return (
-      <div className="min-h-screen bg-gradient-to-b from-blue-50 to-white flex flex-col">
-        <div className="flex-1 flex flex-col items-center justify-center p-6">
+<div className="min-h-screen bg-white flex flex-col">
+<div className="flex-1 flex flex-col items-center justify-center p-6">
           <div className="w-full max-w-md">
             {/* Header */}
             <div className="text-center mb-8">
-              <h1 className="text-3xl font-bold text-blue-800 mb-2">ParentLoad</h1>
+              <h1 className="text-3xl font-bold text-blue-800 mb-2">Allie</h1>
               <p className="text-gray-600">
                 Log in to access your family's workload balancer
               </p>
@@ -352,7 +352,7 @@ const handleImageFile = async (file) => {
         
         {/* Footer */}
         <div className="p-4 text-center text-sm text-gray-500">
-          <p>ParentLoad v1.0 - Balancing family responsibilities together</p>
+          <p>Allie v1.0 - Balancing family responsibilities together</p>
         </div>
       </div>
     );
@@ -371,7 +371,7 @@ const handleImageFile = async (file) => {
           <div className="w-full max-w-md">
             {/* Header */}
             <div className="text-center mb-8">
-              <h1 className="text-3xl font-bold text-blue-800 mb-2">ParentLoad</h1>
+              <h1 className="text-3xl font-bold text-blue-800 mb-2">Allie</h1>
               <p className="text-gray-600">
                 Welcome to your family workload manager
               </p>
@@ -455,7 +455,7 @@ const handleImageFile = async (file) => {
         
         {/* Footer */}
         <div className="p-4 text-center text-sm text-gray-500">
-          <p>ParentLoad v1.0 - Balancing family responsibilities together</p>
+          <p>Allie v1.0 - Balancing family responsibilities together</p>
         </div>
       </div>
     );
@@ -468,7 +468,7 @@ const handleImageFile = async (file) => {
         <div className="w-full max-w-md">
           {/* Header with Logout */}
           <div className="flex justify-between items-center mb-8">
-            <h1 className="text-3xl font-bold text-blue-800">ParentLoad</h1>
+            <h1 className="text-3xl font-bold text-blue-800">Allie</h1>
             <button 
               onClick={handleLogout}
               className="text-sm text-gray-600 hover:text-gray-800 flex items-center"
@@ -482,14 +482,7 @@ const handleImageFile = async (file) => {
             Who are you in the family? Select your profile to begin.
           </p>
 
-          {/* Switch Account Button */}
-          <button
-            onClick={() => setShowLoginForm(true)}
-            className="w-full py-2 px-4 rounded-md font-medium text-blue-600 border border-blue-300 hover:bg-blue-50 flex items-center justify-center mb-6"
-          >
-            <User size={16} className="mr-2" />
-            Switch Account
-          </button>
+          
 
           {/* Family member selection */}
           <div className="bg-white rounded-xl shadow-lg p-6 mb-8">
@@ -498,14 +491,14 @@ const handleImageFile = async (file) => {
             <div className="grid grid-cols-1 gap-4">
               {familyMembers.map((member) => (
                 <div 
-                  key={member.id}
-                  className={`border rounded-lg p-4 cursor-pointer transition-all ${
-                    selectedUser?.id === member.id 
-                      ? 'border-blue-500 bg-blue-50' 
-                      : 'border-gray-200 hover:border-blue-300'
-                  }`}
-                  onClick={() => handleSelectUser(member)}
-                >
+                key={member.id}
+                className={`border rounded-lg p-4 cursor-pointer transition-all ${
+                  selectedUser?.id === member.id 
+                    ? 'border-black bg-gray-50' 
+                    : 'border-gray-200 hover:border-gray-900'
+                }`}
+                onClick={() => handleSelectUser(member)}
+              >
                   <div className="flex items-center">
                     <div className="flex-shrink-0 mr-4 relative">
                       <div className="w-16 h-16 rounded-full overflow-hidden border-2 border-blue-200">
@@ -540,15 +533,15 @@ const handleImageFile = async (file) => {
 
           {/* Action buttons */}
           <div className="text-center space-y-4">
-            <button 
-              disabled={!selectedUser}
-              onClick={() => selectedUser && handleSelectUser(selectedUser)}
-              className={`w-full py-3 px-4 rounded-md font-medium text-white ${
-                selectedUser 
-                  ? 'bg-blue-600 hover:bg-blue-700' 
-                  : 'bg-blue-300 cursor-not-allowed'
-              }`}
-            >
+          <button 
+  disabled={!selectedUser}
+  onClick={() => selectedUser && handleSelectUser(selectedUser)}
+  className={`w-full py-3 px-4 rounded-md font-medium text-white ${
+    selectedUser 
+      ? 'bg-black hover:bg-gray-800' 
+      : 'bg-gray-300 cursor-not-allowed'
+  }`}
+>
               {selectedUser 
                 ? `Continue as ${selectedUser.name}` 
                 : "Select your profile to continue"}
@@ -569,7 +562,7 @@ const handleImageFile = async (file) => {
 
       {/* Footer */}
       <div className="p-4 text-center text-sm text-gray-500">
-        <p>ParentLoad v1.0 - Balancing family responsibilities together</p>
+        <p>Allie v1.0 - Balancing family responsibilities together</p>
       </div>
 
 {/* Add a camera button alongside the file upload */}

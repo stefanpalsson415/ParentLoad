@@ -81,7 +81,7 @@ const OnboardingFlow = () => {
       case 1:
         return (
           <div className="text-center">
-            <h2 className="text-3xl font-light mb-6">Welcome to ParentLoad</h2>
+            <h2 className="text-3xl font-light mb-6">Welcome to Allie</h2>
             <p className="text-lg mb-8">We're excited to help your family find better balance.</p>
             <div className="w-64 h-64 mx-auto mb-8 rounded-full bg-blue-100 flex items-center justify-center">
             <img 
@@ -114,7 +114,7 @@ const OnboardingFlow = () => {
               </div>
             </div>
             <p className="text-gray-600">
-              ParentLoad helps measure and balance both visible and invisible work.
+              Allie helps measure and balance both visible and invisible work.
             </p>
           </div>
         );
@@ -159,7 +159,7 @@ const OnboardingFlow = () => {
               </ul>
             </div>
             <p className="text-gray-600">
-              ParentLoad uses this research to create a data-driven approach to family balance.
+              Allie uses this research to create a data-driven approach to family balance.
             </p>
           </div>
         );
@@ -285,7 +285,7 @@ const OnboardingFlow = () => {
               </div>
             </div>
             <p className="text-gray-600">
-              ParentLoad helps identify imbalances and create practical paths to improvement.
+              Allie helps identify imbalances and create practical paths to improvement.
             </p>
           </div>
         );
@@ -354,7 +354,7 @@ const OnboardingFlow = () => {
           <div>
             <h2 className="text-3xl font-light mb-6">The Four Categories of Family Tasks</h2>
             <p className="text-gray-600 mb-6">
-              ParentLoad divides family responsibilities into four categories to help identify imbalances.
+              Allie divides family responsibilities into four categories to help identify imbalances.
             </p>
             
             <div className="space-y-4">
@@ -468,7 +468,7 @@ const OnboardingFlow = () => {
       case 11:
         return (
           <div>
-            <h2 className="text-3xl font-light mb-6">The ParentLoad Approach</h2>
+            <h2 className="text-3xl font-light mb-6">The Allie Approach</h2>
             <p className="text-gray-600 mb-6">
               We use a structured, weekly process to help your family achieve lasting balance.
             </p>
@@ -530,7 +530,7 @@ const OnboardingFlow = () => {
           <div>
             <h2 className="text-3xl font-light mb-6">App Preferences</h2>
             <p className="text-gray-600 mb-6">
-              Let's customize how ParentLoad works for your family.
+              Let's customize how Allie works for your family.
             </p>
             
             <div className="space-y-6">
@@ -675,7 +675,7 @@ const OnboardingFlow = () => {
           <div>
             <h2 className="text-3xl font-light mb-6">Family Balance FAQ</h2>
             <p className="text-gray-600 mb-6">
-              Answers to common questions about the ParentLoad approach.
+              Answers to common questions about the Allie approach.
             </p>
             
             <div className="space-y-4">
@@ -709,7 +709,7 @@ const OnboardingFlow = () => {
                 {familyData.expandedFaq === 2 && (
                   <div className="p-4 bg-gray-50 border-t">
                     <p className="text-gray-700 text-sm">
-                      This is common! One approach is to focus on the data-driven aspect of ParentLoad. Many skeptical partners become more engaged when they see objective measurements rather than feeling "accused." Start with simple, specific task changes rather than attempting a complete overhaul at once.
+                      This is common! One approach is to focus on the data-driven aspect of Allie. Many skeptical partners become more engaged when they see objective measurements rather than feeling "accused." Start with simple, specific task changes rather than attempting a complete overhaul at once.
                     </p>
                   </div>
                 )}
@@ -727,7 +727,7 @@ const OnboardingFlow = () => {
                 {familyData.expandedFaq === 3 && (
                   <div className="p-4 bg-gray-50 border-t">
                     <p className="text-gray-700 text-sm">
-                      Weekly check-ins take about 5 minutes per person. The guided family meeting is designed to be 30 minutes once a week. In total, the ParentLoad process requires about 45 minutes per week, but saves families hours in reduced conflicts and more efficient task management.
+                      Weekly check-ins take about 5 minutes per person. The guided family meeting is designed to be 30 minutes once a week. In total, the Allie process requires about 45 minutes per week, but saves families hours in reduced conflicts and more efficient task management.
                     </p>
                   </div>
                 )}
@@ -745,7 +745,7 @@ const OnboardingFlow = () => {
                 {familyData.expandedFaq === 4 && (
                   <div className="p-4 bg-gray-50 border-t">
                     <p className="text-gray-700 text-sm">
-                      Not necessarily! ParentLoad isn't about forcing a rigid 50/50 split. It's about finding a balance that works for your unique family situation and feels fair to all involved. Some families might have a 60/40 split that feels perfectly balanced based on work schedules, preferences, and other factors.
+                      Not necessarily! Allie isn't about forcing a rigid 50/50 split. It's about finding a balance that works for your unique family situation and feels fair to all involved. Some families might have a 60/40 split that feels perfectly balanced based on work schedules, preferences, and other factors.
                     </p>
                   </div>
                 )}
@@ -759,7 +759,7 @@ const OnboardingFlow = () => {
           <div>
             <h2 className="text-3xl font-light mb-6">Your Family's Goals</h2>
             <p className="text-gray-600 mb-6">
-              What are you hoping to achieve with ParentLoad? Select all that apply.
+              What are you hoping to achieve with Allie? Select all that apply.
             </p>
             
             <div className="space-y-3">
@@ -881,7 +881,7 @@ const OnboardingFlow = () => {
           <div>
             <h2 className="text-3xl font-light mb-6">Your Weekly Journey</h2>
             <p className="text-gray-600 mb-6">
-              Here's what a typical week with ParentLoad looks like:
+              Here's what a typical week with Allie looks like:
             </p>
             
             <div className="space-y-4">
@@ -935,7 +935,7 @@ const OnboardingFlow = () => {
       case 17:
         return (
           <div>
-            <h2 className="text-3xl font-light mb-6">Key Features of ParentLoad</h2>
+            <h2 className="text-3xl font-light mb-6">Key Features of Allie</h2>
             <p className="text-gray-600 mb-6">
               Here are the powerful tools you'll have access to:
             </p>
@@ -1033,7 +1033,7 @@ const OnboardingFlow = () => {
           <div>
             <h2 className="text-3xl font-light mb-6">Success Stories</h2>
             <p className="text-gray-600 mb-6">
-              Here's how ParentLoad has helped other families:
+              Here's how Allie has helped other families:
             </p>
             
             <div className="space-y-6">
@@ -1052,7 +1052,7 @@ const OnboardingFlow = () => {
                       <Star size={16} fill="currentColor" />
                     </div>
                     <p className="text-sm text-gray-600 italic">
-                      "We were constantly arguing about who did more around the house. ParentLoad helped us see that Maria was handling 72% of the mental load. Three months in, we're at a much healthier 55/45 split, and the tension has melted away."
+                      "We were constantly arguing about who did more around the house. Allie helped us see that Maria was handling 72% of the mental load. Three months in, we're at a much healthier 55/45 split, and the tension has melted away."
                     </p>
                   </div>
                 </div>
@@ -1073,7 +1073,7 @@ const OnboardingFlow = () => {
                       <Star size={16} fill="currentColor" />
                     </div>
                     <p className="text-sm text-gray-600 italic">
-                      "As two working parents, we thought we were sharing equally, but ParentLoad's data showed hidden imbalances we'd never noticed. The weekly tasks were practical and manageable. Six weeks in, our 9-year-old said, 'You guys don't fight about chores anymore!'"
+                      "As two working parents, we thought we were sharing equally, but Allie's data showed hidden imbalances we'd never noticed. The weekly tasks were practical and manageable. Six weeks in, our 9-year-old said, 'You guys don't fight about chores anymore!'"
                     </p>
                   </div>
                 </div>
@@ -1094,7 +1094,7 @@ const OnboardingFlow = () => {
                       <Star size={16} fill="currentColor" />
                     </div>
                     <p className="text-sm text-gray-600 italic">
-                      "My wife felt overwhelmed but couldn't exactly explain why. ParentLoad helped us quantify the invisible work she was doing. The guided family meetings completely changed how we communicate. I understand her stress so much better now."
+                      "My wife felt overwhelmed but couldn't exactly explain why. Allie helped us quantify the invisible work she was doing. The guided family meetings completely changed how we communicate. I understand her stress so much better now."
                     </p>
                   </div>
                 </div>
@@ -1200,12 +1200,12 @@ const OnboardingFlow = () => {
           <div className="text-center">
             <h2 className="text-3xl font-light mb-6">You're Ready to Begin!</h2>
             <p className="text-lg mb-8">
-              Choose how you'd like to proceed with ParentLoad
+              Choose how you'd like to proceed with Allie
             </p>
             
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               <div className="bg-white p-6 rounded-lg shadow-md hover:shadow-lg transition-all">
-                <h3 className="font-bold text-xl mb-2">Join ParentLoad Premium</h3>
+                <h3 className="font-bold text-xl mb-2">Join Allie Premium</h3>
                 <p className="text-gray-600 mb-4">Get full access to all features and start your family balance journey</p>
                 <button 
                   onClick={() => navigate('/payment')}
