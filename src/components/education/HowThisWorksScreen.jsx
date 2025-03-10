@@ -21,7 +21,7 @@ const HowThisWorksScreen = () => {
 {/* Header */}
 <div className="px-6 py-4 border-b bg-white">
   <div className="max-w-6xl mx-auto flex justify-between items-center">
-    <h1 className="text-3xl font-light cursor-pointer" onClick={() => navigate('/')}>ParentLoad</h1>
+    <h1 className="text-3xl font-light cursor-pointer" onClick={() => navigate('/')}>Allie</h1>
     <nav className="hidden md:flex space-x-8">
       <button 
         onClick={() => navigate('/product-overview')}
@@ -74,7 +74,7 @@ const HowThisWorksScreen = () => {
               <div>
                 <h2 className="text-xl font-bold text-gray-800 mb-2">Balancing Your Family's Load</h2>
                 <p className="text-gray-600 mb-4">
-                  ParentLoad uses data-driven insights to help families distribute responsibilities more equitably,
+                  Allie uses data-driven insights to help families distribute responsibilities more equitably,
                   leading to reduced stress, stronger relationships, and healthier, happier families.
                 </p>
                 <div className="grid grid-cols-2 gap-4 mt-6">
@@ -255,7 +255,7 @@ const HowThisWorksScreen = () => {
                   <BarChart3 className="text-blue-600" size={24} />
                 </div>
                 <div>
-                  <h2 className="text-xl font-bold text-gray-800 mb-2">How AI Powers ParentLoad</h2>
+                  <h2 className="text-xl font-bold text-gray-800 mb-2">How AI Powers Allie</h2>
                   <p className="text-gray-600">
                     Our AI analyzes your family's data to provide personalized insights and recommendations.
                   </p>
@@ -313,7 +313,7 @@ const HowThisWorksScreen = () => {
                 <div>
                   <h2 className="text-xl font-bold text-gray-800 mb-2">Your Weekly Improvement Journey</h2>
                   <p className="text-gray-600">
-                    ParentLoad uses a structured weekly process to help your family gradually achieve better balance.
+                    Allie uses a structured weekly process to help your family gradually achieve better balance.
                   </p>
                 </div>
               </div>
@@ -397,7 +397,7 @@ const HowThisWorksScreen = () => {
   <div className="p-6">
     <h2 className="text-xl font-light mb-3">Ready to Create Better Balance?</h2>
     <p className="opacity-90 mb-6">
-      Get started with ParentLoad today and take the first step toward a happier, more balanced family life.
+      Get started with Allie today and take the first step toward a happier, more balanced family life.
     </p>
     <button 
       onClick={() => navigate('/onboarding')}
@@ -412,7 +412,7 @@ const HowThisWorksScreen = () => {
   <div className="max-w-6xl mx-auto">
     <div className="flex flex-col md:flex-row justify-between items-center">
       <div className="mb-4 md:mb-0">
-        <h2 className="text-2xl font-light">ParentLoad</h2>
+        <h2 className="text-2xl font-light">Allie</h2>
         <p className="text-gray-600">Balancing family responsibilities together</p>
       </div>
       <div className="flex space-x-6">
@@ -424,7 +424,7 @@ const HowThisWorksScreen = () => {
 </div>
     </div>
     <div className="mt-8 pt-8 border-t text-center text-gray-500 text-sm">
-      <p>© 2025 ParentLoad. All rights reserved.</p>
+      <p>© 2025 Allie. All rights reserved.</p>
     </div>
   </div>
 </footer>
