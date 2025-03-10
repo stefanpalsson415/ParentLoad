@@ -240,6 +240,8 @@ const handleImageFile = async (file) => {
       await loadAllFamilies(user.uid);
       
       // Don't navigate to dashboard, just stay on the selection screen
+      navigate('/login', { replace: true });
+
       // by removing the navigation code, we'll stay on the family selection screen
     } catch (error) {
       console.error("Login error:", error);
@@ -391,32 +393,33 @@ const handleImageFile = async (file) => {
                      <button
                      key={family.familyId}
                      className="w-full p-3 text-left border rounded-lg hover:bg-gray-50"
-                     onClick={async (event) => {  // ADD event parameter here
-                       try {
-                         // Add loading indication
-                         const buttonElement = event.currentTarget;  // RENAMED to buttonElement
-                         buttonElement.textContent = 'Loading...';
-                         buttonElement.disabled = true;
-                         
-                         // Load the family data FIRST, before any navigation
-                         await loadFamilyData(family.familyId);
-                         
-                         // Now navigate with state
-                         navigate('/dashboard', { 
-                           state: { 
-                             directAccess: true,
-                             familyId: family.familyId 
-                           }
-                         });
-                       } catch (error) {
-                         console.error("Family selection error:", error);
-                         alert("Error loading family: " + error.message);
-                         
-                         // Reset button
-                         buttonElement.textContent = family.familyName || 'Unnamed Family';  // CHANGED to buttonElement
-                         buttonElement.disabled = false;
-                       }
-                     }}
+                     onClick={async (event) => {
+                      try {
+                        // Add loading indication
+                        const button = event.currentTarget;
+                        button.textContent = 'Loading...';
+                        button.disabled = true;
+                        
+                        // Load the family data FIRST, before any navigation
+                        await loadFamilyData(family.familyId);
+                        
+                        // Now navigate with state
+                        navigate('/dashboard', { 
+                          state: { 
+                            directAccess: true,
+                            familyId: family.familyId 
+                          }
+                        });
+                      } catch (error) {
+                        console.error("Family selection error:", error);
+                        alert("Error loading family: " + error.message);
+                        
+                        // Reset button
+                        const button = event.currentTarget;
+                        button.textContent = family.familyName || 'Unnamed Family';
+                        button.disabled = false;
+                      }
+                    }}
                    >
                         <div className="font-medium">{family.familyName || 'Unnamed Family'}</div>
                         <div className="text-xs text-gray-500">

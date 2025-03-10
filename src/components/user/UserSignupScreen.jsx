@@ -114,9 +114,16 @@ const UserSignupScreen = () => {
       }
       
 // Navigate to family selection screen with the newly created family
-console.log("Navigating to family selection screen with new family");
+// Navigate directly to dashboard with the newly created family
+console.log("Navigating to dashboard with new family");
 localStorage.setItem('selectedFamilyId', result.familyId);
-navigate('/login');
+// Set a flag to ensure we use this new family
+localStorage.setItem('directFamilyAccess', JSON.stringify({
+  familyId: result.familyId,
+  familyName: familyName,
+  timestamp: new Date().getTime()
+}));
+navigate('/dashboard');
     } catch (error) {
       console.error("Detailed error creating family:", error);
       alert("There was an error creating your family: " + (error.message || "Unknown error"));

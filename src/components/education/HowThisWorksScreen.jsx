@@ -475,20 +475,49 @@ const HowThisWorksScreen = () => {
 </div>
       </div>
       {/* Footer */}
-<footer className="px-6 py-12 bg-gray-50 border-t">
+      <footer className="px-6 py-12 bg-gray-50 border-t">
   <div className="max-w-6xl mx-auto">
-    <div className="flex flex-col md:flex-row justify-between items-center">
-      <div className="mb-4 md:mb-0">
-        <h2 className="text-2xl font-light">Allie</h2>
+    <div className="grid grid-cols-1 md:grid-cols-4 gap-8">
+      <div>
+        <h2 className="text-2xl font-light mb-4">Allie</h2>
         <p className="text-gray-600">Balancing family responsibilities together</p>
       </div>
-      <div className="flex space-x-6">
-  <button onClick={() => navigate('/product-overview')} className="text-gray-600 hover:text-gray-900">Product Overview</button>
-  <button onClick={() => navigate('/how-it-works')} className="text-gray-600 hover:text-gray-900">How It Works</button>
-  <button onClick={() => navigate('/about-us')} className="text-gray-600 hover:text-gray-900">About Us</button>
-  <button onClick={() => navigate('/blog')} className="text-gray-600 hover:text-gray-900">Blog</button>
-  <button onClick={() => navigate('/login')} className="text-gray-600 hover:text-gray-900">Log In</button>
-</div>
+      
+      <div>
+        <h3 className="text-gray-800 font-medium mb-4">Product</h3>
+        <ul className="space-y-2">
+          <li>
+            <button onClick={() => navigate('/product-overview')} className="text-gray-600 hover:text-gray-900">Product Overview</button>
+          </li>
+          <li>
+            <button onClick={() => navigate('/how-it-works')} className="text-gray-600 hover:text-gray-900">How It Works</button>
+          </li>
+        </ul>
+      </div>
+      
+      <div>
+        <h3 className="text-gray-800 font-medium mb-4">Company</h3>
+        <ul className="space-y-2">
+          <li>
+            <button onClick={() => navigate('/about-us')} className="text-gray-600 hover:text-gray-900">About Us</button>
+          </li>
+          <li>
+            <button onClick={() => navigate('/blog')} className="text-gray-600 hover:text-gray-900">Blog</button>
+          </li>
+        </ul>
+      </div>
+      
+      <div>
+        <h3 className="text-gray-800 font-medium mb-4">Account</h3>
+        <ul className="space-y-2">
+          <li>
+            <button onClick={() => navigate('/login')} className="text-gray-600 hover:text-gray-900">Log In</button>
+          </li>
+          <li>
+            <button onClick={() => navigate('/signup')} className="text-gray-600 hover:text-gray-900">Sign Up</button>
+          </li>
+        </ul>
+      </div>
     </div>
     <div className="mt-8 pt-8 border-t text-center text-gray-500 text-sm">
       <p>© 2025 Allie. All rights reserved.</p>

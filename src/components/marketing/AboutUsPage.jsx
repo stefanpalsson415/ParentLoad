@@ -12,43 +12,48 @@ const AboutUsPage = () => {
     <div className="min-h-screen bg-white">
       {/* Header/Nav */}
       <header className="px-6 py-4 border-b bg-white sticky top-0 z-50">
-
-        <div className="max-w-6xl mx-auto flex justify-between items-center">
-        <h1 className="text-3xl font-light cursor-pointer" onClick={() => navigate('/')}>Allie</h1>
-        <nav className="hidden md:flex space-x-8">
-  <button 
-    onClick={() => navigate('/product-overview')}
-    className="text-gray-800 hover:text-gray-600"
-  >
-    Product Overview
-  </button>
-  <button 
-    onClick={() => navigate('/how-it-works')}
-    className="text-gray-800 hover:text-gray-600"
-  >
-    How It Works
-  </button>
-  <button 
-    onClick={() => navigate('/about-us')}
-    className="text-gray-800 hover:text-gray-600 font-medium"
-  >
-    About Us
-  </button>
-  <button 
-    onClick={() => navigate('/blog')}
-    className="text-gray-800 hover:text-gray-600"
-  >
-    Blog
-  </button>
-  <button 
-    onClick={() => navigate('/login')}
-    className="px-4 py-2 border border-gray-800 rounded hover:bg-gray-100"
-  >
-    Log In
-  </button>
-</nav>
-        </div>
-      </header>
+  <div className="max-w-6xl mx-auto flex justify-between items-center">
+    <h1 className="text-3xl font-light">Allie</h1>
+    <nav className="hidden md:flex space-x-8">
+      <button 
+        onClick={() => navigate('/product-overview')}
+        className="text-gray-800 hover:text-blue-600 hover:underline transition-colors"
+      >
+        Product Overview
+      </button>
+      <button 
+        onClick={() => navigate('/how-it-works')}
+        className="text-gray-800 hover:text-blue-600 hover:underline transition-colors"
+      >
+        How It Works
+      </button>
+      <button
+        onClick={() => navigate('/about-us')}
+        className="text-gray-800 hover:text-blue-600 hover:underline transition-colors"
+      >
+        About Us
+      </button>
+      <button 
+        onClick={() => navigate('/blog')}
+        className="text-gray-800 hover:text-blue-600 hover:underline transition-colors"
+      >
+        Blog
+      </button>
+      <button 
+        onClick={() => navigate('/login')}
+        className="px-4 py-2 border border-gray-800 rounded hover:bg-gray-100"
+      >
+        Log In
+      </button>
+      <button 
+        onClick={() => navigate('/signup')}
+        className="px-4 py-2 bg-black text-white rounded hover:bg-gray-800"
+      >
+        Sign Up
+      </button>
+    </nav>
+  </div>
+</header>
       
       {/* Hero Section */}
       <section className="py-16 bg-gradient-to-r from-blue-600 to-purple-600 text-white">
@@ -196,25 +201,54 @@ const AboutUsPage = () => {
       
       {/* Footer */}
       <footer className="px-6 py-12 bg-gray-50 border-t">
-        <div className="max-w-6xl mx-auto">
-          <div className="flex flex-col md:flex-row justify-between items-center">
-            <div className="mb-4 md:mb-0">
-              <h2 className="text-2xl font-bold">ParentLoad</h2>
-              <p className="text-gray-600">Balancing family responsibilities together</p>
-            </div>
-            <div className="flex space-x-6">
-  <button onClick={() => navigate('/product-overview')} className="text-gray-600 hover:text-gray-900">Product Overview</button>
-  <button onClick={() => navigate('/how-it-works')} className="text-gray-600 hover:text-gray-900">How It Works</button>
-  <button onClick={() => navigate('/about-us')} className="text-gray-600 hover:text-gray-900">About Us</button>
-  <button onClick={() => navigate('/blog')} className="text-gray-600 hover:text-gray-900">Blog</button>
-  <button onClick={() => navigate('/login')} className="text-gray-600 hover:text-gray-900">Log In</button>
-</div>
-          </div>
-          <div className="mt-8 pt-8 border-t text-center text-gray-500 text-sm">
-            <p>© 2025 ParentLoad. All rights reserved.</p>
-          </div>
-        </div>
-      </footer>
+  <div className="max-w-6xl mx-auto">
+    <div className="grid grid-cols-1 md:grid-cols-4 gap-8">
+      <div>
+        <h2 className="text-2xl font-light mb-4">Allie</h2>
+        <p className="text-gray-600">Balancing family responsibilities together</p>
+      </div>
+      
+      <div>
+        <h3 className="text-gray-800 font-medium mb-4">Product</h3>
+        <ul className="space-y-2">
+          <li>
+            <button onClick={() => navigate('/product-overview')} className="text-gray-600 hover:text-gray-900">Product Overview</button>
+          </li>
+          <li>
+            <button onClick={() => navigate('/how-it-works')} className="text-gray-600 hover:text-gray-900">How It Works</button>
+          </li>
+        </ul>
+      </div>
+      
+      <div>
+        <h3 className="text-gray-800 font-medium mb-4">Company</h3>
+        <ul className="space-y-2">
+          <li>
+            <button onClick={() => navigate('/about-us')} className="text-gray-600 hover:text-gray-900">About Us</button>
+          </li>
+          <li>
+            <button onClick={() => navigate('/blog')} className="text-gray-600 hover:text-gray-900">Blog</button>
+          </li>
+        </ul>
+      </div>
+      
+      <div>
+        <h3 className="text-gray-800 font-medium mb-4">Account</h3>
+        <ul className="space-y-2">
+          <li>
+            <button onClick={() => navigate('/login')} className="text-gray-600 hover:text-gray-900">Log In</button>
+          </li>
+          <li>
+            <button onClick={() => navigate('/signup')} className="text-gray-600 hover:text-gray-900">Sign Up</button>
+          </li>
+        </ul>
+      </div>
+    </div>
+    <div className="mt-8 pt-8 border-t text-center text-gray-500 text-sm">
+      <p>© 2025 Allie. All rights reserved.</p>
+    </div>
+  </div>
+</footer>
     </div>
   );
 };
