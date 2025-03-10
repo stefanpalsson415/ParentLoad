@@ -6,6 +6,9 @@ import { SurveyProvider } from './contexts/SurveyContext';
 import { useFamily } from './contexts/FamilyContext';
 import AboutUsPage from './components/marketing/AboutUsPage';
 import HowThisWorksScreen from './components/education/HowThisWorksScreen';
+import ProductOverviewPage from './components/marketing/ProductOverviewPage'; 
+import BlogHomePage from './components/blog/BlogHomePage';
+import BlogArticlePage from './components/blog/BlogArticlePage';
 
 // Components
 import MiniSurvey from './components/survey/MiniSurvey';
@@ -29,13 +32,16 @@ function AppRoutes() {
 
 
   return (
-    <Routes>
+<Routes>
   <Route path="/" element={<LandingPage />} />
   <Route path="/login" element={<FamilySelectionScreen />} />
   <Route path="/onboarding" element={<OnboardingFlow />} />
   <Route path="/signup" element={<UserSignupScreen />} />
   <Route path="/how-it-works" element={<HowThisWorksScreen />} />
   <Route path="/about-us" element={<AboutUsPage />} />
+  <Route path="/product-overview" element={<ProductOverviewPage />} />
+  <Route path="/blog" element={<BlogHomePage />} />
+  <Route path="/blog/:slug" element={<BlogArticlePage />} />
   <Route path="/survey" element={
     selectedUser?.role === 'child' 
       ? <KidFriendlySurvey surveyType="initial" /> 
@@ -45,6 +51,7 @@ function AppRoutes() {
     <Route path="/mini-results" element={<MiniResultsScreen />} />
   <Route path="/payment" element={<PaymentScreen />} />
   <Route path="/dashboard" element={<DashboardScreen />} />
+  ...
   
   {/* Route for weekly check-in - directs kids to kid-friendly version */}
   <Route path="/weekly-check-in" element={
