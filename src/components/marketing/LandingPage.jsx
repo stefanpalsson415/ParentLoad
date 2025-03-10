@@ -1,10 +1,15 @@
-import React from 'react';
 import { useNavigate } from 'react-router-dom';
+import React, { useEffect } from 'react';
 import familyPhoto from '../../assets/family-photo.jpg'; // You'll need to add this image to your assets folder
 
 const LandingPage = () => {
   const navigate = useNavigate();
   
+  useEffect(() => {
+    window.scrollTo(0, 0);
+  }, []);
+
+
   return (
     <div className="min-h-screen bg-white">
       {/* Header/Nav */}
@@ -12,25 +17,31 @@ const LandingPage = () => {
         <div className="max-w-6xl mx-auto flex justify-between items-center">
           <h1 className="text-3xl font-bold">Allie</h1>
           <nav className="hidden md:flex space-x-8">
-            <button 
-              onClick={() => navigate('/how-it-works')}
-              className="text-gray-800 hover:text-gray-600"
-            >
-              How It Works
-            </button>
-            <button
-              onClick={() => navigate('/about-us')}
-              className="text-gray-800 hover:text-gray-600"
-            >
-              About Us
-            </button>
-            <button 
-              onClick={() => navigate('/login')}
-              className="px-4 py-2 border border-gray-800 rounded hover:bg-gray-100"
-            >
-              Log In
-            </button>
-          </nav>
+  <button 
+    onClick={() => navigate('/how-it-works')}
+    className="text-gray-800 hover:text-gray-600"
+  >
+    How It Works
+  </button>
+  <button
+    onClick={() => navigate('/about-us')}
+    className="text-gray-800 hover:text-gray-600"
+  >
+    About Us
+  </button>
+  <button 
+    onClick={() => navigate('/login')}
+    className="px-4 py-2 border border-gray-800 rounded hover:bg-gray-100"
+  >
+    Log In
+  </button>
+  <button 
+    onClick={() => navigate('/signup')}
+    className="px-4 py-2 bg-black text-white rounded hover:bg-gray-800"
+  >
+    Sign Up
+  </button>
+</nav>
         </div>
       </header>
       
@@ -40,7 +51,7 @@ const LandingPage = () => {
           <div>
             <h2 className="text-5xl font-light mb-6">Balance family responsibilities together.</h2>
             <p className="text-xl text-gray-600 mb-8">
-              ParentLoad helps families measure, analyze, and balance parenting duties for happier households.
+              Allie helps families measure, analyze, and balance parenting duties for happier households.
             </p>
             <button 
               onClick={() => navigate('/onboarding')}
@@ -60,18 +71,18 @@ const LandingPage = () => {
       </section>
       
       {/* Our Story Section */}
-      <section className="py-16 bg-blue-50">
-        <div className="max-w-4xl mx-auto px-6">
+      <section className="py-16 bg-white border-t border-gray-100">
+      <div className="max-w-4xl mx-auto px-6">
           <h2 className="text-3xl font-bold text-center mb-8">Our Family's Story</h2>
           <div className="bg-white p-8 rounded-lg shadow-md">
             <p className="text-lg mb-4">
-              We built ParentLoad because we experienced firsthand the challenges of balancing family responsibilities. Like many families, we struggled with the uneven distribution of household and parenting tasks, often not even realizing the imbalance until it led to frustration and conflict.
+              We built Allie because we experienced firsthand the challenges of balancing family responsibilities. Like many families, we struggled with the uneven distribution of household and parenting tasks, often not even realizing the imbalance until it led to frustration and conflict.
             </p>
             <p className="text-lg mb-4">
               As a family of five with three active children, we found ourselves constantly negotiating who would handle which tasks, from school pickups to meal planning to emotional support. We wanted a data-driven, scientific approach to understand our family dynamics better.
             </p>
             <p className="text-lg mb-4">
-              ParentLoad was born from our desire to create a tool that doesn't just identify imbalances but helps families work together to create meaningful, lasting change. We're excited to share it with your family and hope it brings more harmony to your home, just as it has to ours.
+              Allie was born from our desire to create a tool that doesn't just identify imbalances but helps families work together to create meaningful, lasting change. We're excited to share it with your family and hope it brings more harmony to your home, just as it has to ours.
             </p>
             <p className="text-lg font-medium text-right">- The Palsson Family</p>
           </div>
@@ -81,7 +92,7 @@ const LandingPage = () => {
       {/* Features Section */}
       <section className="py-20">
         <div className="max-w-6xl mx-auto px-6">
-          <h2 className="text-3xl font-bold text-center mb-12">How ParentLoad Helps Families</h2>
+          <h2 className="text-3xl font-bold text-center mb-12">How Allie Helps Families</h2>
           <div className="grid md:grid-cols-3 gap-8">
             <div className="bg-white p-6 rounded-lg shadow-md">
               <div className="w-12 h-12 bg-blue-100 rounded-full flex items-center justify-center mb-4">
@@ -141,7 +152,7 @@ const LandingPage = () => {
         <div className="max-w-6xl mx-auto">
           <div className="flex flex-col md:flex-row justify-between items-center">
             <div className="mb-4 md:mb-0">
-              <h2 className="text-2xl font-bold">ParentLoad</h2>
+              <h2 className="text-2xl font-bold">Allie</h2>
               <p className="text-gray-600">Balancing family responsibilities together</p>
             </div>
             <div className="flex space-x-6">
@@ -151,7 +162,7 @@ const LandingPage = () => {
             </div>
           </div>
           <div className="mt-8 pt-8 border-t text-center text-gray-500 text-sm">
-            <p>© 2025 ParentLoad. All rights reserved.</p>
+            <p>© 2025 Allie. All rights reserved.</p>
           </div>
         </div>
       </footer>

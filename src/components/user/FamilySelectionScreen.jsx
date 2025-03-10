@@ -236,16 +236,11 @@ const handleImageFile = async (file) => {
       // Auth state change will trigger UI update 
       setShowLoginForm(false);
       
-      // Explicitly load all families to make sure availableFamilies is updated
-      const families = await loadAllFamilies(user.uid);
+      // Explicitly load all families
+      await loadAllFamilies(user.uid);
       
-      // Force navigation to dashboard if there's at least one family
-      if (families && families.length > 0) {
-        const firstFamily = families[0];
-        console.log("Auto-selecting first family:", firstFamily.familyId);
-        await loadFamilyData(firstFamily.familyId);
-        navigate('/dashboard');
-      }
+      // Don't navigate to dashboard, just stay on the selection screen
+      // by removing the navigation code, we'll stay on the family selection screen
     } catch (error) {
       console.error("Login error:", error);
       setLoginError('Invalid email or password. Please try again.');

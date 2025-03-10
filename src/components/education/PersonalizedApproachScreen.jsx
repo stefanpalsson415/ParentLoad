@@ -10,6 +10,10 @@ const PersonalizedApproachScreen = () => {
   const { familyMembers, completedWeeks, currentWeek } = useFamily();
   const [selectedInsight, setSelectedInsight] = useState(null);
 
+  useEffect(() => {
+    window.scrollTo(0, 0);
+  }, []);
+
   // Sample data - in a real implementation, this would come from the family's actual survey responses
   const familyInsights = [
     {

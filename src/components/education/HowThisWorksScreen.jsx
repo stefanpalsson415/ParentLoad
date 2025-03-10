@@ -1,4 +1,5 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { Book, Brain, Scale, ChevronDown, ChevronUp, Heart, Clock, CheckCircle2, BarChart3, Users } from 'lucide-react';
 
 const HowThisWorksScreen = () => {
@@ -8,17 +9,47 @@ const HowThisWorksScreen = () => {
     setExpandedSection(expandedSection === section ? null : section);
   };
 
+  const navigate = useNavigate();
+
+  useEffect(() => {
+    window.scrollTo(0, 0);
+  }, []);
+
   return (
     <div className="min-h-screen bg-gray-50 pb-8">
       {/* Header */}
-      <div className="bg-blue-600 text-white p-6">
-        <div className="max-w-3xl mx-auto">
-          <h1 className="text-2xl font-bold mb-2">How ParentLoad Works</h1>
-          <p className="opacity-90">
-            Discover how our science-backed approach helps balance family responsibilities
-          </p>
-        </div>
-      </div>
+{/* Header */}
+<div className="px-6 py-4 border-b bg-white">
+  <div className="max-w-6xl mx-auto flex justify-between items-center">
+    <h1 className="text-3xl font-light cursor-pointer" onClick={() => navigate('/')}>ParentLoad</h1>
+    <nav className="hidden md:flex space-x-8">
+      <button 
+        onClick={() => navigate('/how-it-works')}
+        className="text-gray-800 hover:text-gray-600 font-medium"
+      >
+        How It Works
+      </button>
+      <button
+        onClick={() => navigate('/about-us')}
+        className="text-gray-800 hover:text-gray-600"
+      >
+        About Us
+      </button>
+      <button 
+        onClick={() => navigate('/login')}
+        className="px-4 py-2 border border-gray-800 rounded hover:bg-gray-100"
+      >
+        Log In
+      </button>
+      <button 
+        onClick={() => navigate('/signup')}
+        className="px-4 py-2 bg-black text-white rounded hover:bg-gray-800"
+      >
+        Sign Up
+      </button>
+    </nav>
+  </div>
+</div>
 
       {/* Main Content */}
       <div className="max-w-3xl mx-auto p-4">
@@ -72,7 +103,7 @@ const HowThisWorksScreen = () => {
                   <Brain className="text-purple-600" size={24} />
                 </div>
                 <div>
-                  <h2 className="text-xl font-bold text-gray-800 mb-2">The Science Behind ParentLoad</h2>
+                  <h2 className="text-xl font-bold text-gray-800 mb-2">The Science Behind Allie</h2>
                   <p className="text-gray-600">
                     Our approach is backed by research showing that balanced parental responsibilities lead to improved family outcomes.
                   </p>
@@ -350,23 +381,40 @@ const HowThisWorksScreen = () => {
         </div>
 
         {/* Ready to Start */}
-        <div className="bg-gradient-to-r from-blue-500 to-blue-600 rounded-lg shadow-sm overflow-hidden text-white">
-          <div className="p-6">
-            <h2 className="text-xl font-bold mb-3">Ready to Create Better Balance?</h2>
-            <p className="opacity-90 mb-6">
-              Get started with ParentLoad today and take the first step toward a happier, more balanced family life.
-            </p>
-            <div className="flex flex-col sm:flex-row gap-3">
-              <button className="px-6 py-3 bg-white text-blue-600 rounded-md font-medium hover:bg-blue-50">
-                Take the Survey
-              </button>
-              <button className="px-6 py-3 bg-blue-400 bg-opacity-20 rounded-md font-medium hover:bg-opacity-30">
-                Learn More
-              </button>
-            </div>
-          </div>
-        </div>
+        {/* Ready to Start */}
+<div className="bg-black rounded-lg shadow-sm overflow-hidden text-white">
+  <div className="p-6">
+    <h2 className="text-xl font-light mb-3">Ready to Create Better Balance?</h2>
+    <p className="opacity-90 mb-6">
+      Get started with ParentLoad today and take the first step toward a happier, more balanced family life.
+    </p>
+    <button 
+      onClick={() => navigate('/onboarding')}
+      className="px-6 py-3 bg-white text-black rounded-md font-medium hover:bg-gray-100">
+      Take the Survey
+    </button>
+  </div>
+</div>
       </div>
+      {/* Footer */}
+<footer className="px-6 py-12 bg-gray-50 border-t">
+  <div className="max-w-6xl mx-auto">
+    <div className="flex flex-col md:flex-row justify-between items-center">
+      <div className="mb-4 md:mb-0">
+        <h2 className="text-2xl font-light">ParentLoad</h2>
+        <p className="text-gray-600">Balancing family responsibilities together</p>
+      </div>
+      <div className="flex space-x-6">
+        <button onClick={() => navigate('/how-it-works')} className="text-gray-600 hover:text-gray-900">How It Works</button>
+        <button onClick={() => navigate('/about-us')} className="text-gray-600 hover:text-gray-900">About Us</button>
+        <button onClick={() => navigate('/login')} className="text-gray-600 hover:text-gray-900">Log In</button>
+      </div>
+    </div>
+    <div className="mt-8 pt-8 border-t text-center text-gray-500 text-sm">
+      <p>© 2025 ParentLoad. All rights reserved.</p>
+    </div>
+  </div>
+</footer>
     </div>
   );
 };

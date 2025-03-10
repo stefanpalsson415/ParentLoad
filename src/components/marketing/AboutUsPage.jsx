@@ -1,16 +1,20 @@
-import React from 'react';
+import React, { useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 
 const AboutUsPage = () => {
   const navigate = useNavigate();
   
+  useEffect(() => {
+    window.scrollTo(0, 0);
+  }, []);
+
   return (
     <div className="min-h-screen bg-white">
       {/* Header/Nav */}
       <header className="px-6 py-4 border-b">
         <div className="max-w-6xl mx-auto flex justify-between items-center">
-          <h1 className="text-3xl font-bold cursor-pointer" onClick={() => navigate('/')}>ParentLoad</h1>
-          <nav className="hidden md:flex space-x-8">
+        <h1 className="text-3xl font-light cursor-pointer" onClick={() => navigate('/')}>Allie</h1>
+        <nav className="hidden md:flex space-x-8">
             <button 
               onClick={() => navigate('/how-it-works')}
               className="text-gray-800 hover:text-gray-600"
@@ -136,9 +140,9 @@ const AboutUsPage = () => {
           <h2 className="text-3xl font-bold mb-8 text-center">The Team Behind ParentLoad</h2>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
             <div className="bg-white p-6 rounded-lg shadow-md text-center">
-              <div className="w-24 h-24 rounded-full overflow-hidden mx-auto mb-4 border-2 border-blue-300">
-                <img src="/api/placeholder/150/150" alt="Team member" className="w-full h-full object-cover" />
-              </div>
+            <div className="w-24 h-24 rounded-full overflow-hidden mx-auto mb-4 border-2 border-gray-300">
+  <img src="https://your-domain.com/path-to-family-image.jpg" alt="The Palsson Family" className="w-full h-full object-cover" />
+</div>
               <h3 className="text-xl font-semibold">The Palsson Family</h3>
               <p className="text-gray-600 mb-4">Founders</p>
               <p className="text-sm">
@@ -146,15 +150,19 @@ const AboutUsPage = () => {
               </p>
             </div>
             <div className="bg-white p-6 rounded-lg shadow-md text-center">
-              <div className="w-24 h-24 rounded-full overflow-hidden mx-auto mb-4 border-2 border-blue-300">
-                <img src="/api/placeholder/150/150" alt="AI icon" className="w-full h-full object-cover" />
-              </div>
-              <h3 className="text-xl font-semibold">Our AI Team</h3>
-              <p className="text-gray-600 mb-4">Data Scientists & Family Psychologists</p>
-              <p className="text-sm">
-                A collaborative team of AI specialists and family dynamics experts who built the intelligent engine that powers our recommendations.
-              </p>
-            </div>
+  <div className="w-24 h-24 rounded-full bg-gradient-to-r from-purple-400 to-pink-500 flex items-center justify-center mx-auto mb-4 border-2 border-gray-300">
+    <svg xmlns="http://www.w3.org/2000/svg" width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+      <path d="M12 2a10 10 0 1 0 0 20 10 10 0 0 0 0-20Z"></path>
+      <path d="M12 8v8"></path>
+      <path d="M8 12h8"></path>
+    </svg>
+  </div>
+  <h3 className="text-xl font-semibold">Our AI Team</h3>
+  <p className="text-gray-600 mb-4">Data Scientists & Family Psychologists</p>
+  <p className="text-sm">
+    A collaborative team of AI specialists and family dynamics experts who built the intelligent engine that powers our recommendations.
+  </p>
+</div>
           </div>
         </div>
       </section>
