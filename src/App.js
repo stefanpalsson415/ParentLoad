@@ -35,7 +35,8 @@ function AppRoutes() {
       <Route path="/" element={<LandingPage />} />
       <Route path="/login" element={<FamilySelectionScreen />} />
       <Route path="/onboarding" element={<OnboardingFlow />} />
-      {/* Remove the /signup route as requested */}
+      <Route path="/signup" element={<Navigate to="/onboarding" />} />
+
       <Route path="/how-it-works" element={<HowThisWorksScreen />} />
       <Route path="/about-us" element={<AboutUsPage />} />
       <Route path="/product-overview" element={<ProductOverviewPage />} />

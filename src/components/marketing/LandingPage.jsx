@@ -48,7 +48,7 @@ const LandingPage = () => {
         Log In
       </button>
       <button 
-        onClick={() => navigate('/signup')}
+        onClick={() => navigate('/onboarding')}
         className="px-4 py-2 bg-black text-white rounded hover:bg-gray-800"
       >
         Sign Up
@@ -201,7 +201,7 @@ const LandingPage = () => {
             <button onClick={() => navigate('/login')} className="text-gray-600 hover:text-gray-900">Log In</button>
           </li>
           <li>
-            <button onClick={() => navigate('/signup')} className="text-gray-600 hover:text-gray-900">Sign Up</button>
+            <button onClick={() => navigate('/onboarding')} className="text-gray-600 hover:text-gray-900">Sign Up</button>
           </li>
         </ul>
       </div>

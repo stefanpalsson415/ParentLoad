@@ -396,12 +396,12 @@ if (familyMembers.length === 0) {
             
             {/* Create New Family Button */}
             <button
-              onClick={() => navigate('/signup')}
-              className="w-full py-3 px-4 rounded-md font-medium text-black border border-black hover:bg-gray-50 flex items-center justify-center"
-            >
-              <PlusCircle size={16} className="mr-2" />
-              Create New Family
-            </button>
+  onClick={() => navigate('/onboarding')}
+  className="w-full py-3 px-4 rounded-md font-medium text-black border border-black hover:bg-gray-50 flex items-center justify-center"
+>
+  <PlusCircle size={16} className="mr-2" />
+  Create New Family
+</button>
           </div>
         </div>
         
