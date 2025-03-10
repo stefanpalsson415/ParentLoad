@@ -18,7 +18,7 @@ const BlogArticlePage = () => {
       author: "Allie Parent Coaches",
       date: "March 5, 2025",
       readTime: "8 min read",
-      image: "/api/placeholder/1200/600",
+      image: "https://images.unsplash.com/photo-1532012197267-da84d127e765?ixlib=rb-1.2.1&auto=format&fit=crop&w=600&h=400&q=80",
       content: `
         <h2>The Emerging Research on Family Workload Balance</h2>
         
@@ -91,7 +91,7 @@ const BlogArticlePage = () => {
       author: "Allie Parent Coaches",
       date: "February 28, 2025",
       readTime: "6 min read",
-      image: "/api/placeholder/1200/600",
+      image: "https://images.unsplash.com/photo-1484069560501-87d72b0c3669?ixlib=rb-1.2.1&auto=format&fit=crop&w=600&h=400&q=80",
       content: `
         <h2>Understanding the Hidden Imbalance in Your Home</h2>
         

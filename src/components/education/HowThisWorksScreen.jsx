@@ -3,10 +3,13 @@ import { useNavigate } from 'react-router-dom';
 import { Book, Brain, Scale, ChevronDown, ChevronUp, Heart, Clock, CheckCircle2, BarChart3, Users } from 'lucide-react';
 
 const HowThisWorksScreen = () => {
-  const [expandedSection, setExpandedSection] = useState('overview');
-
+  const [expandedSection, setExpandedSection] = useState(['science', 'survey', 'ai', 'weekly', 'kids']);
   const toggleSection = (section) => {
-    setExpandedSection(expandedSection === section ? null : section);
+    if (expandedSection.includes(section)) {
+      setExpandedSection(expandedSection.filter(item => item !== section));
+    } else {
+      setExpandedSection([...expandedSection, section]);
+    }
   };
 
   const navigate = useNavigate();
@@ -19,7 +22,7 @@ const HowThisWorksScreen = () => {
     <div className="min-h-screen bg-gray-50 pb-8">
       {/* Header */}
 {/* Header */}
-<div className="px-6 py-4 border-b bg-white">
+<div className="px-6 py-4 border-b bg-white sticky top-0 z-50">
   <div className="max-w-6xl mx-auto flex justify-between items-center">
     <h1 className="text-3xl font-light cursor-pointer" onClick={() => navigate('/')}>Allie</h1>
     <nav className="hidden md:flex space-x-8">
@@ -121,11 +124,11 @@ const HowThisWorksScreen = () => {
                 </div>
               </div>
               <div>
-                {expandedSection === 'science' ? (
-                  <ChevronUp className="text-gray-500" size={24} />
-                ) : (
-                  <ChevronDown className="text-gray-500" size={24} />
-                )}
+              {expandedSection.includes('science') ? (
+  <ChevronUp className="text-gray-500" size={24} />
+) : (
+  <ChevronDown className="text-gray-500" size={24} />
+)}
               </div>
             </div>
           </div>
@@ -390,6 +393,70 @@ const HowThisWorksScreen = () => {
             </div>
           )}
         </div>
+{/* Kids Focus Section */}
+<div 
+  className="bg-white rounded-lg shadow-sm overflow-hidden mb-6 cursor-pointer"
+  onClick={() => toggleSection('kids')}
+>
+  <div className="p-6">
+    <div className="flex items-start justify-between">
+      <div className="flex items-start">
+        <div className="w-12 h-12 rounded-full bg-amber-100 flex items-center justify-center flex-shrink-0 mr-4">
+          <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6 text-amber-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z" />
+          </svg>
+        </div>
+        <div>
+          <h2 className="text-xl font-bold text-gray-800 mb-2">Designed with Kids in Mind</h2>
+          <p className="text-gray-600">
+            Allie includes the whole family, with special features designed to engage children in the balance process.
+          </p>
+        </div>
+      </div>
+      <div>
+        {expandedSection.includes('kids') ? (
+          <ChevronUp className="text-gray-500" size={24} />
+        ) : (
+          <ChevronDown className="text-gray-500" size={24} />
+        )}
+      </div>
+    </div>
+  </div>
+
+  {expandedSection.includes('kids') && (
+    <div className="px-6 pb-6 pt-0">
+      <div className="pl-16 space-y-4">
+        <div className="bg-gray-50 p-4 rounded-lg">
+          <h3 className="font-medium text-gray-800 mb-2">Kid-Friendly Surveys</h3>
+          <p className="text-sm text-gray-600">
+            Age-appropriate questionnaires with simple language and visual cues help children share their perspectives on family responsibilities.
+          </p>
+        </div>
+
+        <div className="bg-gray-50 p-4 rounded-lg">
+          <h3 className="font-medium text-gray-800 mb-2">Game-Like Elements</h3>
+          <p className="text-sm text-gray-600">
+            Interactive features make participation fun for children, with stars, achievements, and visual progress tracking.
+          </p>
+        </div>
+
+        <div className="bg-gray-50 p-4 rounded-lg">
+          <h3 className="font-medium text-gray-800 mb-2">Developmentally Appropriate</h3>
+          <p className="text-sm text-gray-600">
+            Content automatically adjusts based on the child's age, ensuring it's always at the right level for their understanding.
+          </p>
+        </div>
+        
+        <div className="bg-amber-50 p-4 rounded-lg">
+          <h3 className="font-medium text-amber-800 mb-2">Why Kids Matter</h3>
+          <p className="text-sm text-amber-700">
+            Children are important stakeholders in family balance. They often have unique insights into family dynamics, and their involvement helps them develop a healthy understanding of shared responsibility.
+          </p>
+        </div>
+      </div>
+    </div>
+  )}
+</div>
 
         {/* Ready to Start */}
         {/* Ready to Start */}

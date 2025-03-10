@@ -38,27 +38,52 @@ const ProductOverviewPage = () => {
     {
       title: "Initial Assessment",
       description: "Each family member completes an 80-question assessment to establish your family's baseline balance.",
-      image: "/api/placeholder/500/300"
+      image: "https://images.unsplash.com/photo-1531538606174-0f90ff5dce83?ixlib=rb-1.2.1&auto=format&fit=crop&w=500&h=300&q=80"
     },
     {
       title: "Data Visualization",
       description: "See a clear breakdown of your family's current task distribution across all categories.",
-      image: "/api/placeholder/500/300"
+      image: "https://images.unsplash.com/photo-1551288049-bebda4e38f71?ixlib=rb-1.2.1&auto=format&fit=crop&w=500&h=300&q=80"
     },
     {
       title: "AI-Powered Insights",
       description: "Receive personalized recommendations based on your family's unique imbalances.",
-      image: "/api/placeholder/500/300"
+      image: "https://images.unsplash.com/photo-1599658880436-c61792e70672?ixlib=rb-1.2.1&auto=format&fit=crop&w=500&h=300&q=80"
     },
     {
       title: "Weekly Check-ins",
       description: "Quick 5-minute surveys to track progress and adjust recommendations in real-time.",
-      image: "/api/placeholder/500/300"
+      image: "https://images.unsplash.com/photo-1522071820081-009f0129c71c?ixlib=rb-1.2.1&auto=format&fit=crop&w=500&h=300&q=80"
     },
     {
       title: "Guided Family Meetings",
       description: "Structured 30-minute discussions to evaluate progress and set goals together.",
-      image: "/api/placeholder/500/300"
+      image: "https://images.unsplash.com/photo-1576089073624-b5a6ef46b9c1?ixlib=rb-1.2.1&auto=format&fit=crop&w=500&h=300&q=80"
+    },
+    {
+      title: "Kid-Friendly Surveys",
+      description: "Age-appropriate surveys that make it fun for children to participate in the balance journey.",
+      image: "https://images.unsplash.com/photo-1485546784815-e380f3c8a0e6?ixlib=rb-1.2.1&auto=format&fit=crop&w=500&h=300&q=80"
+    },
+    {
+      title: "Gamified Learning",
+      description: "Interactive elements that help kids understand family balance through play and participation.",
+      image: "https://images.unsplash.com/photo-1500995617113-cf789362a3e1?ixlib=rb-1.2.1&auto=format&fit=crop&w=500&h=300&q=80"
+    },
+    {
+      title: "Progress Celebration",
+      description: "Visual feedback and celebrations when your family achieves better balance milestones.",
+      image: "https://images.unsplash.com/photo-1536337005238-94b997371b40?ixlib=rb-1.2.1&auto=format&fit=crop&w=500&h=300&q=80"
+    },
+    {
+      title: "Educational Content",
+      description: "Learn about the science of family balance and how it impacts everyone's wellbeing.",
+      image: "https://images.unsplash.com/photo-1434030216411-0b793f4b4173?ixlib=rb-1.2.1&auto=format&fit=crop&w=500&h=300&q=80"
+    },
+    {
+      title: "Customized Family Plan",
+      description: "A tailored roadmap for your family's unique journey to better balance and happier relationships.",
+      image: "https://images.unsplash.com/photo-1573497491765-dccce02b29df?ixlib=rb-1.2.1&auto=format&fit=crop&w=500&h=300&q=80"
     }
   ];
   
@@ -136,7 +161,7 @@ const ProductOverviewPage = () => {
   return (
     <div className="min-h-screen bg-white">
       {/* Header/Nav */}
-      <header className="px-6 py-4 border-b">
+      <header className="px-6 py-4 border-b bg-white sticky top-0 z-50">
         <div className="max-w-6xl mx-auto flex justify-between items-center">
           <h1 className="text-3xl font-light cursor-pointer" onClick={() => navigate('/')}>Allie</h1>
           <nav className="hidden md:flex space-x-8">
@@ -312,8 +337,7 @@ const ProductOverviewPage = () => {
                     className="mt-6 px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 inline-flex items-center"
                   >
                     <Play size={16} className="mr-2" />
-                    {activeDemo === demoSteps.length ? "Start Your Journey" : "Next Step"}
-                  </button>
+                    {activeDemo === demoSteps.length ? "Get Started" : "Next Step"}                  </button>
                 </div>
                 
                 <div className="bg-gray-100 rounded-lg overflow-hidden">
@@ -384,7 +408,7 @@ const ProductOverviewPage = () => {
               onClick={() => navigate('/signup')}
               className="px-8 py-4 bg-blue-600 text-white rounded-md text-lg font-medium hover:bg-blue-700"
             >
-              Start Your Journey
+              Get Started
             </button>
           </div>
         </div>

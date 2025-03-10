@@ -11,7 +11,8 @@ const AboutUsPage = () => {
   return (
     <div className="min-h-screen bg-white">
       {/* Header/Nav */}
-      <header className="px-6 py-4 border-b">
+      <header className="px-6 py-4 border-b bg-white sticky top-0 z-50">
+
         <div className="max-w-6xl mx-auto flex justify-between items-center">
         <h1 className="text-3xl font-light cursor-pointer" onClick={() => navigate('/')}>Allie</h1>
         <nav className="hidden md:flex space-x-8">
