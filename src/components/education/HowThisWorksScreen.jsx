@@ -24,6 +24,12 @@ const HowThisWorksScreen = () => {
     <h1 className="text-3xl font-light cursor-pointer" onClick={() => navigate('/')}>ParentLoad</h1>
     <nav className="hidden md:flex space-x-8">
       <button 
+        onClick={() => navigate('/product-overview')}
+        className="text-gray-800 hover:text-gray-600"
+      >
+        Product Overview
+      </button>
+      <button 
         onClick={() => navigate('/how-it-works')}
         className="text-gray-800 hover:text-gray-600 font-medium"
       >
@@ -34,6 +40,12 @@ const HowThisWorksScreen = () => {
         className="text-gray-800 hover:text-gray-600"
       >
         About Us
+      </button>
+      <button 
+        onClick={() => navigate('/blog')}
+        className="text-gray-800 hover:text-gray-600"
+      >
+        Blog
       </button>
       <button 
         onClick={() => navigate('/login')}
@@ -50,7 +62,6 @@ const HowThisWorksScreen = () => {
     </nav>
   </div>
 </div>
-
       {/* Main Content */}
       <div className="max-w-3xl mx-auto p-4">
         {/* Introduction Card */}
@@ -405,10 +416,12 @@ const HowThisWorksScreen = () => {
         <p className="text-gray-600">Balancing family responsibilities together</p>
       </div>
       <div className="flex space-x-6">
-        <button onClick={() => navigate('/how-it-works')} className="text-gray-600 hover:text-gray-900">How It Works</button>
-        <button onClick={() => navigate('/about-us')} className="text-gray-600 hover:text-gray-900">About Us</button>
-        <button onClick={() => navigate('/login')} className="text-gray-600 hover:text-gray-900">Log In</button>
-      </div>
+  <button onClick={() => navigate('/product-overview')} className="text-gray-600 hover:text-gray-900">Product Overview</button>
+  <button onClick={() => navigate('/how-it-works')} className="text-gray-600 hover:text-gray-900">How It Works</button>
+  <button onClick={() => navigate('/about-us')} className="text-gray-600 hover:text-gray-900">About Us</button>
+  <button onClick={() => navigate('/blog')} className="text-gray-600 hover:text-gray-900">Blog</button>
+  <button onClick={() => navigate('/login')} className="text-gray-600 hover:text-gray-900">Log In</button>
+</div>
     </div>
     <div className="mt-8 pt-8 border-t text-center text-gray-500 text-sm">
       <p>© 2025 ParentLoad. All rights reserved.</p>
