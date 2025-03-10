@@ -257,7 +257,7 @@ const BlogHomePage = () => {
             </button>
           </nav>
         </div>
-      </header>
+      </div>
       
       {/* Blog Hero Section */}
       <section className="py-16 bg-gradient-to-r from-blue-600 to-purple-600 text-white">
