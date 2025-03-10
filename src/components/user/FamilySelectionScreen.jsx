@@ -363,103 +363,26 @@ const handleImageFile = async (file) => {
     return renderLoginForm();
   }
   
-  // If logged in but no family members, show a message
-  if (familyMembers.length === 0) {
-    return (
-      <div className="min-h-screen bg-gradient-to-b from-blue-50 to-white flex flex-col">
-        <div className="flex-1 flex flex-col items-center justify-center p-6">
-          <div className="w-full max-w-md">
-            {/* Header */}
-            <div className="text-center mb-8">
-              <h1 className="text-3xl font-bold text-blue-800 mb-2">Allie</h1>
-              <p className="text-gray-600">
-                Welcome to your family workload manager
-              </p>
-            </div>
-            
-            {/* No Family Members Message */}
-            <div className="bg-white rounded-xl shadow-lg p-6 mb-8">
-              <h2 className="text-xl font-semibold mb-4 text-center">No Family Found</h2>
-              <p className="text-center text-gray-600 mb-6">
-                It looks like you don't have any family members set up yet.
-              </p>
-              
-              {/* Family Switcher */}
-              {availableFamilies && availableFamilies.length > 0 && (
-                <div className="mb-6">
-                  <h3 className="text-lg font-semibold mb-3">Switch Family</h3>
-                  <div className="space-y-2">
-                    {availableFamilies.map((family) => (
-                     <button
-                     key={family.familyId}
-                     className="w-full p-3 text-left border rounded-lg hover:bg-gray-50"
-                     onClick={async (event) => {
-                      try {
-                        // Add loading indication
-                        const button = event.currentTarget;
-                        button.textContent = 'Loading...';
-                        button.disabled = true;
-                        
-                        // Load the family data FIRST, before any navigation
-                        await loadFamilyData(family.familyId);
-                        
-                        // Now navigate with state
-                        navigate('/dashboard', { 
-                          state: { 
-                            directAccess: true,
-                            familyId: family.familyId 
-                          }
-                        });
-                      } catch (error) {
-                        console.error("Family selection error:", error);
-                        alert("Error loading family: " + error.message);
-                        
-                        // Reset button
-                        const button = event.currentTarget;
-                        button.textContent = family.familyName || 'Unnamed Family';
-                        button.disabled = false;
-                      }
-                    }}
-                   >
-                        <div className="font-medium">{family.familyName || 'Unnamed Family'}</div>
-                        <div className="text-xs text-gray-500">
-                          {family.familyMembers?.length || 0} members
-                        </div>
-                      </button>
-                    ))}
-                  </div>
-                </div>
-              )}
-              
-
-              <div className="space-y-4">
-                <button
-                  onClick={() => navigate('/signup')}
-                  className="w-full py-3 px-4 rounded-md font-medium text-white bg-blue-600 hover:bg-blue-700 flex items-center justify-center"
-                >
-                  <PlusCircle size={16} className="mr-2" />
-                  Create New Family
-                </button>
-                
-                <button
-                  onClick={handleLogout}
-                  className="w-full py-2 px-4 rounded-md font-medium text-gray-700 border border-gray-300 hover:bg-gray-50 flex items-center justify-center"
-                >
-                  <LogOut size={16} className="mr-2" />
-                  Log Out
-                </button>
-              </div>
-            </div>
-          </div>
-        </div>
-        
-        {/* Footer */}
-        <div className="p-4 text-center text-sm text-gray-500">
-          <p>Allie v1.0 - Balancing family responsibilities together</p>
-        </div>
+ // If logged in but no family members, redirect to create a family
+if (familyMembers.length === 0) {
+  console.log("No families found - redirecting to signup");
+  // Use a React effect to handle the navigation
+  React.useEffect(() => {
+    if (currentUser && familyMembers.length === 0) {
+      navigate('/signup');
+    }
+  }, [currentUser, familyMembers]);
+  
+  // Show a simple loading screen while redirecting
+  return (
+    <div className="min-h-screen bg-white flex items-center justify-center">
+      <div className="text-center">
+        <div className="w-8 h-8 border-4 border-black border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
+        <p className="text-gray-700">Setting up your family...</p>
       </div>
-    );
-  }
+    </div>
+  );
+}
   
   // Normal profile selection view with logout option
   return (
