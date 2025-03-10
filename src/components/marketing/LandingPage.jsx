@@ -151,7 +151,7 @@ const LandingPage = () => {
     <h2 className="text-3xl font-bold mb-4">Ready to create a more balanced family life?</h2>
     <p className="text-xl mb-8">Join thousands of families who are transforming their relationships through better balance.</p>
     <button 
-      onClick={() => navigate('/signup')}
+      onClick={() => navigate('/onboarding')}
       className="px-8 py-4 bg-white text-black rounded-md text-lg font-medium hover:bg-gray-100"
     >
       Get Started

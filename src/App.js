@@ -34,10 +34,10 @@ function AppRoutes() {
   return (
 <Routes>
   <Route path="/" element={<LandingPage />} />
-  <Route path="/login" element={<OnboardingFlow />} />
-    <Route path="/onboarding" element={<OnboardingFlow />} />
-  <Route path="/signup" element={<UserSignupScreen />} />
-  <Route path="/how-it-works" element={<HowThisWorksScreen />} />
+  <Route path="/login" element={<FamilySelectionScreen />} />
+      <Route path="/onboarding" element={<OnboardingFlow />} />
+      <Route path="/signup" element={<OnboardingFlow />} />
+      <Route path="/how-it-works" element={<HowThisWorksScreen />} />
   <Route path="/about-us" element={<AboutUsPage />} />
   <Route path="/product-overview" element={<ProductOverviewPage />} />
   <Route path="/blog" element={<BlogHomePage />} />
