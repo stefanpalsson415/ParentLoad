@@ -30,39 +30,37 @@ import OnboardingFlow from './components/onboarding/OnboardingFlow';
 function AppRoutes() {
   const { selectedUser } = useFamily();
 
-
   return (
-<Routes>
-  <Route path="/" element={<LandingPage />} />
-  <Route path="/login" element={<FamilySelectionScreen />} />
+    <Routes>
+      <Route path="/" element={<LandingPage />} />
+      <Route path="/login" element={<FamilySelectionScreen />} />
       <Route path="/onboarding" element={<OnboardingFlow />} />
-      <Route path="/signup" element={<OnboardingFlow />} />
+      {/* Remove the /signup route as requested */}
       <Route path="/how-it-works" element={<HowThisWorksScreen />} />
-  <Route path="/about-us" element={<AboutUsPage />} />
-  <Route path="/product-overview" element={<ProductOverviewPage />} />
-  <Route path="/blog" element={<BlogHomePage />} />
-  <Route path="/blog/:slug" element={<BlogArticlePage />} />
-  <Route path="/survey" element={
-    selectedUser?.role === 'child' 
-      ? <KidFriendlySurvey surveyType="initial" /> 
-      : <SurveyScreen />
-  } />
-    <Route path="/mini-survey" element={<MiniSurvey />} />
-    <Route path="/mini-results" element={<MiniResultsScreen />} />
-  <Route path="/payment" element={<PaymentScreen />} />
-  <Route path="/dashboard" element={<DashboardScreen />} />
-  ...
-  
-  {/* Route for weekly check-in - directs kids to kid-friendly version */}
-  <Route path="/weekly-check-in" element={
-    selectedUser?.role === 'child' 
-      ? <KidFriendlySurvey surveyType="weekly" /> 
-      : <WeeklyCheckInScreen />
-  } />
-  
-  <Route path="/loading" element={<LoadingScreen />} />
-  <Route path="*" element={<Navigate to="/" />} />
-</Routes>
+      <Route path="/about-us" element={<AboutUsPage />} />
+      <Route path="/product-overview" element={<ProductOverviewPage />} />
+      <Route path="/blog" element={<BlogHomePage />} />
+      <Route path="/blog/:slug" element={<BlogArticlePage />} />
+      <Route path="/survey" element={
+        selectedUser?.role === 'child' 
+          ? <KidFriendlySurvey surveyType="initial" /> 
+          : <SurveyScreen />
+      } />
+      <Route path="/mini-survey" element={<MiniSurvey />} />
+      <Route path="/mini-results" element={<MiniResultsScreen />} />
+      <Route path="/payment" element={<PaymentScreen />} />
+      <Route path="/dashboard" element={<DashboardScreen />} />
+      
+      {/* Route for weekly check-in - directs kids to kid-friendly version */}
+      <Route path="/weekly-check-in" element={
+        selectedUser?.role === 'child' 
+          ? <KidFriendlySurvey surveyType="weekly" /> 
+          : <WeeklyCheckInScreen />
+      } />
+      
+      <Route path="/loading" element={<LoadingScreen />} />
+      <Route path="*" element={<Navigate to="/" />} />
+    </Routes>
   );
 }
 

@@ -6,8 +6,9 @@ import { useFamily } from '../../contexts/FamilyContext';
 import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
 import { storage } from '../../services/firebase';
 
-export const FamilySelectionScreen = () => {
-  const { currentUser, availableFamilies, loadFamilyData, familyData, login, logout, loadAllFamilies } = useAuth();  const { 
+const FamilySelectionScreen = () => {
+  const { currentUser, availableFamilies, loadFamilyData, familyData, login, logout, loadAllFamilies } = useAuth();
+  const { 
     familyMembers, 
     selectedUser, 
     selectFamilyMember, 
@@ -16,16 +17,77 @@ export const FamilySelectionScreen = () => {
   
   const navigate = useNavigate();
   
+  // State management
   const [showProfileUpload, setShowProfileUpload] = useState(false);
   const [uploadForMember, setUploadForMember] = useState(null);
   const [isUploading, setIsUploading] = useState(false);
-  
-  // Login form state
-  const [showLoginForm, setShowLoginForm] = useState(!currentUser);
+  const [showLoginForm, setShowLoginForm] = useState(true);
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [isLoggingIn, setIsLoggingIn] = useState(false);
   const [loginError, setLoginError] = useState('');
+  
+  // Effect to update login form visibility based on auth state
+  useEffect(() => {
+    if (currentUser) {
+      setShowLoginForm(false);
+    } else {
+      setShowLoginForm(true);
+    }
+  }, [currentUser]);
+  
+  // Effect to redirect if logged in but no family members
+  useEffect(() => {
+    // Replace the code around line 343-354 with:
+// Replace the if (familyMembers.length === 0) block with:
+if (familyMembers.length === 0) {
+  console.log("No families found - showing empty state");
+  
+  // This component doesn't use any effects that need cleanup
+  return (
+    <div className="min-h-screen bg-white flex flex-col">
+      <div className="flex-1 flex flex-col items-center justify-center p-6">
+        <div className="w-full max-w-md">
+          <div className="text-center mb-8">
+            <h1 className="text-3xl font-bold text-black mb-2">Allie</h1>
+            <p className="text-gray-600">
+              Welcome to Allie, your family workload balancer
+            </p>
+          </div>
+          
+          <div className="bg-white rounded-xl shadow-lg p-6 mb-8">
+            <h2 className="text-xl font-semibold mb-4 text-center">No Families Found</h2>
+            <p className="text-center text-gray-600 mb-6">
+              It looks like you don't have any families set up yet. Would you like to create one?
+            </p>
+            
+            <button
+              onClick={() => navigate('/signup')}
+              className="w-full py-3 px-4 rounded-md font-medium text-white bg-black hover:bg-gray-800 flex items-center justify-center"
+            >
+              <PlusCircle size={16} className="mr-2" />
+              Create New Family
+            </button>
+            
+            <button
+              onClick={handleLogout}
+              className="w-full mt-4 py-3 px-4 rounded-md font-medium text-gray-700 border border-gray-300 hover:bg-gray-50 flex items-center justify-center"
+            >
+              <LogOut size={16} className="mr-2" />
+              Log Out
+            </button>
+          </div>
+        </div>
+      </div>
+      
+      <div className="p-4 text-center text-sm text-gray-500">
+        <p>Allie v1.0 - Balance family responsibilities together</p>
+      </div>
+    </div>
+  );
+
+}
+  }, [currentUser, familyMembers, navigate]);
   
   // Debug logging
   useEffect(() => {
@@ -34,29 +96,22 @@ export const FamilySelectionScreen = () => {
     console.log("Family members:", familyMembers);
   }, [currentUser, availableFamilies, familyMembers]);
   
-  const handleSelectForUpload = (member, e) => {
-    e.stopPropagation();
-    setUploadForMember(member);
-    setShowProfileUpload(true);
+  // Get default profile image based on role
+  const getDefaultProfileImage = (member) => {
+    if (!member.profilePicture) {
+      if (member.role === 'parent') {
+        return member.roleType === 'Mama' 
+          ? 'data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAyNTYgMjU2Ij48Y2lyY2xlIGN4PSIxMjgiIGN5PSIxMjgiIHI9IjEyOCIgZmlsbD0iI2U5YjFkYSIvPjxjaXJjbGUgY3g9IjEyOCIgY3k9IjkwIiByPSI0MCIgZmlsbD0iI2ZmZiIvPjxwYXRoIGQ9Ik0yMTUsMTcyLjVjMCwzNS05NSwzNS05NSwzNXMtOTUsMC05NS0zNWMwLTIzLjMsOTUtMTAsOTUtMTBTMjE1LDE0OS4yLDIxNSwxNzIuNVoiIGZpbGw9IiNmZmYiLz48L3N2Zz4=' 
+          : 'data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAyNTYgMjU2Ij48Y2lyY2xlIGN4PSIxMjgiIGN5PSIxMjgiIHI9IjEyOCIgZmlsbD0iIzg0YzRlMiIvPjxjaXJjbGUgY3g9IjEyOCIgY3k9IjkwIiByPSI0MCIgZmlsbD0iI2ZmZiIvPjxwYXRoIGQ9Ik0yMTUsMTcyLjVjMCwzNS05NSwzNS05NSwzNXMtOTUsMC05NS0zNWMwLTIzLjMsOTUtMTAsOTUtMTBTMjE1LDE0OS4yLDIxNSwxNzIuNVoiIGZpbGw9IiNmZmYiLz48L3N2Zz4=';
+      } else {
+        // Child icon
+        return 'data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAyNTYgMjU2Ij48Y2lyY2xlIGN4PSIxMjgiIGN5PSIxMjgiIHI9IjEyOCIgZmlsbD0iI2ZkZTY4YSIvPjxjaXJjbGUgY3g9IjEyOCIgY3k9IjkwIiByPSI0MCIgZmlsbD0iI2ZmZiIvPjxwYXRoIGQ9Ik0yMTUsMTcyLjVjMCwzNS05NSwzNS05NSwzNXMtOTUsMC05NS0zNWMwLTIzLjMsOTUtMTAsOTUtMTBTMjE1LDE0OS4yLDIxNSwxNzIuNVoiIGZpbGw9IiNmZmYiLz48L3N2Zz4=';
+      }
+    }
+    return member.profilePicture;
   };
   
-// Add this function near the beginning of the FamilySelectionScreen component
-const getDefaultProfileImage = (member) => {
-  if (!member.profilePicture) {
-    if (member.role === 'parent') {
-      return member.roleType === 'Mama' 
-        ? 'data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAyNTYgMjU2Ij48Y2lyY2xlIGN4PSIxMjgiIGN5PSIxMjgiIHI9IjEyOCIgZmlsbD0iI2U5YjFkYSIvPjxjaXJjbGUgY3g9IjEyOCIgY3k9IjkwIiByPSI0MCIgZmlsbD0iI2ZmZiIvPjxwYXRoIGQ9Ik0yMTUsMTcyLjVjMCwzNS05NSwzNS05NSwzNXMtOTUsMC05NS0zNWMwLTIzLjMsOTUtMTAsOTUtMTBTMjE1LDE0OS4yLDIxNSwxNzIuNVoiIGZpbGw9IiNmZmYiLz48L3N2Zz4=' 
-        : 'data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAyNTYgMjU2Ij48Y2lyY2xlIGN4PSIxMjgiIGN5PSIxMjgiIHI9IjEyOCIgZmlsbD0iIzg0YzRlMiIvPjxjaXJjbGUgY3g9IjEyOCIgY3k9IjkwIiByPSI0MCIgZmlsbD0iI2ZmZiIvPjxwYXRoIGQ9Ik0yMTUsMTcyLjVjMCwzNS05NSwzNS05NSwzNXMtOTUsMC05NS0zNWMwLTIzLjMsOTUtMTAsOTUtMTBTMjE1LDE0OS4yLDIxNSwxNzIuNVoiIGZpbGw9IiNmZmYiLz48L3N2Zz4=';
-    } else {
-      // Child icon
-      return 'data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAyNTYgMjU2Ij48Y2lyY2xlIGN4PSIxMjgiIGN5PSIxMjgiIHI9IjEyOCIgZmlsbD0iI2ZkZTY4YSIvPjxjaXJjbGUgY3g9IjEyOCIgY3k9IjkwIiByPSI0MCIgZmlsbD0iI2ZmZiIvPjxwYXRoIGQ9Ik0yMTUsMTcyLjVjMCwzNS05NSwzNS05NSwzNXMtOTUsMC05NS0zNWMwLTIzLjMsOTUtMTAsOTUtMTBTMjE1LDE0OS4yLDIxNSwxNzIuNVoiIGZpbGw9IiNmZmYiLz48L3N2Zz4=';
-    }
-  }
-  return member.profilePicture;
-};
-
-
-  
+  // Handle selecting a user from the family
   const handleSelectUser = (member) => {
     selectFamilyMember(member);
     
@@ -67,7 +122,7 @@ const getDefaultProfileImage = (member) => {
       navigate('/survey');
     }
   };
-
+  
   // Get the next action for a family member
   const getNextAction = (member) => {
     if (!member.completed) {
@@ -101,131 +156,134 @@ const getDefaultProfileImage = (member) => {
     };
   };
   
-  // Add this new function to enable camera capture
-const openCameraCapture = () => {
-  const videoElement = document.createElement('video');
-  const canvasElement = document.createElement('canvas');
+  // Profile picture upload functions
+  const handleSelectForUpload = (member, e) => {
+    e.stopPropagation();
+    setUploadForMember(member);
+    setShowProfileUpload(true);
+  };
   
-  navigator.mediaDevices.getUserMedia({ video: true })
-    .then(stream => {
-      videoElement.srcObject = stream;
-      videoElement.play();
+  const handleImageUpload = async (e) => {
+    const file = e.target.files[0];
+    if (file && uploadForMember) {
+      handleImageFile(file);
+    }
+  };
+  
+  const handleImageFile = async (file) => {
+    setIsUploading(true);
+    try {
+      const storageRef = ref(storage, `profiles/${uploadForMember.id}/${Date.now()}_${file.name}`);
+      const snapshot = await uploadBytes(storageRef, file);
+      const imageUrl = await getDownloadURL(snapshot.ref);
+      await updateMemberProfile(uploadForMember.id, { profilePicture: imageUrl });
+      setShowProfileUpload(false);
+    } catch (error) {
+      console.error("Error uploading image:", error);
+      let errorMessage = "Failed to upload image. Please try again.";
       
-      // Create camera UI
-      const cameraModal = document.createElement('div');
-      cameraModal.className = 'fixed inset-0 bg-black bg-opacity-75 flex items-center justify-center z-50';
+      if (error.code === 'storage/unauthorized') {
+        errorMessage = "You don't have permission to upload files.";
+      } else if (error.code === 'storage/canceled') {
+        errorMessage = "Upload was canceled.";
+      } else if (error.code === 'storage/unknown') {
+        errorMessage = "An unknown error occurred during upload.";
+      }
       
-      const cameraContainer = document.createElement('div');
-      cameraContainer.className = 'bg-white p-4 rounded-lg max-w-md w-full';
-      
-      const title = document.createElement('h3');
-      title.textContent = 'Take a Profile Picture';
-      title.className = 'text-lg font-medium mb-4';
-      
-      const videoContainer = document.createElement('div');
-      videoContainer.className = 'relative mb-4';
-      videoContainer.appendChild(videoElement);
-      videoElement.className = 'w-full rounded';
-      
-      const buttonContainer = document.createElement('div');
-      buttonContainer.className = 'flex justify-between';
-      
-      const captureButton = document.createElement('button');
-      captureButton.textContent = 'Take Photo';
-      captureButton.className = 'px-4 py-2 bg-blue-600 text-white rounded';
-      
-      const cancelButton = document.createElement('button');
-      cancelButton.textContent = 'Cancel';
-      cancelButton.className = 'px-4 py-2 border rounded';
-      
-      buttonContainer.appendChild(cancelButton);
-      buttonContainer.appendChild(captureButton);
-      
-      cameraContainer.appendChild(title);
-      cameraContainer.appendChild(videoContainer);
-      cameraContainer.appendChild(buttonContainer);
-      cameraModal.appendChild(cameraContainer);
-      
-      document.body.appendChild(cameraModal);
-      
-      // Handle capture
-      captureButton.addEventListener('click', () => {
-        // Set canvas dimensions to match video
-        canvasElement.width = videoElement.videoWidth;
-        canvasElement.height = videoElement.videoHeight;
+      alert(errorMessage);
+    } finally {
+      setIsUploading(false);
+    }
+  };
+  
+  // Camera capture function
+  const openCameraCapture = () => {
+    const videoElement = document.createElement('video');
+    const canvasElement = document.createElement('canvas');
+    
+    navigator.mediaDevices.getUserMedia({ video: true })
+      .then(stream => {
+        videoElement.srcObject = stream;
+        videoElement.play();
         
-        // Draw current video frame to canvas
-        canvasElement.getContext('2d').drawImage(
-          videoElement, 0, 0, canvasElement.width, canvasElement.height
-        );
+        // Create camera UI
+        const cameraModal = document.createElement('div');
+        cameraModal.className = 'fixed inset-0 bg-black bg-opacity-75 flex items-center justify-center z-50';
         
-        // Convert to blob
-        canvasElement.toBlob(blob => {
+        const cameraContainer = document.createElement('div');
+        cameraContainer.className = 'bg-white p-4 rounded-lg max-w-md w-full';
+        
+        const title = document.createElement('h3');
+        title.textContent = 'Take a Profile Picture';
+        title.className = 'text-lg font-medium mb-4';
+        
+        const videoContainer = document.createElement('div');
+        videoContainer.className = 'relative mb-4';
+        videoContainer.appendChild(videoElement);
+        videoElement.className = 'w-full rounded';
+        
+        const buttonContainer = document.createElement('div');
+        buttonContainer.className = 'flex justify-between';
+        
+        const captureButton = document.createElement('button');
+        captureButton.textContent = 'Take Photo';
+        captureButton.className = 'px-4 py-2 bg-black text-white rounded';
+        
+        const cancelButton = document.createElement('button');
+        cancelButton.textContent = 'Cancel';
+        cancelButton.className = 'px-4 py-2 border rounded';
+        
+        buttonContainer.appendChild(cancelButton);
+        buttonContainer.appendChild(captureButton);
+        
+        cameraContainer.appendChild(title);
+        cameraContainer.appendChild(videoContainer);
+        cameraContainer.appendChild(buttonContainer);
+        cameraModal.appendChild(cameraContainer);
+        
+        document.body.appendChild(cameraModal);
+        
+        // Handle capture
+        captureButton.addEventListener('click', () => {
+          // Set canvas dimensions to match video
+          canvasElement.width = videoElement.videoWidth;
+          canvasElement.height = videoElement.videoHeight;
+          
+          // Draw current video frame to canvas
+          canvasElement.getContext('2d').drawImage(
+            videoElement, 0, 0, canvasElement.width, canvasElement.height
+          );
+          
+          // Convert to blob
+          canvasElement.toBlob(blob => {
+            // Stop all tracks to close camera
+            videoElement.srcObject.getTracks().forEach(track => track.stop());
+            
+            // Remove modal
+            document.body.removeChild(cameraModal);
+            
+            // Process the image blob
+            const file = new File([blob], "camera-photo.jpg", { type: "image/jpeg" });
+            handleImageFile(file);
+          }, 'image/jpeg');
+        });
+        
+        // Handle cancel
+        cancelButton.addEventListener('click', () => {
           // Stop all tracks to close camera
           videoElement.srcObject.getTracks().forEach(track => track.stop());
           
           // Remove modal
           document.body.removeChild(cameraModal);
-          
-          // Process the image blob
-          const file = new File([blob], "camera-photo.jpg", { type: "image/jpeg" });
-          handleImageFile(file);
-        }, 'image/jpeg');
+        });
+      })
+      .catch(error => {
+        console.error("Error accessing camera:", error);
+        alert("Could not access camera. Please check permissions or use file upload instead.");
       });
-      
-      // Handle cancel
-      cancelButton.addEventListener('click', () => {
-        // Stop all tracks to close camera
-        videoElement.srcObject.getTracks().forEach(track => track.stop());
-        
-        // Remove modal
-        document.body.removeChild(cameraModal);
-      });
-    })
-    .catch(error => {
-      console.error("Error accessing camera:", error);
-      alert("Could not access camera. Please check permissions or use file upload instead.");
-    });
-};
-
-// Modify the handleImageUpload function
-const handleImageUpload = async (e) => {
-  const file = e.target.files[0];
-  if (file && uploadForMember) {
-    handleImageFile(file);
-  }
-};
-
-// Add this new helper function to handle the file processing
-const handleImageFile = async (file) => {
-  setIsUploading(true);
-  try {
-    const storageRef = ref(storage, `profiles/${uploadForMember.id}/${Date.now()}_${file.name}`);
-    const snapshot = await uploadBytes(storageRef, file);
-    const imageUrl = await getDownloadURL(snapshot.ref);
-    await updateMemberProfile(uploadForMember.id, { profilePicture: imageUrl });
-    setShowProfileUpload(false);
-  } catch (error) {
-    console.error("Error uploading image:", error);
-    let errorMessage = "Failed to upload image. Please try again.";
-    
-    if (error.code === 'storage/unauthorized') {
-      errorMessage = "You don't have permission to upload files.";
-    } else if (error.code === 'storage/canceled') {
-      errorMessage = "Upload was canceled.";
-    } else if (error.code === 'storage/unknown') {
-      errorMessage = "An unknown error occurred during upload.";
-    }
-    
-    alert(errorMessage);
-  } finally {
-    setIsUploading(false);
-  }
-};
+  };
   
-  
-  
-  // Handle login submission
+  // Login and logout functions
   const handleLogin = async (e) => {
     e.preventDefault();
     setIsLoggingIn(true);
@@ -233,16 +291,13 @@ const handleImageFile = async (file) => {
     
     try {
       const user = await login(email, password);
-      // Auth state change will trigger UI update 
-      setShowLoginForm(false);
+      console.log("Login successful:", user);
       
       // Explicitly load all families
       await loadAllFamilies(user.uid);
       
-      // Don't navigate to dashboard, just stay on the selection screen
-      navigate('/login', { replace: true });
-
-      // by removing the navigation code, we'll stay on the family selection screen
+      // Stay on the family selection screen
+      setShowLoginForm(false);
     } catch (error) {
       console.error("Login error:", error);
       setLoginError('Invalid email or password. Please try again.');
@@ -251,25 +306,25 @@ const handleImageFile = async (file) => {
     }
   };
   
-  // Handle logout
   const handleLogout = async () => {
     try {
       await logout();
-      navigate('/login'); // Direct to onboarding flow instead
+      setShowLoginForm(true);
+      navigate('/login');
     } catch (error) {
       console.error("Logout error:", error);
     }
   };
   
-  // Login Form Screen
+  // Login Form UI
   const renderLoginForm = () => {
     return (
-<div className="min-h-screen bg-white flex flex-col">
-<div className="flex-1 flex flex-col items-center justify-center p-6">
+      <div className="min-h-screen bg-white flex flex-col">
+        <div className="flex-1 flex flex-col items-center justify-center p-6">
           <div className="w-full max-w-md">
             {/* Header */}
             <div className="text-center mb-8">
-              <h1 className="text-3xl font-bold text-blue-800 mb-2">Allie</h1>
+              <h1 className="text-3xl font-bold text-black mb-2">Allie</h1>
               <p className="text-gray-600">
                 Log in to access your family's workload balancer
               </p>
@@ -324,7 +379,7 @@ const handleImageFile = async (file) => {
                   <button
                     type="submit"
                     disabled={isLoggingIn}
-                    className="w-full py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 flex items-center justify-center"
+                    className="w-full py-2 bg-black text-white rounded-md hover:bg-gray-800 flex items-center justify-center"
                   >
                     {isLoggingIn ? (
                       <>
@@ -342,7 +397,7 @@ const handleImageFile = async (file) => {
             {/* Create New Family Button */}
             <button
               onClick={() => navigate('/signup')}
-              className="w-full py-3 px-4 rounded-md font-medium text-blue-600 border border-blue-600 hover:bg-blue-50 flex items-center justify-center"
+              className="w-full py-3 px-4 rounded-md font-medium text-black border border-black hover:bg-gray-50 flex items-center justify-center"
             >
               <PlusCircle size={16} className="mr-2" />
               Create New Family
@@ -352,46 +407,37 @@ const handleImageFile = async (file) => {
         
         {/* Footer */}
         <div className="p-4 text-center text-sm text-gray-500">
-          <p>Allie v1.0 - Balancing family responsibilities together</p>
+          <p>Allie v1.0 - Balance family responsibilities together</p>
         </div>
       </div>
     );
   };
+  
+  // Loading screen for redirect
+  if (currentUser && familyMembers.length === 0) {
+    return (
+      <div className="min-h-screen bg-white flex items-center justify-center">
+        <div className="text-center">
+          <div className="w-8 h-8 border-4 border-black border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
+          <p className="text-gray-700">Setting up your family...</p>
+        </div>
+      </div>
+    );
+  }
   
   // If showing login form, render it
   if (showLoginForm) {
     return renderLoginForm();
   }
   
- // If logged in but no family members, redirect to create a family
-if (familyMembers.length === 0) {
-  console.log("No families found - redirecting to signup");
-  // Use a React effect to handle the navigation
-  React.useEffect(() => {
-    if (currentUser && familyMembers.length === 0) {
-      navigate('/signup');
-    }
-  }, [currentUser, familyMembers]);
-  
-  // Show a simple loading screen while redirecting
+  // Normal profile selection view
   return (
-    <div className="min-h-screen bg-white flex items-center justify-center">
-      <div className="text-center">
-        <div className="w-8 h-8 border-4 border-black border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
-        <p className="text-gray-700">Setting up your family...</p>
-      </div>
-    </div>
-  );
-}
-  
-  // Normal profile selection view with logout option
-  return (
-    <div className="min-h-screen bg-gradient-to-b from-blue-50 to-white flex flex-col">
+    <div className="min-h-screen bg-white flex flex-col">
       <div className="flex-1 flex flex-col items-center justify-center p-6">
         <div className="w-full max-w-md">
           {/* Header with Logout */}
           <div className="flex justify-between items-center mb-8">
-            <h1 className="text-3xl font-bold text-blue-800">Allie</h1>
+            <h1 className="text-3xl font-bold text-black">Allie</h1>
             <button 
               onClick={handleLogout}
               className="text-sm text-gray-600 hover:text-gray-800 flex items-center"
@@ -405,8 +451,6 @@ if (familyMembers.length === 0) {
             Who are you in the family? Select your profile to begin.
           </p>
 
-          
-
           {/* Family member selection */}
           <div className="bg-white rounded-xl shadow-lg p-6 mb-8">
             <h2 className="text-xl font-semibold mb-4 text-center">Choose Your Profile</h2>
@@ -414,25 +458,25 @@ if (familyMembers.length === 0) {
             <div className="grid grid-cols-1 gap-4">
               {familyMembers.map((member) => (
                 <div 
-                key={member.id}
-                className={`border rounded-lg p-4 cursor-pointer transition-all ${
-                  selectedUser?.id === member.id 
-                    ? 'border-black bg-gray-50' 
-                    : 'border-gray-200 hover:border-gray-900'
-                }`}
-                onClick={() => handleSelectUser(member)}
-              >
+                  key={member.id}
+                  className={`border rounded-lg p-4 cursor-pointer transition-all ${
+                    selectedUser?.id === member.id 
+                      ? 'border-black bg-gray-50' 
+                      : 'border-gray-200 hover:border-gray-900'
+                  }`}
+                  onClick={() => handleSelectUser(member)}
+                >
                   <div className="flex items-center">
                     <div className="flex-shrink-0 mr-4 relative">
-                      <div className="w-16 h-16 rounded-full overflow-hidden border-2 border-blue-200">
-                                            <img 
-                        src={getDefaultProfileImage(member)} 
-                        alt={`${member.name}'s profile`}
-                        className="w-full h-full object-cover"
-                      />
+                      <div className="w-16 h-16 rounded-full overflow-hidden border-2 border-gray-200">
+                        <img 
+                          src={getDefaultProfileImage(member)} 
+                          alt={`${member.name}'s profile`}
+                          className="w-full h-full object-cover"
+                        />
                       </div>
                       <button
-                        className="absolute bottom-0 right-0 bg-blue-500 text-white p-1 rounded-full"
+                        className="absolute bottom-0 right-0 bg-black text-white p-1 rounded-full"
                         onClick={(e) => handleSelectForUpload(member, e)}
                       >
                         <Camera size={12} />
@@ -456,15 +500,15 @@ if (familyMembers.length === 0) {
 
           {/* Action buttons */}
           <div className="text-center space-y-4">
-          <button 
-  disabled={!selectedUser}
-  onClick={() => selectedUser && handleSelectUser(selectedUser)}
-  className={`w-full py-3 px-4 rounded-md font-medium text-white ${
-    selectedUser 
-      ? 'bg-black hover:bg-gray-800' 
-      : 'bg-gray-300 cursor-not-allowed'
-  }`}
->
+            <button 
+              disabled={!selectedUser}
+              onClick={() => selectedUser && handleSelectUser(selectedUser)}
+              className={`w-full py-3 px-4 rounded-md font-medium text-white ${
+                selectedUser 
+                  ? 'bg-black hover:bg-gray-800' 
+                  : 'bg-gray-300 cursor-not-allowed'
+              }`}
+            >
               {selectedUser 
                 ? `Continue as ${selectedUser.name}` 
                 : "Select your profile to continue"}
@@ -472,7 +516,7 @@ if (familyMembers.length === 0) {
               
             <button
               onClick={() => navigate('/signup')}
-              className="w-full py-3 px-4 rounded-md font-medium text-blue-600 border border-blue-600 hover:bg-blue-50 flex items-center justify-center"
+              className="w-full py-3 px-4 rounded-md font-medium text-black border border-black hover:bg-gray-50 flex items-center justify-center"
             >
               <PlusCircle size={16} className="mr-2" />
               Create New Family
@@ -481,42 +525,10 @@ if (familyMembers.length === 0) {
         </div>
       </div>
 
-     
-
       {/* Footer */}
       <div className="p-4 text-center text-sm text-gray-500">
-        <p>Allie v1.0 - Balancing family responsibilities together</p>
+        <p>Allie v1.0 - Balance family responsibilities together</p>
       </div>
-
-{/* Add a camera button alongside the file upload */}
-<div className="flex items-center justify-center mb-4">
-  {isUploading ? (
-    <div className="px-4 py-2 bg-gray-100 text-gray-700 rounded border flex items-center">
-      <div className="w-4 h-4 border-2 border-t-transparent border-blue-600 rounded-full animate-spin mr-2"></div>
-      <span className="text-sm">Uploading...</span>
-    </div>
-  ) : (
-    <div className="flex space-x-3">
-      <label 
-        htmlFor="image-upload" 
-        className="flex flex-col items-center px-4 py-3 bg-blue-50 text-blue-700 rounded cursor-pointer border border-blue-300 hover:bg-blue-100"
-      >
-        <Upload size={20} className="mb-1" />
-        <span className="text-sm">Upload Photo</span>
-      </label>
-      
-      <button
-        onClick={openCameraCapture}
-        className="flex flex-col items-center px-4 py-3 bg-green-50 text-green-700 rounded cursor-pointer border border-green-300 hover:bg-green-100"
-      >
-        <Camera size={20} className="mb-1" />
-        <span className="text-sm">Take Photo</span>
-      </button>
-    </div>
-  )}
-</div>
-
-
 
       {/* Profile picture upload modal */}
       {showProfileUpload && (
@@ -528,9 +540,9 @@ if (familyMembers.length === 0) {
             </p>
               
             <div className="flex justify-center mb-4">
-              <div className="w-24 h-24 rounded-full overflow-hidden border-2 border-blue-200">
+              <div className="w-24 h-24 rounded-full overflow-hidden border-2 border-gray-200">
                 <img 
-                  src={uploadForMember?.profilePicture} 
+                  src={uploadForMember?.profilePicture || getDefaultProfileImage(uploadForMember)} 
                   alt="Current profile" 
                   className="w-full h-full object-cover"
                 />
@@ -540,21 +552,34 @@ if (familyMembers.length === 0) {
             <div className="flex items-center justify-center mb-4">
               {isUploading ? (
                 <div className="px-4 py-2 bg-gray-100 text-gray-700 rounded border border-gray-300 flex items-center">
-                  <div className="w-4 h-4 border-2 border-t-transparent border-blue-600 rounded-full animate-spin mr-2"></div>
+                  <div className="w-4 h-4 border-2 border-t-transparent border-black rounded-full animate-spin mr-2"></div>
                   <span className="text-sm">Uploading...</span>
                 </div>
               ) : (
-                <label className="flex flex-col items-center px-4 py-2 bg-blue-50 text-blue-700 rounded cursor-pointer border border-blue-300 hover:bg-blue-100">
-                  <Upload size={18} className="mb-1" />
-                  <span className="text-sm">Select Photo</span>
-                  <input
-                    type="file"
-                    className="hidden"
-                    accept="image/*"
-                    onChange={handleImageUpload}
-                    disabled={isUploading}
-                  />
-                </label>
+                <div className="flex space-x-3">
+                  <label 
+                    htmlFor="image-upload" 
+                    className="flex flex-col items-center px-4 py-3 bg-gray-50 text-black rounded cursor-pointer border border-gray-300 hover:bg-gray-100"
+                  >
+                    <Upload size={20} className="mb-1" />
+                    <span className="text-sm">Upload Photo</span>
+                    <input
+                      id="image-upload"
+                      type="file"
+                      className="hidden"
+                      accept="image/*"
+                      onChange={handleImageUpload}
+                    />
+                  </label>
+                  
+                  <button
+                    onClick={openCameraCapture}
+                    className="flex flex-col items-center px-4 py-3 bg-blue-50 text-blue-700 rounded cursor-pointer border border-blue-300 hover:bg-blue-100"
+                  >
+                    <Camera size={20} className="mb-1" />
+                    <span className="text-sm">Take Photo</span>
+                  </button>
+                </div>
               )}
             </div>
               
