@@ -31,6 +31,27 @@ export function AuthProvider({ children }) {
     return DatabaseService.signIn(email, password);
   }
 
+  // Added helper function to ensure families are loaded
+async function ensureFamiliesLoaded(userId) {
+  try {
+    console.log("Ensuring families are loaded for user:", userId);
+    
+    // First load all families
+    const families = await loadAllFamilies(userId);
+    console.log("Found families:", families.length);
+    
+    // Then if there are families, load the primary family
+    if (families && families.length > 0) {
+      await loadFamilyData(userId);
+    }
+    
+    return families;
+  } catch (error) {
+    console.error("Error ensuring families are loaded:", error);
+    throw error;
+  }
+}
+  
   // Logout function
   async function logout() {
     return DatabaseService.signOut();
@@ -161,6 +182,7 @@ async function loadFamilyData(idParam) {
     createFamily,
     loadFamilyData,
     loadAllFamilies,
+    ensureFamiliesLoaded, // Add the new function here
     reload: () => loadFamilyData(currentUser?.uid)
   };
 

@@ -1,12 +1,13 @@
-import React, { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import React, { useState, useEffect } from 'react';
+import { useNavigate, useLocation } from 'react-router-dom';
 import { ArrowLeft, Plus, Trash2, User, Mail, Key } from 'lucide-react';
 import { useAuth } from '../../contexts/AuthContext';
 
 const UserSignupScreen = () => {
   const { createFamily } = useAuth();
   const navigate = useNavigate();
-  
+  const location = useLocation(); // Add this line
+
   const [step, setStep] = useState(1);
   const [familyName, setFamilyName] = useState('');
   const [parents, setParents] = useState([
@@ -17,7 +18,21 @@ const UserSignupScreen = () => {
     { name: '', age: '' }
   ]);
   const [isSubmitting, setIsSubmitting] = useState(false);
+ 
   
+// Check if coming from payment with family data
+useEffect(() => {
+  if (location?.state?.fromPayment && location?.state?.familyData) {
+    const receivedData = location.state.familyData;
+
+    console.log("Received family data from payment:", location.state.familyData);
+    if (receivedData.familyName) setFamilyName(receivedData.familyName);
+    if (receivedData.parents) setParents(receivedData.parents);
+    if (receivedData.children) setChildren(receivedData.children);
+    setStep(4); // Jump to the review step
+  }
+}, [location]);
+
   // Handle parent input change
   const handleParentChange = (index, field, value) => {
     const updatedParents = [...parents];
@@ -87,49 +102,50 @@ const UserSignupScreen = () => {
   };
   
   // Handle form submission
-  const handleSubmit = async () => {
-    setIsSubmitting(true);
+  // Handle form submission
+const handleSubmit = async () => {
+  setIsSubmitting(true);
+  
+  try {
+    console.log("Starting family creation with data:", {
+      familyName,
+      parentData: parents.map(p => ({...p, password: '****'})), // Log without passwords
+      children 
+    });
     
-    try {
-      console.log("Starting family creation with data:", {
-        familyName,
-        parentData: parents.map(p => ({...p, password: '****'})), // Log without passwords
-        children // Fixed: using 'children' instead of 'childrenData'
-      });
-      
-      // Create the family in Firebase
-      const familyData = {
-        familyName,
-        parentData: parents,
-        childrenData: children // Kept as is since this is the expected key format for createFamily
-      };
-      
-      const result = await createFamily(familyData);
-      console.log("Family creation result:", result);
-      
-      // Store the family ID in localStorage to help with debugging
-      if (result && result.familyId) {
-        localStorage.setItem('lastCreatedFamilyId', result.familyId);
-        console.log("Stored family ID in localStorage:", result.familyId);
-      }
-      
-// Navigate directly to dashboard with the newly created family
-console.log("Navigating to dashboard with new family");
-localStorage.setItem('selectedFamilyId', result.familyId);
-// Set a flag to ensure we use this new family
-localStorage.setItem('directFamilyAccess', JSON.stringify({
-  familyId: result.familyId,
-  familyName: familyName,
-  timestamp: new Date().getTime()
-}));
-navigate('/dashboard');
-    } catch (error) {
-      console.error("Detailed error creating family:", error);
-      alert("There was an error creating your family: " + (error.message || "Unknown error"));
-    } finally {
-      setIsSubmitting(false);
+    // Create the family in Firebase
+    const familyData = {
+      familyName,
+      parentData: parents,
+      childrenData: children
+    };
+    
+    const result = await createFamily(familyData);
+    console.log("Family creation result:", result);
+    
+    // Store the family ID in localStorage to help with debugging
+    if (result && result.familyId) {
+      localStorage.setItem('lastCreatedFamilyId', result.familyId);
+      console.log("Stored family ID in localStorage:", result.familyId);
     }
-  };
+    
+    // Navigate directly to dashboard with the newly created family
+    console.log("Navigating to dashboard with new family");
+    localStorage.setItem('selectedFamilyId', result.familyId);
+    // Set a flag to ensure we use this new family
+    localStorage.setItem('directFamilyAccess', JSON.stringify({
+      familyId: result.familyId,
+      familyName: familyName,
+      timestamp: new Date().getTime()
+    }));
+    navigate('/dashboard');
+  } catch (error) {
+    console.error("Detailed error creating family:", error);
+    alert("There was an error creating your family: " + (error.message || "Unknown error"));
+  } finally {
+    setIsSubmitting(false);
+  }
+};
   
   // Render step content
   const renderStepContent = () => {

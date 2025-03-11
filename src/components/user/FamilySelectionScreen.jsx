@@ -37,8 +37,36 @@ const FamilySelectionScreen = () => {
     }
   }, [currentUser]);
   
-  // Effect to update empty state visibility based on whether we have family members
+// Effect to update empty state visibility based on whether we have family members
 useEffect(() => {
+  if (currentUser && familyMembers.length === 0 && availableFamilies.length === 0) {
+    // Only show empty state if there are truly no families
+    setShowEmptyState(true);
+  } else {
+    setShowEmptyState(false);
+  }
+  
+  // Auto-redirect to onboarding if logged in with no families
+  // but only if we're not in the process of logging in
+  if (currentUser && availableFamilies.length === 0 && !isLoggingIn) {
+    console.log("No families found, redirecting to onboarding");
+    navigate('/onboarding');
+  }
+}, [currentUser, familyMembers, availableFamilies, navigate, isLoggingIn]);
+  
+  // Debug logging
+  useEffect(() => {
+    console.log("Current user:", currentUser);
+    console.log("Available families:", availableFamilies);
+    console.log("Family members:", familyMembers);
+  }, [currentUser, availableFamilies, familyMembers]);
+  
+// Effect to update empty state visibility based on whether we have family members
+useEffect(() => {
+  console.log("Current user:", currentUser);
+  console.log("Family members:", familyMembers);
+  console.log("Available families:", availableFamilies);
+  
   if (currentUser && familyMembers.length === 0 && availableFamilies.length === 0) {
     // Only show empty state if there are truly no families
     setShowEmptyState(true);
@@ -51,14 +79,8 @@ useEffect(() => {
     navigate('/onboarding');
   }
 }, [currentUser, familyMembers, availableFamilies, navigate]);
-  
-  // Debug logging
-  useEffect(() => {
-    console.log("Current user:", currentUser);
-    console.log("Available families:", availableFamilies);
-    console.log("Family members:", familyMembers);
-  }, [currentUser, availableFamilies, familyMembers]);
-  
+
+
   // Get default profile image based on role
   const getDefaultProfileImage = (member) => {
     if (!member.profilePicture) {
@@ -257,7 +279,14 @@ useEffect(() => {
       console.log("Login successful:", user);
       
       // Explicitly load all families
-      await loadAllFamilies(user.uid);
+      const families = await loadAllFamilies(user.uid);
+    console.log("Loaded families:", families);
+
+     // If families exist, load the first one to populate familyMembers
+     if (families && families.length > 0) {
+      console.log("Loading first family:", families[0].familyId);
+      await loadFamilyData(families[0].familyId);
+    }
       
       // Stay on the family selection screen
       setShowLoginForm(false);
@@ -453,51 +482,57 @@ useEffect(() => {
           </p>
 
           {/* Family member selection */}
-          <div className="bg-white rounded-xl shadow-lg p-6 mb-8">
-            <h2 className="text-xl font-semibold mb-4 text-center">Choose Your Profile</h2>
-              
-            <div className="grid grid-cols-1 gap-4">
-              {familyMembers.map((member) => (
-                <div 
-                  key={member.id}
-                  className={`border rounded-lg p-4 cursor-pointer transition-all ${
-                    selectedUser?.id === member.id 
-                      ? 'border-black bg-gray-50' 
-                      : 'border-gray-200 hover:border-gray-900'
-                  }`}
-                  onClick={() => handleSelectUser(member)}
-                >
-                  <div className="flex items-center">
-                    <div className="flex-shrink-0 mr-4 relative">
-                      <div className="w-16 h-16 rounded-full overflow-hidden border-2 border-gray-200">
-                        <img 
-                          src={getDefaultProfileImage(member)} 
-                          alt={`${member.name}'s profile`}
-                          className="w-full h-full object-cover"
-                        />
-                      </div>
-                      <button
-                        className="absolute bottom-0 right-0 bg-black text-white p-1 rounded-full"
-                        onClick={(e) => handleSelectForUpload(member, e)}
-                      >
-                        <Camera size={12} />
-                      </button>
-                    </div>
-                    <div className="flex-1">
-                      <h3 className="font-medium text-lg">{member.name}</h3>
-                      <p className="text-sm text-gray-500 capitalize">{member.role}</p>
-                      <div className="mt-1">
-                        <span className={`text-xs flex items-center ${getNextAction(member).className}`}>
-                          {getNextAction(member).icon}
-                          {getNextAction(member).text}
-                        </span>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              ))}
+<div className="bg-white rounded-xl shadow-lg p-6 mb-8">
+  <h2 className="text-xl font-semibold mb-4 text-center">Choose Your Profile</h2>
+    
+  <div className="grid grid-cols-1 gap-4">
+    {familyMembers.length > 0 ? (
+      familyMembers.map((member) => (
+        <div 
+          key={member.id}
+          className={`border rounded-lg p-4 cursor-pointer transition-all ${
+            selectedUser?.id === member.id 
+              ? 'border-black bg-gray-50' 
+              : 'border-gray-200 hover:border-gray-900'
+          }`}
+          onClick={() => handleSelectUser(member)}
+        >
+          <div className="flex items-center">
+            <div className="flex-shrink-0 mr-4 relative">
+              <div className="w-16 h-16 rounded-full overflow-hidden border-2 border-gray-200">
+                <img 
+                  src={getDefaultProfileImage(member)} 
+                  alt={`${member.name}'s profile`}
+                  className="w-full h-full object-cover"
+                />
+              </div>
+              <button
+                className="absolute bottom-0 right-0 bg-black text-white p-1 rounded-full"
+                onClick={(e) => handleSelectForUpload(member, e)}
+              >
+                <Camera size={12} />
+              </button>
+            </div>
+            <div className="flex-1">
+              <h3 className="font-medium text-lg">{member.name}</h3>
+              <p className="text-sm text-gray-500 capitalize">{member.role}</p>
+              <div className="mt-1">
+                <span className={`text-xs flex items-center ${getNextAction(member).className}`}>
+                  {getNextAction(member).icon}
+                  {getNextAction(member).text}
+                </span>
+              </div>
             </div>
           </div>
+        </div>
+      ))
+    ) : (
+      <div className="text-center p-6 text-gray-500">
+        <p>No family members found. Please check your account or create a new family.</p>
+      </div>
+    )}
+  </div>
+</div>
 
           {/* Action buttons */}
           <div className="text-center space-y-4">

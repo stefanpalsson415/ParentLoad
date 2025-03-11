@@ -44,54 +44,43 @@ const PaymentScreen = () => {
           console.log('Free coupon applied');
           setCouponApplied(true);
           
-          // Create family with pending data if available
+          // Instead of trying to create the family right here,
+          // store the information and navigate to signup for confirmation
           if (pendingFamilyData) {
-            const result = await createFamily(pendingFamilyData);
-            console.log("Family creation result:", result);
+            // Store a flag indicating payment is complete
+            localStorage.setItem('paymentCompleted', 'true');
             
-            // Store family ID for auto-login
-            if (result && result.familyId) {
-              localStorage.setItem('selectedFamilyId', result.familyId);
-              localStorage.setItem('directFamilyAccess', JSON.stringify({
-                familyId: result.familyId,
-                familyName: pendingFamilyData.familyName,
-                timestamp: new Date().getTime()
-              }));
-            }
-            
-            // Clear pending data
-            localStorage.removeItem('pendingFamilyData');
+            console.log("Payment completed, navigating to signup for confirmation");
+            // Navigate to signup for final confirmation
+            navigate('/signup', { 
+              state: { 
+                fromPayment: true,
+                familyData: pendingFamilyData 
+              } 
+            });
+          } else {
+            console.error("No pending family data available");
+            setError("Missing family information. Please try again.");
           }
-          
-          // Navigate to login (family selector) screen
-          navigate('/login');
           return;
         }
         
         // Regular payment processing would happen here
         // ...
         
-        // Create family if pending data is available
+        // After successful payment, navigate to signup for confirmation
         if (pendingFamilyData) {
-          const result = await createFamily(pendingFamilyData);
-          console.log("Family creation result:", result);
+          localStorage.setItem('paymentCompleted', 'true');
           
-          // Store family ID for auto-login
-          if (result && result.familyId) {
-            localStorage.setItem('selectedFamilyId', result.familyId);
-            localStorage.setItem('directFamilyAccess', JSON.stringify({
-              familyId: result.familyId,
-              familyName: pendingFamilyData.familyName,
-              timestamp: new Date().getTime()
-            }));
-          }
-          
-          // Clear pending data
-          localStorage.removeItem('pendingFamilyData');
+          navigate('/signup', { 
+            state: { 
+              fromPayment: true,
+              familyData: pendingFamilyData 
+            } 
+          });
+        } else {
+          navigate('/login');
         }
-        
-        // Navigate to login page after successful payment
-        navigate('/login');
       } catch (error) {
         console.error("Error in payment processing:", error);
         setError("An error occurred. Please try again.");

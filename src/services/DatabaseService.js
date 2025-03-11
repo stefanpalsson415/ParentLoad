@@ -552,8 +552,15 @@ async getFamilyMeetingNotes(familyId, weekNumber) {
       }
       
       // Generate a simple family ID instead of using addDoc
-      const familyId = Date.now().toString(36) + Math.random().toString(36).substring(2);
-      console.log("Generated familyId:", familyId);
+      // Generate a simple family ID instead of using addDoc
+const familyId = Date.now().toString(36) + Math.random().toString(36).substring(2);
+console.log("Generated familyId:", familyId);
+console.log("Parent users created:", parentUsers);
+console.log("Family data being prepared:", {
+  familyName,
+  parentData: parentData.map(p => ({...p, password: '****'})),
+  childrenData
+});
       
       // Create family members array
       const familyMembers = [
