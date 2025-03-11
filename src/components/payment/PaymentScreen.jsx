@@ -13,33 +13,111 @@ const PaymentScreen = () => {
     
     const navigate = useNavigate();
   
-  const handleSubmit = async (event) => {
-    event.preventDefault();
-    setLoading(true);
+    const { location } = useNavigate();
+    const [pendingFamilyData, setPendingFamilyData] = useState(null);
     
-    // Check if coupon code is valid
-    if (couponCode === 'olytheawesome') {
-      // Skip payment process and proceed directly
-      console.log('Free coupon applied');
-      setCouponApplied(true);
-      navigate('/dashboard');
-      return;
-    }
-    if (couponCode.toLowerCase() === 'stefan') {
-      // 100% discount code
-      console.log('Free coupon applied');
-      setCouponApplied(true);
-      setDiscount(100);
-      navigate('/dashboard');
-      return;
-    }
+    // Effect to load pending family data
+    useEffect(() => {
+      // Check for data passed in location state
+      if (location?.state?.familyData) {
+        setPendingFamilyData(location.state.familyData);
+      } 
+      // Check for data in localStorage
+      else {
+        const storedData = localStorage.getItem('pendingFamilyData');
+        if (storedData) {
+          try {
+            setPendingFamilyData(JSON.parse(storedData));
+          } catch (e) {
+            console.error("Error parsing stored family data:", e);
+          }
+        }
+      }
+    }, [location]);
+    
+    const handleSubmit = async (event) => {
+      event.preventDefault();
+      setLoading(true);
+      
+      try {
+        // Check if coupon code is valid
+        if (couponCode === 'olytheawesome' || couponCode.toLowerCase() === 'stefan') {
+          // Skip payment process and proceed directly
+          console.log('Free coupon applied');
+          setCouponApplied(true);
+          
+          // Create family with pending data if available
+          if (pendingFamilyData) {
+            const result = await createFamily(pendingFamilyData);
+            console.log("Family creation result:", result);
+            
+            // Store family ID for auto-login
+            if (result && result.familyId) {
+              localStorage.setItem('selectedFamilyId', result.familyId);
+              localStorage.setItem('directFamilyAccess', JSON.stringify({
+                familyId: result.familyId,
+                familyName: pendingFamilyData.familyName,
+                timestamp: new Date().getTime()
+              }));
+            }
+            
+            // Clear pending data
+            localStorage.removeItem('pendingFamilyData');
+          }
+          
+          // Navigate to login (family selector) screen
+          navigate('/login');
+          return;
+        }
+        
+        // Regular payment processing would happen here
+        // ...
+        
+        // Create family if pending data is available
+        if (pendingFamilyData) {
+          const result = await createFamily(pendingFamilyData);
+          console.log("Family creation result:", result);
+          
+          // Store family ID for auto-login
+          if (result && result.familyId) {
+            localStorage.setItem('selectedFamilyId', result.familyId);
+            localStorage.setItem('directFamilyAccess', JSON.stringify({
+              familyId: result.familyId,
+              familyName: pendingFamilyData.familyName,
+              timestamp: new Date().getTime()
+            }));
+          }
+          
+          // Clear pending data
+          localStorage.removeItem('pendingFamilyData');
+        }
+        
+        // Navigate to login page after successful payment
+        navigate('/login');
+      } catch (error) {
+        console.error("Error in payment processing:", error);
+        setError("An error occurred. Please try again.");
+      } finally {
+        setLoading(false);
+      }
+    };
     
  // New code
 // Handle Stripe payment logic here
 // This is simplified - you'll need to implement the actual Stripe payment flow
     
-// Add navigation to dashboard after successful payment
-navigate('/dashboard');
+// Save family ID to localStorage to ensure we use this family
+if (result && result.familyId) {
+  localStorage.setItem('selectedFamilyId', result.familyId);
+  localStorage.setItem('directFamilyAccess', JSON.stringify({
+    familyId: result.familyId,
+    familyName: familyName || 'Your Family',
+    timestamp: new Date().getTime()
+  }));
+}
+
+// Navigate to family selection screen fully logged in
+navigate('/login');
     
 setLoading(false);  };
   

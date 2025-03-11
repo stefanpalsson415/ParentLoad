@@ -38,6 +38,30 @@ const MiniSurvey = () => {
     { id: "q20", text: "Who handles cultural and moral education?", category: "Invisible Parental Tasks" }
   ];
   
+  // Check if we came from onboarding
+  const { location } = useNavigate();
+  const [pendingFamilyData, setPendingFamilyData] = useState(null);
+  
+  // Effect to load pending family data
+  useEffect(() => {
+    // Check for data passed in location state
+    if (location?.state?.familyData) {
+      setPendingFamilyData(location.state.familyData);
+    } 
+    // Check for data in localStorage
+    else {
+      const storedData = localStorage.getItem('pendingFamilyData');
+      if (storedData) {
+        try {
+          setPendingFamilyData(JSON.parse(storedData));
+        } catch (e) {
+          console.error("Error parsing stored family data:", e);
+        }
+      }
+    }
+  }, [location]);
+  
+  // Handle parent selection
   const handleSelectParent = (parent) => {
     // Save response
     const updatedResponses = {...responses};
@@ -50,7 +74,14 @@ const MiniSurvey = () => {
     } else {
       // Save responses and navigate to results
       localStorage.setItem('miniSurveyResponses', JSON.stringify(updatedResponses));
-      navigate('/mini-results');
+      
+      // Pass along the pending family data if it exists
+      navigate('/mini-results', pendingFamilyData ? {
+        state: {
+          fromMiniSurvey: true,
+          familyData: pendingFamilyData
+        }
+      } : undefined);
     }
   };
   
