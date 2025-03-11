@@ -1,9 +1,13 @@
 import { useNavigate } from 'react-router-dom';
 import React, { useEffect } from 'react';
+import { useAuth } from '../../contexts/AuthContext'; // Add this line
 import familyPhoto from '../../assets/family-photo.jpg'; // You'll need to add this image to your assets folder
+
 
 const LandingPage = () => {
   const navigate = useNavigate();
+  const { currentUser } = useAuth(); // Add this line
+
   
   useEffect(() => {
     window.scrollTo(0, 0);
@@ -41,18 +45,41 @@ const LandingPage = () => {
       >
         Blog
       </button>
-      <button 
-        onClick={() => navigate('/login')}
-        className="px-4 py-2 border border-gray-800 rounded hover:bg-gray-100"
-      >
-        Log In
-      </button>
-      <button 
-        onClick={() => navigate('/onboarding')}
-        className="px-4 py-2 bg-black text-white rounded hover:bg-gray-800"
-      >
-        Sign Up
-      </button>
+      
+      {currentUser ? (
+  <button 
+    onClick={() => {
+      console.log("Jump back in clicked, navigating to /login");
+      // First navigate to login which handles the family selection properly
+      navigate('/login', { 
+        state: { 
+          directAccess: true, 
+          fromLanding: true
+        } 
+      });
+    }}
+    className="px-4 py-2 bg-black text-white rounded hover:bg-gray-800"
+  >
+    Jump Back In
+  </button>
+) : (
+  // existing login/signup buttons
+
+        <>
+          <button 
+            onClick={() => navigate('/login')}
+            className="px-4 py-2 border border-gray-800 rounded hover:bg-gray-100"
+          >
+            Log In
+          </button>
+          <button 
+            onClick={() => navigate('/onboarding')}
+            className="px-4 py-2 bg-black text-white rounded hover:bg-gray-800"
+          >
+            Sign Up
+          </button>
+        </>
+      )}
     </nav>
   </div>
 </header>

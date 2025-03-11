@@ -117,6 +117,39 @@ useEffect(() => {
   }
 }, []);
 
+
+// PRIORITY: Direct family access bypass
+useEffect(() => {
+  try {
+    const directAccess = localStorage.getItem('directFamilyAccess');
+    if (directAccess) {
+      const { familyId, familyName, timestamp } = JSON.parse(directAccess);
+      
+      // Check if this is recent (within last 30 seconds)
+      const now = new Date().getTime();
+      if (now - timestamp < 30000) {
+        console.log("DIRECT FAMILY ACCESS:", familyId, familyName);
+        
+        // Load this family immediately
+        loadFamilyData(familyId).then(() => {
+          console.log("DIRECT FAMILY LOADED SUCCESSFULLY");
+          // Clear the direct access
+          localStorage.removeItem('directFamilyAccess');
+        }).catch(err => {
+          console.error("DIRECT FAMILY LOAD ERROR:", err);
+          alert("Error loading family: " + err.message);
+        });
+      } else {
+        // Expired access attempt, clean up
+        localStorage.removeItem('directFamilyAccess');
+      }
+    }
+  } catch (e) {
+    console.error("Error in direct family access:", e);
+    localStorage.removeItem('directFamilyAccess');
+  }
+}, []);
+
 // Extract family ID from URL if present
 useEffect(() => {
   const params = new URLSearchParams(window.location.search);

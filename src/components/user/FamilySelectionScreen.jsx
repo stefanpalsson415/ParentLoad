@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 import { Camera, PlusCircle, CheckCircle, AlertCircle, Upload, Calendar, Mail, Lock, User, LogOut } from 'lucide-react';
 import { useAuth } from '../../contexts/AuthContext';
 import { useFamily } from '../../contexts/FamilyContext';
@@ -27,7 +27,31 @@ const FamilySelectionScreen = () => {
   const [isLoggingIn, setIsLoggingIn] = useState(false);
   const [loginError, setLoginError] = useState('');
   const [showEmptyState, setShowEmptyState] = useState(false);
+ 
   
+// Check for direct navigation state
+const location = useLocation();
+useEffect(() => {
+  if (location.state?.directAccess && location.state?.fromLanding) {
+    console.log("DIRECT ACCESS from landing page");
+    
+    // Only load if needed
+    if (!selectedUser || !familyMembers || familyMembers.length === 0) {
+      // Let's make sure we load the family data correctly
+      loadAllFamilies(currentUser.uid)
+        .then(families => {
+          if (families && families.length > 0) {
+            return loadFamilyData(families[0].familyId);
+          }
+        })
+        .then(() => {
+          console.log("Family loaded successfully for direct access");
+        })
+        .catch(error => console.error("Error loading family:", error));
+    }
+  }
+}, [location]);
+
   // Effect to update login form visibility based on auth state
   useEffect(() => {
     if (currentUser) {
@@ -75,10 +99,12 @@ useEffect(() => {
   }
   
   // Auto-redirect to onboarding if logged in with no families
-  if (currentUser && availableFamilies.length === 0) {
+  // but only if we're not in the process of logging in
+  if (currentUser && availableFamilies.length === 0 && !isLoggingIn) {
+    console.log("No families found, redirecting to onboarding");
     navigate('/onboarding');
   }
-}, [currentUser, familyMembers, availableFamilies, navigate]);
+}, [currentUser, familyMembers, availableFamilies, navigate, isLoggingIn]);
 
 
   // Get default profile image based on role
@@ -277,6 +303,9 @@ useEffect(() => {
     try {
       const user = await login(email, password);
       console.log("Login successful:", user);
+
+      await new Promise(resolve => setTimeout(resolve, 500));
+
       
       // Explicitly load all families
       const families = await loadAllFamilies(user.uid);
@@ -289,13 +318,13 @@ useEffect(() => {
     }
       
       // Stay on the family selection screen
-      setShowLoginForm(false);
-    } catch (error) {
-      console.error("Login error:", error);
-      setLoginError('Invalid email or password. Please try again.');
-    } finally {
-      setIsLoggingIn(false);
-    }
+          setShowLoginForm(false);
+  } catch (error) {
+    console.error("Login error:", error);
+    setLoginError('Invalid email or password. Please try again.');
+  } finally {
+    setIsLoggingIn(false);
+  }
   };
   
   const handleLogout = async () => {

@@ -2,6 +2,7 @@
 
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+import familyPhoto from '../../assets/family-photo.jpg'; // You'll need to add this image to your assets folder
 import { ArrowRight, ArrowLeft, CheckCircle, Star, Award, Brain, Heart, ChevronDown, ChevronUp, Book } from 'lucide-react';
 
 const OnboardingFlow = () => {
@@ -161,7 +162,7 @@ const OnboardingFlow = () => {
             <p className="text-lg mb-8">We're excited to help your family find better balance.</p>
             <div className="w-64 h-64 mx-auto mb-8 rounded-full bg-blue-100 flex items-center justify-center">
             <img 
-              src="/api/placeholder/200/200" 
+              src={familyPhoto} 
               alt="Family Balance Research" 
               className="w-48 h-48 object-cover rounded-full"
             />
@@ -205,7 +206,7 @@ const OnboardingFlow = () => {
             <input
               type="text"
               className="w-full p-3 border rounded mb-4"
-              placeholder="e.g., The Andersons"
+              placeholder="e.g., Anderson"
               value={familyData.familyName}
               onChange={e => updateFamily('familyName', e.target.value)}
             />

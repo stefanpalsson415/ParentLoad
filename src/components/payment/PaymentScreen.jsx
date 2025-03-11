@@ -122,16 +122,34 @@ const PaymentScreen = () => {
           </div>
           
           {couponApplied ? (
-            <div className="bg-green-100 p-4 rounded mb-4">
-              <p className="text-green-800">Coupon applied successfully! Enjoy Allie at no cost.</p>
-              <button
-                onClick={() => navigate('/dashboard')}
-                className="mt-4 w-full py-3 bg-blue-600 text-white rounded-md"
-              >
-                Continue to Dashboard
-              </button>
-            </div>
-          ) : (
+  <div className="bg-green-100 p-4 rounded mb-4">
+    <p className="text-green-800">Coupon applied successfully! Enjoy Allie at no cost.</p>
+    <button
+      onClick={() => {
+        if (pendingFamilyData) {
+          // Store a flag indicating payment is complete
+          localStorage.setItem('paymentCompleted', 'true');
+          
+          // Navigate to signup for final confirmation
+          navigate('/signup', { 
+            state: { 
+              fromPayment: true,
+              familyData: pendingFamilyData 
+            } 
+          });
+        } else {
+          console.error("No pending family data available");
+          setError("Missing family information. Please try again.");
+        }
+      }}
+      className="mt-4 w-full py-3 bg-blue-600 text-white rounded-md"
+    >
+      Continue to Confirmation
+    </button>
+  </div>
+) : (
+  // form code here
+
             <form onSubmit={handleSubmit}>
               <div className="mb-4">
                 <label className="block text-sm font-medium mb-2">Card Information</label>
