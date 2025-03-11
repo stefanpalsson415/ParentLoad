@@ -26,6 +26,7 @@ const FamilySelectionScreen = () => {
   const [password, setPassword] = useState('');
   const [isLoggingIn, setIsLoggingIn] = useState(false);
   const [loginError, setLoginError] = useState('');
+  const [showEmptyState, setShowEmptyState] = useState(false);
   
   // Effect to update login form visibility based on auth state
   useEffect(() => {
@@ -36,58 +37,14 @@ const FamilySelectionScreen = () => {
     }
   }, [currentUser]);
   
-  // Effect to redirect if logged in but no family members
+  // Effect to update empty state visibility based on whether we have family members
   useEffect(() => {
-    // Replace the code around line 343-354 with:
-// Replace the if (familyMembers.length === 0) block with:
-if (familyMembers.length === 0) {
-  console.log("No families found - showing empty state");
-  
-  // This component doesn't use any effects that need cleanup
-  return (
-    <div className="min-h-screen bg-white flex flex-col">
-      <div className="flex-1 flex flex-col items-center justify-center p-6">
-        <div className="w-full max-w-md">
-          <div className="text-center mb-8">
-            <h1 className="text-3xl font-bold text-black mb-2">Allie</h1>
-            <p className="text-gray-600">
-              Welcome to Allie, your family workload balancer
-            </p>
-          </div>
-          
-          <div className="bg-white rounded-xl shadow-lg p-6 mb-8">
-            <h2 className="text-xl font-semibold mb-4 text-center">No Families Found</h2>
-            <p className="text-center text-gray-600 mb-6">
-              It looks like you don't have any families set up yet. Would you like to create one?
-            </p>
-            
-            <button
-              onClick={() => navigate('/signup')}
-              className="w-full py-3 px-4 rounded-md font-medium text-white bg-black hover:bg-gray-800 flex items-center justify-center"
-            >
-              <PlusCircle size={16} className="mr-2" />
-              Create New Family
-            </button>
-            
-            <button
-              onClick={handleLogout}
-              className="w-full mt-4 py-3 px-4 rounded-md font-medium text-gray-700 border border-gray-300 hover:bg-gray-50 flex items-center justify-center"
-            >
-              <LogOut size={16} className="mr-2" />
-              Log Out
-            </button>
-          </div>
-        </div>
-      </div>
-      
-      <div className="p-4 text-center text-sm text-gray-500">
-        <p>Allie v1.0 - Balance family responsibilities together</p>
-      </div>
-    </div>
-  );
-
-}
-  }, [currentUser, familyMembers, navigate]);
+    if (currentUser && familyMembers.length === 0) {
+      setShowEmptyState(true);
+    } else {
+      setShowEmptyState(false);
+    }
+  }, [currentUser, familyMembers]);
   
   // Debug logging
   useEffect(() => {
@@ -396,12 +353,12 @@ if (familyMembers.length === 0) {
             
             {/* Create New Family Button */}
             <button
-  onClick={() => navigate('/onboarding')}
-  className="w-full py-3 px-4 rounded-md font-medium text-black border border-black hover:bg-gray-50 flex items-center justify-center"
->
-  <PlusCircle size={16} className="mr-2" />
-  Create New Family
-</button>
+              onClick={() => navigate('/onboarding')}
+              className="w-full py-3 px-4 rounded-md font-medium text-black border border-black hover:bg-gray-50 flex items-center justify-center"
+            >
+              <PlusCircle size={16} className="mr-2" />
+              Create New Family
+            </button>
           </div>
         </div>
         
@@ -413,21 +370,59 @@ if (familyMembers.length === 0) {
     );
   };
   
-  // Loading screen for redirect
-  if (currentUser && familyMembers.length === 0) {
+  // Empty state UI for when there are no families
+  const renderEmptyState = () => {
     return (
-      <div className="min-h-screen bg-white flex items-center justify-center">
-        <div className="text-center">
-          <div className="w-8 h-8 border-4 border-black border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
-          <p className="text-gray-700">Setting up your family...</p>
+      <div className="min-h-screen bg-white flex flex-col">
+        <div className="flex-1 flex flex-col items-center justify-center p-6">
+          <div className="w-full max-w-md">
+            <div className="text-center mb-8">
+              <h1 className="text-3xl font-bold text-black mb-2">Allie</h1>
+              <p className="text-gray-600">
+                Welcome to Allie, your family workload balancer
+              </p>
+            </div>
+            
+            <div className="bg-white rounded-xl shadow-lg p-6 mb-8">
+              <h2 className="text-xl font-semibold mb-4 text-center">No Families Found</h2>
+              <p className="text-center text-gray-600 mb-6">
+                It looks like you don't have any families set up yet. Would you like to create one?
+              </p>
+              
+              <button
+                onClick={() => navigate('/onboarding')}
+                className="w-full py-3 px-4 rounded-md font-medium text-white bg-black hover:bg-gray-800 flex items-center justify-center"
+              >
+                <PlusCircle size={16} className="mr-2" />
+                Create New Family
+              </button>
+              
+              <button
+                onClick={handleLogout}
+                className="w-full mt-4 py-3 px-4 rounded-md font-medium text-gray-700 border border-gray-300 hover:bg-gray-50 flex items-center justify-center"
+              >
+                <LogOut size={16} className="mr-2" />
+                Log Out
+              </button>
+            </div>
+          </div>
+        </div>
+        
+        <div className="p-4 text-center text-sm text-gray-500">
+          <p>Allie v1.0 - Balance family responsibilities together</p>
         </div>
       </div>
     );
-  }
+  };
   
   // If showing login form, render it
   if (showLoginForm) {
     return renderLoginForm();
+  }
+  
+  // If there are no family members, show empty state
+  if (showEmptyState) {
+    return renderEmptyState();
   }
   
   // Normal profile selection view
@@ -515,7 +510,7 @@ if (familyMembers.length === 0) {
             </button>
               
             <button
-              onClick={() => navigate('/signup')}
+              onClick={() => navigate('/onboarding')}
               className="w-full py-3 px-4 rounded-md font-medium text-black border border-black hover:bg-gray-50 flex items-center justify-center"
             >
               <PlusCircle size={16} className="mr-2" />
