@@ -21,12 +21,7 @@ const AboutUsPage = () => {
         <div className="max-w-6xl mx-auto flex justify-between items-center">
           <h1 className="text-3xl font-light">Allie</h1>
           <nav className="hidden md:flex space-x-8">
-            <button 
-              onClick={() => navigate('/product-overview')}
-              className="text-gray-800 hover:text-black font-light"
-            >
-              Product Overview
-            </button>
+            
             <button 
               onClick={() => navigate('/how-it-works')}
               className="text-gray-800 hover:text-black font-light"
@@ -45,18 +40,29 @@ const AboutUsPage = () => {
             >
               Blog
             </button>
-            <button 
-              onClick={() => navigate('/login')}
-              className="px-4 py-2 border border-gray-800 rounded-md hover:bg-gray-50 font-light"
-            >
-              Log In
-            </button>
-            <button 
-              onClick={() => navigate('/signup')}
-              className="px-4 py-2 bg-black text-white rounded-md hover:bg-gray-800 font-light"
-            >
-              Sign Up
-            </button>
+            {currentUser ? (
+              <button 
+                onClick={() => navigate('/login', { state: { directAccess: true, fromLanding: true } })}
+                className="px-4 py-2 bg-black text-white rounded hover:bg-gray-800"
+              >
+                Jump Back In
+              </button>
+            ) : (
+              <>
+                <button 
+                  onClick={() => navigate('/login')}
+                  className="px-4 py-2 border border-gray-800 rounded hover:bg-gray-100"
+                >
+                  Log In
+                </button>
+                <button 
+                  onClick={() => navigate('/onboarding')}
+                  className="px-4 py-2 bg-black text-white rounded hover:bg-gray-800"
+                >
+                  Sign Up
+                </button>
+              </>
+            )}
           </nav>
         </div>
       </header>
@@ -428,9 +434,7 @@ const AboutUsPage = () => {
             <div>
               <h3 className="text-gray-800 font-medium mb-4">Product</h3>
               <ul className="space-y-2">
-                <li>
-                  <button onClick={() => navigate('/product-overview')} className="text-gray-600 hover:text-gray-900 font-light">Product Overview</button>
-                </li>
+                
                 <li>
                   <button onClick={() => navigate('/how-it-works')} className="text-gray-600 hover:text-gray-900 font-light">How It Works</button>
                 </li>
@@ -449,17 +453,7 @@ const AboutUsPage = () => {
               </ul>
             </div>
             
-            <div>
-              <h3 className="text-gray-800 font-medium mb-4">Account</h3>
-              <ul className="space-y-2">
-                <li>
-                  <button onClick={() => navigate('/login')} className="text-gray-600 hover:text-gray-900 font-light">Log In</button>
-                </li>
-                <li>
-                  <button onClick={() => navigate('/signup')} className="text-gray-600 hover:text-gray-900 font-light">Sign Up</button>
-                </li>
-              </ul>
-            </div>
+            
           </div>
           <div className="mt-8 pt-8 border-t text-center text-gray-500 text-sm">
             <p>© 2025 Allie. All rights reserved.</p>

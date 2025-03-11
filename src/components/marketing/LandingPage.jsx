@@ -734,17 +734,7 @@ const LandingPage = () => {
               </ul>
             </div>
             
-            <div>
-              <h3 className="text-gray-800 font-medium mb-4">Account</h3>
-              <ul className="space-y-2">
-                <li>
-                  <button onClick={() => navigate('/login')} className="text-gray-600 hover:text-gray-900 font-light">Log In</button>
-                </li>
-                <li>
-                  <button onClick={() => navigate('/onboarding')} className="text-gray-600 hover:text-gray-900 font-light">Sign Up</button>
-                </li>
-              </ul>
-            </div>
+            
           </div>
           <div className="mt-8 pt-8 border-t text-center text-gray-500 text-sm">
             <p>© 2025 Allie. All rights reserved.</p>
