@@ -21,6 +21,11 @@ const OnboardingFlow = () => {
     preferences: {
       reminderFrequency: 'weekly',
       meetingDay: 'Sunday'
+    },
+    priorities: {
+      highestPriority: '',
+      secondaryPriority: '',
+      tertiaryPriority: ''
     }
   });
   const navigate = useNavigate();
@@ -76,6 +81,77 @@ const OnboardingFlow = () => {
     updateFamily('preferences', updatedPreferences);
   };
   
+  // Move to next step
+  const nextStep = () => {
+    // Validation for each step
+    switch(step) {
+      case 3: // Family name
+        if (!familyData.familyName.trim()) {
+          alert('Please enter your family name');
+          return;
+        }
+        break;
+      case 5: // Parent information
+        for (const parent of familyData.parents) {
+          if (!parent.name || !parent.email || !parent.password) {
+            alert('Please complete all parent information');
+            return;
+          }
+          if (!parent.email.includes('@')) {
+            alert('Please enter a valid email address');
+            return;
+          }
+          if (parent.password.length < 6) {
+            alert('Password must be at least 6 characters');
+            return;
+          }
+        }
+        break;
+      case 7: // Family priorities (for weighting system)
+        if (!familyData.priorities?.highestPriority) {
+          alert('Please select your highest priority concern');
+          return;
+        }
+        break;
+      case 8: // Children information
+        if (familyData.children.length > 0) {
+          for (const child of familyData.children) {
+            if (!child.name) {
+              alert('Please enter a name for each child');
+              return;
+            }
+          }
+        }
+        break;
+      case 10: // Current challenge
+        if (!familyData.mainChallenge) {
+          alert('Please select your current family challenge');
+          return;
+        }
+        break;
+      case 12: // App preferences
+        if (!familyData.preferences.reminderFrequency || !familyData.preferences.meetingDay) {
+          alert('Please complete your app preferences');
+          return;
+        }
+        break;
+      case 15: // Family goals
+        if (!familyData.goals || familyData.goals.length === 0) {
+          alert('Please select at least one family goal');
+          return;
+        }
+        break;
+    }
+    
+    setStep(step + 1);
+  };
+  
+  // Go back to previous step
+  const prevStep = () => {
+    setStep(step - 1);
+  };
+  
+  // Render step content
   const renderStep = () => {
     switch(step) {
       case 1:
@@ -85,10 +161,10 @@ const OnboardingFlow = () => {
             <p className="text-lg mb-8">We're excited to help your family find better balance.</p>
             <div className="w-64 h-64 mx-auto mb-8 rounded-full bg-blue-100 flex items-center justify-center">
             <img 
-      src="/api/placeholder/200/200" 
-      alt="Family Balance Research" 
-      className="w-48 h-48 object-cover rounded-full"
-    />
+              src="/api/placeholder/200/200" 
+              alt="Family Balance Research" 
+              className="w-48 h-48 object-cover rounded-full"
+            />
             </div>
             <p className="text-gray-600 mb-8">
               In the next few minutes, we'll help you set up your family profile and get started on your balance journey.
@@ -257,36 +333,81 @@ const OnboardingFlow = () => {
       case 7:
         return (
           <div>
-            <h2 className="text-3xl font-light mb-6">How Imbalance Affects Families</h2>
-            <div className="bg-amber-50 p-6 rounded-lg mb-6">
-              <h3 className="font-medium mb-3">The Impact of Unbalanced Responsibilities</h3>
-              <div className="space-y-4">
-                <div className="flex items-start">
-                  <Heart className="text-red-500 mr-3 flex-shrink-0 mt-1" size={20} />
-                  <div>
-                    <p className="font-medium">Relationship Strain</p>
-                    <p className="text-sm text-gray-700">When one parent carries most of the load, resentment can build, leading to relationship tension.</p>
-                  </div>
-                </div>
-                <div className="flex items-start">
-                  <Award className="text-amber-500 mr-3 flex-shrink-0 mt-1" size={20} />
-                  <div>
-                    <p className="font-medium">Reduced Personal Fulfillment</p>
-                    <p className="text-sm text-gray-700">Imbalance can lead to career sacrifices and limited personal time for the overloaded parent.</p>
-                  </div>
-                </div>
-                <div className="flex items-start">
-                  <Star className="text-blue-500 mr-3 flex-shrink-0 mt-1" size={20} />
-                  <div>
-                    <p className="font-medium">Child Development</p>
-                    <p className="text-sm text-gray-700">Children learn gender roles by observing parents. Balanced homes teach equality.</p>
-                  </div>
-                </div>
+            <h2 className="text-3xl font-light mb-6">Your Family's Priorities</h2>
+            <p className="text-gray-600 mb-6">
+              To personalize your experience, tell us which areas are most important for your family to balance.
+            </p>
+                
+            <div className="space-y-4">
+              <div>
+                <label className="block text-gray-700 mb-2">Highest priority concern:</label>
+                <select 
+                  className="w-full p-2 border rounded"
+                  value={familyData.priorities?.highestPriority || ''}
+                  onChange={e => {
+                    const updatedPriorities = {
+                      ...familyData.priorities,
+                      highestPriority: e.target.value
+                    };
+                    updateFamily('priorities', updatedPriorities);
+                  }}
+                >
+                  <option value="">Select a category</option>
+                  <option value="Visible Household Tasks">Visible Household Tasks</option>
+                  <option value="Invisible Household Tasks">Invisible Household Tasks</option>
+                  <option value="Visible Parental Tasks">Visible Parental Tasks</option>
+                  <option value="Invisible Parental Tasks">Invisible Parental Tasks</option>
+                </select>
+              </div>
+                  
+              <div>
+                <label className="block text-gray-700 mb-2">Secondary priority concern:</label>
+                <select 
+                  className="w-full p-2 border rounded"
+                  value={familyData.priorities?.secondaryPriority || ''}
+                  onChange={e => {
+                    const updatedPriorities = {
+                      ...familyData.priorities,
+                      secondaryPriority: e.target.value
+                    };
+                    updateFamily('priorities', updatedPriorities);
+                  }}
+                >
+                  <option value="">Select a category</option>
+                  <option value="Visible Household Tasks">Visible Household Tasks</option>
+                  <option value="Invisible Household Tasks">Invisible Household Tasks</option>
+                  <option value="Visible Parental Tasks">Visible Parental Tasks</option>
+                  <option value="Invisible Parental Tasks">Invisible Parental Tasks</option>
+                </select>
+              </div>
+                  
+              <div>
+                <label className="block text-gray-700 mb-2">Tertiary priority concern:</label>
+                <select 
+                  className="w-full p-2 border rounded"
+                  value={familyData.priorities?.tertiaryPriority || ''}
+                  onChange={e => {
+                    const updatedPriorities = {
+                      ...familyData.priorities,
+                      tertiaryPriority: e.target.value
+                    };
+                    updateFamily('priorities', updatedPriorities);
+                  }}
+                >
+                  <option value="">Select a category</option>
+                  <option value="Visible Household Tasks">Visible Household Tasks</option>
+                  <option value="Invisible Household Tasks">Invisible Household Tasks</option>
+                  <option value="Visible Parental Tasks">Visible Parental Tasks</option>
+                  <option value="Invisible Parental Tasks">Invisible Parental Tasks</option>
+                </select>
+              </div>
+                  
+              <div className="mt-4 p-4 bg-blue-50 rounded-lg">
+                <p className="text-sm text-blue-800">
+                  <strong>Why this matters:</strong> We'll use these priorities to personalize your experience. Tasks in your priority areas will be weighted more heavily in your family balance calculations.
+                </p>
               </div>
             </div>
-            <p className="text-gray-600">
-              Allie helps identify imbalances and create practical paths to improvement.
-            </p>
           </div>
         );
         
@@ -1208,7 +1329,17 @@ const OnboardingFlow = () => {
                 <h3 className="font-bold text-xl mb-2">Join Allie Premium</h3>
                 <p className="text-gray-600 mb-4">Get full access to all features and start your family balance journey</p>
                 <button 
-                  onClick={() => navigate('/payment')}
+                  onClick={() => {
+                    // Store family data in localStorage
+                    localStorage.setItem('pendingFamilyData', JSON.stringify(familyData));
+                    // Navigate to payment
+                    navigate('/payment', { 
+                      state: { 
+                        fromOnboarding: true,
+                        familyData: familyData 
+                      } 
+                    });
+                  }}
                   className="px-6 py-3 bg-blue-600 text-white rounded-md w-full"
                 >
                   Subscribe Now
@@ -1219,7 +1350,17 @@ const OnboardingFlow = () => {
                 <h3 className="font-bold text-xl mb-2">Try Our Mini Assessment</h3>
                 <p className="text-gray-600 mb-4">Take a quick 20-question survey to see if your family has balance issues</p>
                 <button 
-                  onClick={() => navigate('/mini-survey')}
+                  onClick={() => {
+                    // Store family data in localStorage
+                    localStorage.setItem('pendingFamilyData', JSON.stringify(familyData));
+                    // Navigate to mini survey
+                    navigate('/mini-survey', { 
+                      state: { 
+                        fromOnboarding: true,
+                        familyData: familyData 
+                      } 
+                    });
+                  }}
                   className="px-6 py-3 bg-purple-600 text-white rounded-md w-full"
                 >
                   Start Mini Survey
@@ -1254,7 +1395,7 @@ const OnboardingFlow = () => {
           
           <div className="flex justify-between mt-8">
             <button
-              onClick={() => step > 1 && setStep(step - 1)}
+              onClick={() => step > 1 && prevStep()}
               className={`px-4 py-2 flex items-center ${step === 1 ? 'invisible' : 'text-gray-600 hover:text-gray-800'}`}
             >
               <ArrowLeft size={16} className="mr-1" />
@@ -1263,7 +1404,7 @@ const OnboardingFlow = () => {
             
             {step < totalSteps ? (
               <button
-                onClick={() => setStep(step + 1)}
+                onClick={() => nextStep()}
                 className="px-4 py-2 bg-blue-600 text-white rounded flex items-center hover:bg-blue-700"
               >
                 Continue
