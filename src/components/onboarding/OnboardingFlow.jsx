@@ -1,9 +1,13 @@
 // src/components/onboarding/OnboardingFlow.jsx
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import familyPhoto from '../../assets/family-photo.jpg'; // You'll need to add this image to your assets folder
-import { ArrowRight, ArrowLeft, CheckCircle, Star, Award, Brain, Heart, ChevronDown, ChevronUp, Book } from 'lucide-react';
+import familyPhoto from '../../assets/family-photo.jpg';
+import { 
+  ArrowRight, ArrowLeft, CheckCircle, Star, Award, Brain, 
+  Heart, ChevronDown, ChevronUp, Book, BarChart, Scale, 
+  Clock, Sliders, AlertTriangle
+} from 'lucide-react';
 
 const OnboardingFlow = () => {
   const [step, setStep] = useState(1);
@@ -31,7 +35,7 @@ const OnboardingFlow = () => {
   });
   const navigate = useNavigate();
   
-  const totalSteps = 20;
+  const totalSteps = 20; // Keeping total steps the same, even with reordering
   
   // Handle data updates
   const updateFamily = (key, value) => {
@@ -108,13 +112,27 @@ const OnboardingFlow = () => {
           }
         }
         break;
-      case 7: // Family priorities (for weighting system)
+      case 9: // Family priorities (for weighting system) - MOVED from 7 to 9
         if (!familyData.priorities?.highestPriority) {
           alert('Please select your highest priority concern');
           return;
         }
+        
+        // Validation to ensure no duplicate selections
+        if (familyData.priorities.highestPriority && 
+            (familyData.priorities.highestPriority === familyData.priorities.secondaryPriority ||
+             familyData.priorities.highestPriority === familyData.priorities.tertiaryPriority)) {
+          alert('Please select different categories for each priority level');
+          return;
+        }
+        
+        if (familyData.priorities.secondaryPriority && 
+            familyData.priorities.secondaryPriority === familyData.priorities.tertiaryPriority) {
+          alert('Please select different categories for each priority level');
+          return;
+        }
         break;
-      case 8: // Children information
+      case 7: // Children information - MOVED from 8 to 7
         if (familyData.children.length > 0) {
           for (const child of familyData.children) {
             if (!child.name) {
@@ -124,13 +142,13 @@ const OnboardingFlow = () => {
           }
         }
         break;
-      case 10: // Current challenge
+      case 12: // Current challenge
         if (!familyData.mainChallenge) {
           alert('Please select your current family challenge');
           return;
         }
         break;
-      case 12: // App preferences
+      case 13: // App preferences
         if (!familyData.preferences.reminderFrequency || !familyData.preferences.meetingDay) {
           alert('Please complete your app preferences');
           return;
@@ -152,6 +170,20 @@ const OnboardingFlow = () => {
     setStep(step - 1);
   };
   
+  // Function to select a subscription plan
+  const selectPlan = (plan) => {
+    updateFamily('plan', plan);
+    
+    // Store data and navigate to payment
+    localStorage.setItem('pendingFamilyData', JSON.stringify(familyData));
+    navigate('/payment', { 
+      state: { 
+        fromOnboarding: true,
+        familyData: familyData 
+      } 
+    });
+  };
+  
   // Render step content
   const renderStep = () => {
     switch(step) {
@@ -161,11 +193,11 @@ const OnboardingFlow = () => {
             <h2 className="text-3xl font-light mb-6">Welcome to Allie</h2>
             <p className="text-lg mb-8">We're excited to help your family find better balance.</p>
             <div className="w-64 h-64 mx-auto mb-8 rounded-full bg-blue-100 flex items-center justify-center">
-            <img 
-              src={familyPhoto} 
-              alt="Family Balance Research" 
-              className="w-48 h-48 object-cover rounded-full"
-            />
+              <img 
+                src={familyPhoto} 
+                alt="Family Balance Research" 
+                className="w-48 h-48 object-cover rounded-full"
+              />
             </div>
             <p className="text-gray-600 mb-8">
               In the next few minutes, we'll help you set up your family profile and get started on your balance journey.
@@ -289,6 +321,7 @@ const OnboardingFlow = () => {
         );
         
       case 6:
+        // Family Communication Style - with added AI engine explanation
         return (
           <div>
             <h2 className="text-3xl font-light mb-6">Family Communication Style</h2>
@@ -327,92 +360,28 @@ const OnboardingFlow = () => {
                   ))}
                 </div>
               </div>
+              
+              {/* New AI engine explanation */}
+              <div className="mt-4 p-4 bg-purple-50 rounded-lg border border-purple-200">
+                <div className="flex items-start">
+                  <Brain size={20} className="text-purple-600 mt-1 mr-2 flex-shrink-0" />
+                  <div>
+                    <h4 className="font-medium text-purple-800">How Allie Uses This Information</h4>
+                    <p className="text-sm text-purple-700 mt-1">
+                      Our AI engine uses your communication style to tailor how it presents recommendations and tasks. 
+                      Families with reserved styles receive more detailed guidance, while those with open styles get more 
+                      focused conversation prompts. This helps create meaningful change in a way that works for your 
+                      specific family dynamic.
+                    </p>
+                  </div>
+                </div>
+              </div>
             </div>
           </div>
         );
-        
+
       case 7:
-        return (
-          <div>
-            <h2 className="text-3xl font-light mb-6">Your Family's Priorities</h2>
-            <p className="text-gray-600 mb-6">
-              To personalize your experience, tell us which areas are most important for your family to balance.
-            </p>
-                
-            <div className="space-y-4">
-              <div>
-                <label className="block text-gray-700 mb-2">Highest priority concern:</label>
-                <select 
-                  className="w-full p-2 border rounded"
-                  value={familyData.priorities?.highestPriority || ''}
-                  onChange={e => {
-                    const updatedPriorities = {
-                      ...familyData.priorities,
-                      highestPriority: e.target.value
-                    };
-                    updateFamily('priorities', updatedPriorities);
-                  }}
-                >
-                  <option value="">Select a category</option>
-                  <option value="Visible Household Tasks">Visible Household Tasks</option>
-                  <option value="Invisible Household Tasks">Invisible Household Tasks</option>
-                  <option value="Visible Parental Tasks">Visible Parental Tasks</option>
-                  <option value="Invisible Parental Tasks">Invisible Parental Tasks</option>
-                </select>
-              </div>
-                  
-              <div>
-                <label className="block text-gray-700 mb-2">Secondary priority concern:</label>
-                <select 
-                  className="w-full p-2 border rounded"
-                  value={familyData.priorities?.secondaryPriority || ''}
-                  onChange={e => {
-                    const updatedPriorities = {
-                      ...familyData.priorities,
-                      secondaryPriority: e.target.value
-                    };
-                    updateFamily('priorities', updatedPriorities);
-                  }}
-                >
-                  <option value="">Select a category</option>
-                  <option value="Visible Household Tasks">Visible Household Tasks</option>
-                  <option value="Invisible Household Tasks">Invisible Household Tasks</option>
-                  <option value="Visible Parental Tasks">Visible Parental Tasks</option>
-                  <option value="Invisible Parental Tasks">Invisible Parental Tasks</option>
-                </select>
-              </div>
-                  
-              <div>
-                <label className="block text-gray-700 mb-2">Tertiary priority concern:</label>
-                <select 
-                  className="w-full p-2 border rounded"
-                  value={familyData.priorities?.tertiaryPriority || ''}
-                  onChange={e => {
-                    const updatedPriorities = {
-                      ...familyData.priorities,
-                      tertiaryPriority: e.target.value
-                    };
-                    updateFamily('priorities', updatedPriorities);
-                  }}
-                >
-                  <option value="">Select a category</option>
-                  <option value="Visible Household Tasks">Visible Household Tasks</option>
-                  <option value="Invisible Household Tasks">Invisible Household Tasks</option>
-                  <option value="Visible Parental Tasks">Visible Parental Tasks</option>
-                  <option value="Invisible Parental Tasks">Invisible Parental Tasks</option>
-                </select>
-              </div>
-                  
-              <div className="mt-4 p-4 bg-blue-50 rounded-lg">
-                <p className="text-sm text-blue-800">
-                  <strong>Why this matters:</strong> We'll use these priorities to personalize your experience. Tasks in your priority areas will be weighted more heavily in your family balance calculations.
-                </p>
-              </div>
-            </div>
-          </div>
-        );
-        
-      case 8:
+        // Your Children - moved from position 8 to 7
         return (
           <div>
             <h2 className="text-3xl font-light mb-6">Your Children</h2>
@@ -464,14 +433,15 @@ const OnboardingFlow = () => {
             
             <button
               onClick={addChild}
-              className="w-full py-2 border border-blue-500 text-blue-600 rounded hover:bg-blue-50 mt-2"
+              className="w-full py-2 border border-black text-black rounded hover:bg-gray-50 mt-2"
             >
               Add Another Child
             </button>
           </div>
         );
         
-      case 9:
+      case 8:
+        // The Four Categories - moved from position 9 to 8 (before priorities)
         return (
           <div>
             <h2 className="text-3xl font-light mb-6">The Four Categories of Family Tasks</h2>
@@ -511,7 +481,243 @@ const OnboardingFlow = () => {
           </div>
         );
         
+      case 9:
+        // Your Family's Priorities - moved from position 7 to 9 (after categories explanation)
+        return (
+          <div>
+            <h2 className="text-3xl font-light mb-6">Your Family's Priorities</h2>
+            <p className="text-gray-600 mb-6">
+              To personalize your experience, tell us which areas are most important for your family to balance.
+            </p>
+                
+            <div className="space-y-4">
+              <div>
+                <label className="block text-gray-700 mb-2">Highest priority concern:</label>
+                <select 
+                  className="w-full p-2 border rounded"
+                  value={familyData.priorities?.highestPriority || ''}
+                  onChange={e => {
+                    const updatedPriorities = {
+                      ...familyData.priorities,
+                      highestPriority: e.target.value
+                    };
+                    updateFamily('priorities', updatedPriorities);
+                  }}
+                >
+                  <option value="">Select a category</option>
+                  <option value="Visible Household Tasks">Visible Household Tasks</option>
+                  <option value="Invisible Household Tasks">Invisible Household Tasks</option>
+                  <option value="Visible Parental Tasks">Visible Parental Tasks</option>
+                  <option value="Invisible Parental Tasks">Invisible Parental Tasks</option>
+                </select>
+                <p className="text-xs text-gray-500 mt-1">
+                  Tasks related to cooking, cleaning, laundry, and other observable household work
+                </p>
+              </div>
+                  
+              <div>
+                <label className="block text-gray-700 mb-2">Secondary priority concern:</label>
+                <select 
+                  className="w-full p-2 border rounded"
+                  value={familyData.priorities?.secondaryPriority || ''}
+                  onChange={e => {
+                    // Prevent duplicate selection
+                    if (e.target.value === familyData.priorities?.highestPriority) {
+                      alert("This category is already your highest priority. Please select a different category.");
+                      return;
+                    }
+                    
+                    const updatedPriorities = {
+                      ...familyData.priorities,
+                      secondaryPriority: e.target.value
+                    };
+                    updateFamily('priorities', updatedPriorities);
+                  }}
+                >
+                  <option value="">Select a category</option>
+                  <option value="Visible Household Tasks">Visible Household Tasks</option>
+                  <option value="Invisible Household Tasks">Invisible Household Tasks</option>
+                  <option value="Visible Parental Tasks">Visible Parental Tasks</option>
+                  <option value="Invisible Parental Tasks">Invisible Parental Tasks</option>
+                </select>
+                <p className="text-xs text-gray-500 mt-1">
+                  Tasks related to planning, scheduling, and mental/cognitive household management
+                </p>
+              </div>
+                  
+              <div>
+                <label className="block text-gray-700 mb-2">Tertiary priority concern:</label>
+                <select 
+                  className="w-full p-2 border rounded"
+                  value={familyData.priorities?.tertiaryPriority || ''}
+                  onChange={e => {
+                    // Prevent duplicate selection
+                    if (e.target.value === familyData.priorities?.highestPriority || 
+                        e.target.value === familyData.priorities?.secondaryPriority) {
+                      alert("This category is already selected as a priority. Please select a different category.");
+                      return;
+                    }
+                    
+                    const updatedPriorities = {
+                      ...familyData.priorities,
+                      tertiaryPriority: e.target.value
+                    };
+                    updateFamily('priorities', updatedPriorities);
+                  }}
+                >
+                  <option value="">Select a category</option>
+                  <option value="Visible Household Tasks">Visible Household Tasks</option>
+                  <option value="Invisible Household Tasks">Invisible Household Tasks</option>
+                  <option value="Visible Parental Tasks">Visible Parental Tasks</option>
+                  <option value="Invisible Parental Tasks">Invisible Parental Tasks</option>
+                </select>
+                <p className="text-xs text-gray-500 mt-1">
+                  Tasks related to childcare, homework help, and other visible child-focused work
+                </p>
+              </div>
+                  
+              <div className="mt-4 p-4 bg-blue-50 rounded-lg">
+                <p className="text-sm text-blue-800">
+                  <strong>Why this matters:</strong> We'll use these priorities to personalize your experience. Tasks in your priority areas will be weighted more heavily in your family balance calculations, helping identify the most important areas for improvement.
+                </p>
+              </div>
+              
+              {/* New AI engine explanation */}
+              <div className="mt-4 p-4 bg-purple-50 rounded-lg border border-purple-200">
+                <div className="flex items-start">
+                  <Sliders size={20} className="text-purple-600 mt-1 mr-2 flex-shrink-0" />
+                  <div>
+                    <h4 className="font-medium text-purple-800">How Allie Uses This Information</h4>
+                    <p className="text-sm text-purple-700 mt-1">
+                      Your priorities directly influence our AI weighting system. High-priority tasks receive a multiplier of 1.5x in our calculations, secondary priorities get a 1.3x multiplier, and tertiary priorities get a 1.1x multiplier. This ensures our recommendations focus on the areas that matter most to your family.
+                    </p>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        );
+
       case 10:
+        // NEW SLIDE: Task Weighting System Introduction
+        return (
+          <div>
+            <h2 className="text-3xl font-light mb-6">Allie's Intelligent Task Weighting</h2>
+            <p className="text-gray-600 mb-6">
+              Not all tasks are created equal. Allie uses a sophisticated weighting system to accurately measure workload balance.
+            </p>
+            
+            <div className="bg-white border rounded-lg p-6 mb-6">
+              <div className="flex items-start mb-4">
+                <BarChart size={24} className="text-blue-600 mr-3 flex-shrink-0 mt-1" />
+                <div>
+                  <h3 className="font-semibold text-lg">Beyond Simple Task Counting</h3>
+                  <p className="text-gray-700 mt-2">
+                    Traditional approaches simply count who does which tasks, but this misses crucial factors that contribute to workload. Allie's multi-factor weighting system accounts for:
+                  </p>
+                </div>
+              </div>
+              
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4">
+                <div className="flex items-start">
+                  <Clock size={20} className="text-indigo-600 mr-2 flex-shrink-0 mt-1" />
+                  <div>
+                    <h4 className="font-medium">Time Investment</h4>
+                    <p className="text-sm text-gray-600">Tasks rated from 1-5 based on time required</p>
+                  </div>
+                </div>
+                
+                <div className="flex items-start">
+                  <AlertTriangle size={20} className="text-amber-600 mr-2 flex-shrink-0 mt-1" />
+                  <div>
+                    <h4 className="font-medium">Task Frequency</h4>
+                    <p className="text-sm text-gray-600">Daily tasks weigh more than monthly ones</p>
+                  </div>
+                </div>
+                
+                <div className="flex items-start">
+                  <Heart size={20} className="text-red-600 mr-2 flex-shrink-0 mt-1" />
+                  <div>
+                    <h4 className="font-medium">Emotional Labor</h4>
+                    <p className="text-sm text-gray-600">Accounts for mental/emotional burden</p>
+                  </div>
+                </div>
+                
+                <div className="flex items-start">
+                  <Brain size={20} className="text-purple-600 mr-2 flex-shrink-0 mt-1" />
+                  <div>
+                    <h4 className="font-medium">Cognitive Load</h4>
+                    <p className="text-sm text-gray-600">Measures mental planning and tracking</p>
+                  </div>
+                </div>
+              </div>
+            </div>
+            
+            <p className="text-sm text-gray-600 italic text-center">
+              "The true imbalance isn't just in who does more tasks, but in who carries more of the mental and emotional load."
+            </p>
+          </div>
+        );
+      
+      case 11:
+        // NEW SLIDE: Task Weighting System Details
+        return (
+          <div>
+            <h2 className="text-3xl font-light mb-6">How Task Weighting Works</h2>
+            <p className="text-gray-600 mb-6">
+              Allie's proprietary algorithm assigns weights to each task based on multiple factors.
+            </p>
+            
+            <div className="bg-white rounded-lg p-6 shadow-sm border mb-6">
+              <h3 className="font-medium mb-4 text-center">Sample Task Weight Calculation</h3>
+              
+              <div className="space-y-3">
+                <div className="flex items-center">
+                  <div className="w-32 font-medium text-right pr-3">Task:</div>
+                  <div className="flex-1 bg-gray-100 py-1 px-2 rounded">Meal planning for the week</div>
+                </div>
+                
+                <div className="flex items-center">
+                  <div className="w-32 font-medium text-right pr-3">Base Weight:</div>
+                  <div className="flex-1 bg-blue-50 py-1 px-2 rounded text-blue-800">4 (Substantial time/cognitive organization)</div>
+                </div>
+                
+                <div className="flex items-center">
+                  <div className="w-32 font-medium text-right pr-3">Multipliers:</div>
+                  <div className="flex-1">
+                    <div className="grid grid-cols-2 gap-2">
+                      <div className="bg-purple-50 py-1 px-2 rounded text-purple-800">Frequency: 1.2x (Weekly)</div>
+                      <div className="bg-purple-50 py-1 px-2 rounded text-purple-800">Invisibility: 1.35x (Mostly invisible)</div>
+                      <div className="bg-purple-50 py-1 px-2 rounded text-purple-800">Emotional Labor: 1.2x (Moderate)</div>
+                      <div className="bg-purple-50 py-1 px-2 rounded text-purple-800">Child Impact: 1.15x (Moderate)</div>
+                    </div>
+                  </div>
+                </div>
+                
+                <div className="flex items-center">
+                  <div className="w-32 font-medium text-right pr-3">Your Priority:</div>
+                  <div className="flex-1 bg-green-50 py-1 px-2 rounded text-green-800">1.3x (Secondary priority)</div>
+                </div>
+                
+                <div className="border-t pt-3 mt-3">
+                  <div className="flex items-center">
+                    <div className="w-32 font-medium text-right pr-3">Final Weight:</div>
+                    <div className="flex-1 bg-black text-white py-1 px-2 rounded">13.42 (compared to 1.5 for taking out trash)</div>
+                  </div>
+                </div>
+              </div>
+            </div>
+            
+            <div className="bg-blue-50 p-4 rounded-lg">
+              <p className="text-sm text-blue-800">
+                Our weighting system is based on research in family dynamics, psychology, and gender studies. By accurately measuring the true effort of each task, Allie provides a much more accurate picture of workload distribution than simple task counting.
+              </p>
+            </div>
+          </div>
+        );
+
+      case 12:
+        // What's Your Current Challenge? - with added AI engine explanation
         return (
           <div>
             <h2 className="text-3xl font-light mb-6">What's Your Current Challenge?</h2>
@@ -583,11 +789,24 @@ const OnboardingFlow = () => {
                   </p>
                 </div>
               </label>
+              
+              {/* New AI engine explanation */}
+              <div className="mt-4 p-4 bg-purple-50 rounded-lg border border-purple-200">
+                <div className="flex items-start">
+                  <Brain size={20} className="text-purple-600 mt-1 mr-2 flex-shrink-0" />
+                  <div>
+                    <h4 className="font-medium text-purple-800">How Allie Uses This Information</h4>
+                    <p className="text-sm text-purple-700 mt-1">
+                      Your primary challenge shapes Allie's AI recommendations. For awareness gaps, we focus on providing clear data visualization. For implementation struggles, we prioritize specific, actionable tasks. For sustainability issues, we emphasize habit-building features. And for communication barriers, we provide structured conversation guides customized to your family's style.
+                    </p>
+                  </div>
+                </div>
+              </div>
             </div>
           </div>
         );
         
-      case 11:
+      case 13:
         return (
           <div>
             <h2 className="text-3xl font-light mb-6">The Allie Approach</h2>
@@ -647,7 +866,7 @@ const OnboardingFlow = () => {
           </div>
         );
         
-      case 12:
+      case 14:
         return (
           <div>
             <h2 className="text-3xl font-light mb-6">App Preferences</h2>
@@ -714,169 +933,8 @@ const OnboardingFlow = () => {
           </div>
         );
         
-      case 13:
-        return (
-          <div>
-            <h2 className="text-3xl font-light mb-6">Benefits of Family Balance</h2>
-            <p className="text-gray-600 mb-6">
-              Research shows that families with balanced workloads experience significant benefits.
-            </p>
-            
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div className="bg-green-50 p-4 rounded-lg">
-                <h3 className="font-medium text-green-800 mb-2">For Parents</h3>
-                <ul className="space-y-2 text-sm text-green-700">
-                  <li className="flex items-start">
-                    <CheckCircle size={16} className="mr-2 flex-shrink-0 mt-0.5" />
-                    <span>Reduced stress and burnout</span>
-                  </li>
-                  <li className="flex items-start">
-                    <CheckCircle size={16} className="mr-2 flex-shrink-0 mt-0.5" />
-                    <span>More equal career opportunities</span>
-                  </li>
-                  <li className="flex items-start">
-                    <CheckCircle size={16} className="mr-2 flex-shrink-0 mt-0.5" />
-                    <span>Stronger relationship satisfaction</span>
-                  </li>
-                  <li className="flex items-start">
-                    <CheckCircle size={16} className="mr-2 flex-shrink-0 mt-0.5" />
-                    <span>Increased personal time</span>
-                  </li>
-                </ul>
-              </div>
-              
-              <div className="bg-blue-50 p-4 rounded-lg">
-                <h3 className="font-medium text-blue-800 mb-2">For Children</h3>
-                <ul className="space-y-2 text-sm text-blue-700">
-                  <li className="flex items-start">
-                    <CheckCircle size={16} className="mr-2 flex-shrink-0 mt-0.5" />
-                    <span>More positive gender role models</span>
-                  </li>
-                  <li className="flex items-start">
-                    <CheckCircle size={16} className="mr-2 flex-shrink-0 mt-0.5" />
-                    <span>Enhanced emotional security</span>
-                  </li>
-                  <li className="flex items-start">
-                    <CheckCircle size={16} className="mr-2 flex-shrink-0 mt-0.5" />
-                    <span>Improved relationships with both parents</span>
-                  </li>
-                  <li className="flex items-start">
-                    <CheckCircle size={16} className="mr-2 flex-shrink-0 mt-0.5" />
-                    <span>Better conflict resolution skills</span>
-                  </li>
-                </ul>
-              </div>
-            </div>
-            
-            <div className="bg-purple-50 p-4 rounded-lg mt-4">
-              <h3 className="font-medium text-purple-800 mb-2">For Families as a Whole</h3>
-              <ul className="space-y-2 text-sm text-purple-700">
-                <li className="flex items-start">
-                  <CheckCircle size={16} className="mr-2 flex-shrink-0 mt-0.5" />
-                  <span>More quality time together</span>
-                </li>
-                <li className="flex items-start">
-                  <CheckCircle size={16} className="mr-2 flex-shrink-0 mt-0.5" />
-                  <span>Reduced household tension</span>
-                </li>
-                <li className="flex items-start">
-                  <CheckCircle size={16} className="mr-2 flex-shrink-0 mt-0.5" />
-                  <span>Better communication patterns</span>
-                </li>
-                <li className="flex items-start">
-                  <CheckCircle size={16} className="mr-2 flex-shrink-0 mt-0.5" />
-                  <span>Stronger family resilience</span>
-                </li>
-              </ul>
-            </div>
-          </div>
-        );
-        
-      case 14:
-        return (
-          <div>
-            <h2 className="text-3xl font-light mb-6">Family Balance FAQ</h2>
-            <p className="text-gray-600 mb-6">
-              Answers to common questions about the Allie approach.
-            </p>
-            
-            <div className="space-y-4">
-              <div className="border rounded-lg overflow-hidden">
-                <button 
-                  className="w-full flex justify-between items-center p-4 text-left"
-                  onClick={() => updateFamily('expandedFaq', familyData.expandedFaq === 1 ? null : 1)}
-                >
-                  <span className="font-medium">How long does it take to see results?</span>
-                  {familyData.expandedFaq === 1 ? <ChevronUp size={20} /> : <ChevronDown size={20} />}
-                </button>
-                
-                {familyData.expandedFaq === 1 && (
-                  <div className="p-4 bg-gray-50 border-t">
-                    <p className="text-gray-700 text-sm">
-                      Most families report noticeable improvements within 3-4 weeks of consistent use. More significant changes in balance and family dynamics typically emerge after 2-3 months, as new habits become established.
-                    </p>
-                  </div>
-                )}
-              </div>
-              
-              <div className="border rounded-lg overflow-hidden">
-                <button 
-                  className="w-full flex justify-between items-center p-4 text-left"
-                  onClick={() => updateFamily('expandedFaq', familyData.expandedFaq === 2 ? null : 2)}
-                >
-                  <span className="font-medium">What if my partner isn't enthusiastic?</span>
-                  {familyData.expandedFaq === 2 ? <ChevronUp size={20} /> : <ChevronDown size={20} />}
-                </button>
-                
-                {familyData.expandedFaq === 2 && (
-                  <div className="p-4 bg-gray-50 border-t">
-                    <p className="text-gray-700 text-sm">
-                      This is common! One approach is to focus on the data-driven aspect of Allie. Many skeptical partners become more engaged when they see objective measurements rather than feeling "accused." Start with simple, specific task changes rather than attempting a complete overhaul at once.
-                    </p>
-                  </div>
-                )}
-              </div>
-              
-              <div className="border rounded-lg overflow-hidden">
-                <button 
-                  className="w-full flex justify-between items-center p-4 text-left"
-                  onClick={() => updateFamily('expandedFaq', familyData.expandedFaq === 3 ? null : 3)}
-                >
-                  <span className="font-medium">How much time does it take each week?</span>
-                  {familyData.expandedFaq === 3 ? <ChevronUp size={20} /> : <ChevronDown size={20} />}
-                </button>
-                
-                {familyData.expandedFaq === 3 && (
-                  <div className="p-4 bg-gray-50 border-t">
-                    <p className="text-gray-700 text-sm">
-                      Weekly check-ins take about 5 minutes per person. The guided family meeting is designed to be 30 minutes once a week. In total, the Allie process requires about 45 minutes per week, but saves families hours in reduced conflicts and more efficient task management.
-                    </p>
-                  </div>
-                )}
-              </div>
-              
-              <div className="border rounded-lg overflow-hidden">
-                <button 
-                  className="w-full flex justify-between items-center p-4 text-left"
-                  onClick={() => updateFamily('expandedFaq', familyData.expandedFaq === 4 ? null : 4)}
-                >
-                  <span className="font-medium">Is 50/50 always the goal?</span>
-                  {familyData.expandedFaq === 4 ? <ChevronUp size={20} /> : <ChevronDown size={20} />}
-                </button>
-                
-                {familyData.expandedFaq === 4 && (
-                  <div className="p-4 bg-gray-50 border-t">
-                    <p className="text-gray-700 text-sm">
-                      Not necessarily! Allie isn't about forcing a rigid 50/50 split. It's about finding a balance that works for your unique family situation and feels fair to all involved. Some families might have a 60/40 split that feels perfectly balanced based on work schedules, preferences, and other factors.
-                    </p>
-                  </div>
-                )}
-              </div>
-            </div>
-          </div>
-        );
-        
       case 15:
+        // Your Family's Goals - with added AI engine explanation
         return (
           <div>
             <h2 className="text-3xl font-light mb-6">Your Family's Goals</h2>
@@ -994,6 +1052,19 @@ const OnboardingFlow = () => {
                   </p>
                 </div>
               </label>
+              
+              {/* New AI engine explanation */}
+              <div className="mt-4 p-4 bg-purple-50 rounded-lg border border-purple-200">
+                <div className="flex items-start">
+                  <Brain size={20} className="text-purple-600 mt-1 mr-2 flex-shrink-0" />
+                  <div>
+                    <h4 className="font-medium text-purple-800">How Allie Uses This Information</h4>
+                    <p className="text-sm text-purple-700 mt-1">
+                      Your goals help our AI engine calibrate your success metrics. If reducing conflict is your priority, we'll measure success through tension reduction rather than just task redistribution. If role modeling is important, we'll prioritize tasks visible to your children. This personalized approach ensures we're measuring what matters most to your family.
+                    </p>
+                  </div>
+                </div>
+              </div>
             </div>
           </div>
         );
@@ -1080,7 +1151,7 @@ const OnboardingFlow = () => {
               <div className="bg-white p-4 rounded-lg border shadow-sm hover:shadow-md transition-shadow">
                 <div className="flex items-start">
                   <div className="bg-green-100 p-2 rounded-lg mr-3">
-                    <Book className="text-green-600" size={24} />
+                    <Brain className="text-green-600" size={24} />
                   </div>
                   <div>
                     <h3 className="font-medium">AI Task Engine</h3>
@@ -1108,7 +1179,7 @@ const OnboardingFlow = () => {
               <div className="bg-white p-4 rounded-lg border shadow-sm hover:shadow-md transition-shadow">
                 <div className="flex items-start">
                   <div className="bg-blue-100 p-2 rounded-lg mr-3">
-                    <Book className="text-blue-600" size={24} />
+                    <BarChart className="text-blue-600" size={24} />
                   </div>
                   <div>
                     <h3 className="font-medium">Weekly Progress Reports</h3>
@@ -1150,85 +1221,98 @@ const OnboardingFlow = () => {
           </div>
         );
         
+      // Success Stories slide removed (case 18 in original)
+        
       case 18:
+        // Family Balance FAQ (originally case 14)
         return (
           <div>
-            <h2 className="text-3xl font-light mb-6">Success Stories</h2>
+            <h2 className="text-3xl font-light mb-6">Family Balance FAQ</h2>
             <p className="text-gray-600 mb-6">
-              Here's how Allie has helped other families:
+              Answers to common questions about the Allie approach.
             </p>
             
-            <div className="space-y-6">
-              <div className="bg-white rounded-lg border p-5">
-                <div className="flex items-start">
-                  <div className="w-12 h-12 rounded-full bg-blue-100 flex items-center justify-center mr-3 flex-shrink-0">
-                    <img src="/api/placeholder/100/100" alt="Family" className="w-full h-full rounded-full object-cover" />
-                  </div>
-                  <div>
-                    <h3 className="font-medium">The Rodriguez Family</h3>
-                    <div className="flex text-amber-400 mb-2">
-                      <Star size={16} fill="currentColor" />
-                      <Star size={16} fill="currentColor" />
-                      <Star size={16} fill="currentColor" />
-                      <Star size={16} fill="currentColor" />
-                      <Star size={16} fill="currentColor" />
-                    </div>
-                    <p className="text-sm text-gray-600 italic">
-                      "We were constantly arguing about who did more around the house. Allie helped us see that Maria was handling 72% of the mental load. Three months in, we're at a much healthier 55/45 split, and the tension has melted away."
+            <div className="space-y-4">
+              <div className="border rounded-lg overflow-hidden">
+                <button 
+                  className="w-full flex justify-between items-center p-4 text-left"
+                  onClick={() => updateFamily('expandedFaq', familyData.expandedFaq === 1 ? null : 1)}
+                >
+                  <span className="font-medium">How long does it take to see results?</span>
+                  {familyData.expandedFaq === 1 ? <ChevronUp size={20} /> : <ChevronDown size={20} />}
+                </button>
+                
+                {familyData.expandedFaq === 1 && (
+                  <div className="p-4 bg-gray-50 border-t">
+                    <p className="text-gray-700 text-sm">
+                      Most families report noticeable improvements within 3-4 weeks of consistent use. More significant changes in balance and family dynamics typically emerge after 2-3 months, as new habits become established.
                     </p>
                   </div>
-                </div>
+                )}
               </div>
               
-              <div className="bg-white rounded-lg border p-5">
-                <div className="flex items-start">
-                  <div className="w-12 h-12 rounded-full bg-purple-100 flex items-center justify-center mr-3 flex-shrink-0">
-                    <img src="/api/placeholder/100/100" alt="Family" className="w-full h-full rounded-full object-cover" />
-                  </div>
-                  <div>
-                    <h3 className="font-medium">The Johnson Family</h3>
-                    <div className="flex text-amber-400 mb-2">
-                      <Star size={16} fill="currentColor" />
-                      <Star size={16} fill="currentColor" />
-                      <Star size={16} fill="currentColor" />
-                      <Star size={16} fill="currentColor" />
-                      <Star size={16} fill="currentColor" />
-                    </div>
-                    <p className="text-sm text-gray-600 italic">
-                      "As two working parents, we thought we were sharing equally, but Allie's data showed hidden imbalances we'd never noticed. The weekly tasks were practical and manageable. Six weeks in, our 9-year-old said, 'You guys don't fight about chores anymore!'"
+              <div className="border rounded-lg overflow-hidden">
+                <button 
+                  className="w-full flex justify-between items-center p-4 text-left"
+                  onClick={() => updateFamily('expandedFaq', familyData.expandedFaq === 2 ? null : 2)}
+                >
+                  <span className="font-medium">What if my partner isn't enthusiastic?</span>
+                  {familyData.expandedFaq === 2 ? <ChevronUp size={20} /> : <ChevronDown size={20} />}
+                </button>
+                
+                {familyData.expandedFaq === 2 && (
+                  <div className="p-4 bg-gray-50 border-t">
+                    <p className="text-gray-700 text-sm">
+                      This is common! One approach is to focus on the data-driven aspect of Allie. Many skeptical partners become more engaged when they see objective measurements rather than feeling "accused." Start with simple, specific task changes rather than attempting a complete overhaul at once.
                     </p>
                   </div>
-                </div>
+                )}
               </div>
               
-              <div className="bg-white rounded-lg border p-5">
-                <div className="flex items-start">
-                  <div className="w-12 h-12 rounded-full bg-green-100 flex items-center justify-center mr-3 flex-shrink-0">
-                    <img src="/api/placeholder/100/100" alt="Family" className="w-full h-full rounded-full object-cover" />
-                  </div>
-                  <div>
-                    <h3 className="font-medium">The Singh Family</h3>
-                    <div className="flex text-amber-400 mb-2">
-                      <Star size={16} fill="currentColor" />
-                      <Star size={16} fill="currentColor" />
-                      <Star size={16} fill="currentColor" />
-                      <Star size={16} fill="currentColor" />
-                      <Star size={16} fill="currentColor" />
-                    </div>
-                    <p className="text-sm text-gray-600 italic">
-                      "My wife felt overwhelmed but couldn't exactly explain why. Allie helped us quantify the invisible work she was doing. The guided family meetings completely changed how we communicate. I understand her stress so much better now."
+              <div className="border rounded-lg overflow-hidden">
+                <button 
+                  className="w-full flex justify-between items-center p-4 text-left"
+                  onClick={() => updateFamily('expandedFaq', familyData.expandedFaq === 3 ? null : 3)}
+                >
+                  <span className="font-medium">How much time does it take each week?</span>
+                  {familyData.expandedFaq === 3 ? <ChevronUp size={20} /> : <ChevronDown size={20} />}
+                </button>
+                
+                {familyData.expandedFaq === 3 && (
+                  <div className="p-4 bg-gray-50 border-t">
+                    <p className="text-gray-700 text-sm">
+                      Weekly check-ins take about 5 minutes per person. The guided family meeting is designed to be 30 minutes once a week. In total, the Allie process requires about 45 minutes per week, but saves families hours in reduced conflicts and more efficient task management.
                     </p>
                   </div>
-                </div>
+                )}
+              </div>
+              
+              <div className="border rounded-lg overflow-hidden">
+                <button 
+                  className="w-full flex justify-between items-center p-4 text-left"
+                  onClick={() => updateFamily('expandedFaq', familyData.expandedFaq === 4 ? null : 4)}
+                >
+                  <span className="font-medium">Is 50/50 always the goal?</span>
+                  {familyData.expandedFaq === 4 ? <ChevronUp size={20} /> : <ChevronDown size={20} />}
+                </button>
+                
+                {familyData.expandedFaq === 4 && (
+                  <div className="p-4 bg-gray-50 border-t">
+                    <p className="text-gray-700 text-sm">
+                      Not necessarily! Allie isn't about forcing a rigid 50/50 split. It's about finding a balance that works for your unique family situation and feels fair to all involved. Some families might have a 60/40 split that feels perfectly balanced based on work schedules, preferences, and other factors.
+                    </p>
+                  </div>
+                )}
               </div>
             </div>
           </div>
         );
         
       case 19:
+        // Modified Plan Options slide with functional buttons
         return (
           <div>
-            <h2 className="text-3xl font-light mb-6">Plan Options</h2>
+            <h2 className="text-3xl font-light mb-6">Get Started with Allie</h2>
             <p className="text-gray-600 mb-6">
               Choose the best option for your family:
             </p>
@@ -1266,7 +1350,7 @@ const OnboardingFlow = () => {
                 
                 <button 
                   className="w-full py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700"
-                  onClick={() => updateFamily('plan', 'monthly')}
+                  onClick={() => selectPlan('monthly')}
                 >
                   Select Monthly Plan
                 </button>
@@ -1308,10 +1392,24 @@ const OnboardingFlow = () => {
                 
                 <button 
                   className="w-full py-2 bg-green-600 text-white rounded-md hover:bg-green-700"
-                  onClick={() => updateFamily('plan', 'annual')}
+                  onClick={() => selectPlan('annual')}
                 >
                   Select Annual Plan
                 </button>
+              </div>
+            </div>
+            
+            <div className="mt-6 p-4 bg-blue-50 rounded-lg border border-blue-100">
+              <div className="flex items-start">
+                <div className="mt-1 mr-3 flex-shrink-0">
+                  <Award size={20} className="text-blue-600" />
+                </div>
+                <div>
+                  <h4 className="font-medium text-blue-800">The True Value of Balance</h4>
+                  <p className="text-sm text-blue-700 mt-1">
+                    The average family spends 19 hours per week arguing about household responsibilities. Allie users report saving 7+ hours per week while improving relationship satisfaction by 40%. What would your family do with that extra time and energy?
+                  </p>
+                </div>
               </div>
             </div>
           </div>
@@ -1341,7 +1439,7 @@ const OnboardingFlow = () => {
                       } 
                     });
                   }}
-                  className="px-6 py-3 bg-blue-600 text-white rounded-md w-full"
+                  className="px-6 py-3 bg-black text-white rounded-md w-full hover:bg-gray-800"
                 >
                   Subscribe Now
                 </button>
@@ -1362,7 +1460,7 @@ const OnboardingFlow = () => {
                       } 
                     });
                   }}
-                  className="px-6 py-3 bg-purple-600 text-white rounded-md w-full"
+                  className="px-6 py-3 bg-purple-600 text-white rounded-md w-full hover:bg-purple-700"
                 >
                   Start Mini Survey
                 </button>
@@ -1381,11 +1479,11 @@ const OnboardingFlow = () => {
   };
   
   return (
-    <div className="min-h-screen bg-white flex flex-col">
+    <div className="min-h-screen bg-white flex flex-col font-['Roboto']">
       {/* Progress indicator */}
       <div className="h-1 bg-gray-200">
         <div 
-          className="h-full bg-blue-600 transition-all duration-500"
+          className="h-full bg-black transition-all duration-500"
           style={{ width: `${(step / totalSteps) * 100}%` }}
         ></div>
       </div>
@@ -1406,7 +1504,7 @@ const OnboardingFlow = () => {
             {step < totalSteps ? (
               <button
                 onClick={() => nextStep()}
-                className="px-4 py-2 bg-blue-600 text-white rounded flex items-center hover:bg-blue-700"
+                className="px-4 py-2 bg-black text-white rounded flex items-center hover:bg-gray-800"
               >
                 Continue
                 <ArrowRight size={16} className="ml-1" />

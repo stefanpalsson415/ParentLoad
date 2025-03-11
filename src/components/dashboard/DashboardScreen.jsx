@@ -194,7 +194,7 @@ useEffect(() => {
   
   // Handle logout/switch user
   const handleLogout = () => {
-    navigate('/');
+    navigate('/dashboard');
   };
   
   // Start weekly check-in
