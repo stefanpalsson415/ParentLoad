@@ -38,13 +38,19 @@ const FamilySelectionScreen = () => {
   }, [currentUser]);
   
   // Effect to update empty state visibility based on whether we have family members
-  useEffect(() => {
-    if (currentUser && familyMembers.length === 0) {
-      setShowEmptyState(true);
-    } else {
-      setShowEmptyState(false);
-    }
-  }, [currentUser, familyMembers]);
+useEffect(() => {
+  if (currentUser && familyMembers.length === 0 && availableFamilies.length === 0) {
+    // Only show empty state if there are truly no families
+    setShowEmptyState(true);
+  } else {
+    setShowEmptyState(false);
+  }
+  
+  // Auto-redirect to onboarding if logged in with no families
+  if (currentUser && availableFamilies.length === 0) {
+    navigate('/onboarding');
+  }
+}, [currentUser, familyMembers, availableFamilies, navigate]);
   
   // Debug logging
   useEffect(() => {
