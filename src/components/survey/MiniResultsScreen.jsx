@@ -1,6 +1,6 @@
 // src/components/survey/MiniResultsScreen.jsx
 import React, { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 import { BarChart3, Award, Clock, Heart } from 'lucide-react';
 import { 
   RadarChart, PolarGrid, PolarAngleAxis, PolarRadiusAxis, 
@@ -9,7 +9,28 @@ import {
 
 const MiniResultsScreen = () => {
   const navigate = useNavigate();
+  const location = useLocation();
   const [surveyData, setSurveyData] = useState({});
+  const [pendingFamilyData, setPendingFamilyData] = useState(null);
+  
+  // Effect to load pending family data
+  useEffect(() => {
+    // Check for data passed in location state
+    if (location?.state?.familyData) {
+      setPendingFamilyData(location.state.familyData);
+    } 
+    // Check for data in localStorage
+    else {
+      const storedData = localStorage.getItem('pendingFamilyData');
+      if (storedData) {
+        try {
+          setPendingFamilyData(JSON.parse(storedData));
+        } catch (e) {
+          console.error("Error parsing stored family data:", e);
+        }
+      }
+    }
+  }, [location]);
   
   useEffect(() => {
     // Load survey responses
@@ -282,46 +303,23 @@ const MiniResultsScreen = () => {
           <div className="p-6">
             <h2 className="text-xl font-bold mb-3">Want a Complete Analysis?</h2>
             <p className="opacity-90 mb-6">
-              ParentLoad offers in-depth analysis, weekly check-ins, and guided family meetings to help you achieve better balance.
+              Allie offers in-depth analysis, weekly check-ins, and guided family meetings to help you achieve better balance.
             </p>
-            // Check if we came from mini survey with pending family data
-const { location } = useNavigate();
-const [pendingFamilyData, setPendingFamilyData] = useState(null);
-
-// Effect to load pending family data
-useEffect(() => {
-  // Check for data passed in location state
-  if (location?.state?.familyData) {
-    setPendingFamilyData(location.state.familyData);
-  } 
-  // Check for data in localStorage
-  else {
-    const storedData = localStorage.getItem('pendingFamilyData');
-    if (storedData) {
-      try {
-        setPendingFamilyData(JSON.parse(storedData));
-      } catch (e) {
-        console.error("Error parsing stored family data:", e);
-      }
-    }
-  }
-}, [location]);
-
-// In the render:
-<button 
-  onClick={() => {
-    // Pass along family data if it exists
-    navigate('/payment', pendingFamilyData ? {
-      state: {
-        fromMiniResults: true,
-        familyData: pendingFamilyData
-      }
-    } : undefined);
-  }}
-  className="px-6 py-3 bg-white text-indigo-600 rounded-md font-medium hover:bg-indigo-50"
->
-  Get Full Access
-</button>
+            
+            <button 
+              onClick={() => {
+                // Pass along family data if it exists
+                navigate('/payment', pendingFamilyData ? {
+                  state: {
+                    fromMiniResults: true,
+                    familyData: pendingFamilyData
+                  }
+                } : undefined);
+              }}
+              className="px-6 py-3 bg-white text-indigo-600 rounded-md font-medium hover:bg-indigo-50"
+            >
+              Get Full Access
+            </button>
           </div>
         </div>
       </div>

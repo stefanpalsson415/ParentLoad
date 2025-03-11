@@ -1,11 +1,15 @@
 // src/components/survey/MiniSurvey.jsx
 import React, { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
+
+
+
 
 const MiniSurvey = () => {
   const [currentQuestion, setCurrentQuestion] = useState(0);
   const [responses, setResponses] = useState({});
   const navigate = useNavigate();
+  
   
   // Sample 20 questions covering the different categories
   const questions = [
@@ -37,10 +41,13 @@ const MiniSurvey = () => {
     { id: "q19", text: "Who monitors academic progress?", category: "Invisible Parental Tasks" },
     { id: "q20", text: "Who handles cultural and moral education?", category: "Invisible Parental Tasks" }
   ];
-  
-  // Check if we came from onboarding
-  const { location } = useNavigate();
+ 
+  const location = useLocation();
   const [pendingFamilyData, setPendingFamilyData] = useState(null);
+    
+// Add this import at the top if it doesn't exist
+// import { useNavigate, useLocation } from 'react-router-dom';
+
   
   // Effect to load pending family data
   useEffect(() => {
