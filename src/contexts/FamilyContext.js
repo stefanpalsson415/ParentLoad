@@ -3,6 +3,9 @@ import React, { createContext, useContext, useState, useEffect, useRef, useCallb
 import { useAuth } from './AuthContext';
 import DatabaseService from '../services/DatabaseService';
 import { calculateBalanceScores } from '../utils/TaskWeightCalculator';
+import { useSurvey } from './SurveyContext';
+
+
 
 // Create the family context
 const FamilyContext = createContext();
@@ -351,36 +354,33 @@ export function FamilyProvider({ children }) {
       }
       
       // Store initial survey data in week history
-      const allComplete = updatedMembers.every(member => member.completed);
-      if (allComplete) {
-        // Get all initial survey responses
-        const initialResponses = await DatabaseService.getAllSurveyResponses(familyId, 'initial');
-        
-        // Create initial survey snapshot
-        const initialSurveyData = {
-          responses: initialResponses,
-          completionDate: new Date().toISOString(),
-          familyMembers: updatedMembers.map(m => ({
-            id: m.id,
-            name: m.name,
-            role: m.role,
-            completedDate: m.completedDate
-          }))
-        };
-        
-        // Update week history
-        const updatedHistory = {
-          ...weekHistory,
-          initial: initialSurveyData
-        };
-        
-        setWeekHistory(updatedHistory);
-        
-        // Save to Firebase
-        await DatabaseService.saveFamilyData({ 
-          weekHistory: updatedHistory
-        }, familyId);
-      }
+const allComplete = updatedMembers.every(member => member.completed);
+if (allComplete) {
+  // Create initial survey snapshot using current responses
+  const initialSurveyData = {
+    responses: responses, // Use the responses that were just submitted
+    completionDate: new Date().toISOString(),
+    familyMembers: updatedMembers.map(m => ({
+      id: m.id,
+      name: m.name,
+      role: m.role,
+      completedDate: m.completedDate
+    }))
+  };
+  
+  // Update week history
+  const updatedHistory = {
+    ...weekHistory,
+    initial: initialSurveyData
+  };
+  
+  setWeekHistory(updatedHistory);
+  
+  // Save to Firebase
+  await DatabaseService.saveFamilyData({ 
+    weekHistory: updatedHistory
+  }, familyId);
+}
       
       return true;
     } catch (error) {
@@ -1871,7 +1871,7 @@ export function FamilyProvider({ children }) {
 
 // Create the bridge component to connect SurveyContext to FamilyContext
 export function SurveyBridge() {
-  const { fullQuestionSet, familyPriorities } = useContext(SurveyContext);
+  const { fullQuestionSet, familyPriorities } = useSurvey();
   const { setSurveyData } = useFamily();
   
   // Bridge the data whenever it changes
