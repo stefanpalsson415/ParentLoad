@@ -176,66 +176,7 @@ const KidFriendlySurvey = ({ surveyType = "initial" }) => {
   const [questions, setQuestions] = useState([]);
   const questionTimerRef = useRef(null);
   
-  // Redirect if no user is selected
-  useEffect(() => {
-    if (!selectedUser) {
-      navigate('/');
-    }
-  }, [selectedUser, navigate]);
-  
-  // Reset survey when component mounts - only once!
-  useEffect(() => {
-    resetSurvey();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []); 
-  
-  // Cleanup function to run when component unmounts
-  useEffect(() => {
-    return () => {
-      // Clear any pending timers
-      if (questionTimerRef.current) {
-        clearTimeout(questionTimerRef.current);
-        questionTimerRef.current = null;
-      }
-      
-      // Clear any other possible timeouts
-      const allTimeouts = [];
-      for (let i = setTimeout(() => {}, 0); i > 0; i--) {
-        clearTimeout(i);
-      }
-      
-      console.log("Kid survey component unmounted, all timers cleared");
-    };
-  }, []);
-  
-  // Set up questions for kids based on survey type
-  useEffect(() => {
-    if (!fullQuestionSet || fullQuestionSet.length === 0) return;
-    
-    let questionSet;
-    
-    // Determine which questions to use based on the survey type
-    if (surveyType === "weekly") {
-      questionSet = generateWeeklyQuestions(currentWeek);
-    } else {
-      questionSet = fullQuestionSet;
-    }
-    
-    let filteredList = questionSet;
-    
-    // For very young children, use a smaller set of simpler questions (40 total)
-if (selectedUser && selectedUser.role === 'child' && selectedUser.age < 8) {
-  // Pick simpler questions - 10 from each category
-  const categories = [
-    "Visible Household Tasks",
-    "Invisible Household Tasks",
-    "Visible Parental Tasks",
-    "Invisible Parental Tasks"
-  ];
-  
-// After all your useEffect hooks and state management, add:
-
-// Handle pause function
+  // Handle pause function
 const handlePauseSurvey = async () => {
   if (isProcessing) return; // Prevent actions while processing
   
@@ -293,9 +234,69 @@ const handleSwitchUser = async () => {
   }
 };
 
-// Then later in your code, you can use these functions in your JSX for button onClick handlers
 
 
+
+  // Redirect if no user is selected
+  useEffect(() => {
+    if (!selectedUser) {
+      navigate('/');
+    }
+  }, [selectedUser, navigate]);
+  
+  // Reset survey when component mounts - only once!
+  useEffect(() => {
+    resetSurvey();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []); 
+  
+  // Cleanup function to run when component unmounts
+  useEffect(() => {
+    return () => {
+      // Clear any pending timers
+      if (questionTimerRef.current) {
+        clearTimeout(questionTimerRef.current);
+        questionTimerRef.current = null;
+      }
+      
+      // Clear any other possible timeouts
+      const allTimeouts = [];
+      for (let i = setTimeout(() => {}, 0); i > 0; i--) {
+        clearTimeout(i);
+      }
+      
+      console.log("Kid survey component unmounted, all timers cleared");
+    };
+  }, []);
+  
+  // Set up questions for kids based on survey type
+  useEffect(() => {
+    if (!fullQuestionSet || fullQuestionSet.length === 0) return;
+    
+    let questionSet;
+    
+    // Determine which questions to use based on the survey type
+    if (surveyType === "weekly") {
+      questionSet = generateWeeklyQuestions(currentWeek);
+    } else {
+      questionSet = fullQuestionSet;
+    }
+    
+    let filteredList = questionSet;
+    
+    // For very young children, use a smaller set of simpler questions (40 total)
+if (selectedUser && selectedUser.role === 'child' && selectedUser.age < 8) {
+  // Pick simpler questions - 10 from each category
+  const categories = [
+    "Visible Household Tasks",
+    "Invisible Household Tasks",
+    "Visible Parental Tasks",
+    "Invisible Parental Tasks"
+  ];
+  
+
+  
+  
   const simpleQuestions = [];
   categories.forEach(category => {
     const categoryQuestions = questionSet.filter(q => q.category === category);
@@ -346,34 +347,6 @@ const handlePauseSurvey = async () => {
   }
 };
 
-// Add switch user function
-const handleSwitchUser = async () => {
-  if (isProcessing) return; // Prevent actions while processing
-  
-  setIsProcessing(true);
-  
-  try {
-    // Save the current progress without marking as completed
-    if (selectedUser && Object.keys(currentSurveyResponses).length > 0) {
-      console.log("Saving survey progress before switching user...");
-      if (surveyType === "weekly") {
-        await saveSurveyProgress(selectedUser.id, currentSurveyResponses);
-      } else {
-        await saveSurveyProgress(selectedUser.id, currentSurveyResponses);
-      }
-      console.log("Progress saved successfully");
-    }
-    
-    // Navigate to login screen
-    navigate('/login');
-  } catch (error) {
-    console.error('Error saving survey progress:', error);
-    alert('There was an error saving your progress, but you can still switch users.');
-    navigate('/login');
-  } finally {
-    setIsProcessing(false);
-  }
-};
   
   const mediumQuestions = [];
   categories.forEach(category => {
