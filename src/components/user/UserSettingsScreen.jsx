@@ -156,6 +156,30 @@ const UserSettingsScreen = ({ onClose }) => {
           </div>
         </div>
         
+{/* Chat Settings */}
+<div>
+  <h4 className="font-medium mb-2">Chat Settings</h4>
+  <div className="space-y-2">
+    <label className="flex items-center">
+      <input 
+        type="checkbox" 
+        className="w-4 h-4 mr-2" 
+        defaultChecked 
+        onChange={(e) => {
+          // Save setting to user profile
+          updateMemberProfile(selectedUser.id, { 
+            settings: {
+              ...selectedUser.settings,
+              childrenCanUseChat: e.target.checked
+            }
+          });
+        }}
+      />
+      <span>Allow children to use chat with Allie</span>
+    </label>
+  </div>
+</div>
+
         {/* Profile Settings */}
         {settingsTab === 'profile' && (
           <div className="p-6">

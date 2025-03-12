@@ -157,6 +157,7 @@ const KidFriendlySurvey = ({ surveyType = "initial" }) => {
   
   // State
   const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0);
+  const [viewingQuestionList, setViewingQuestionList] = useState(false);
   const [selectedParent, setSelectedParent] = useState(null);
   const [showExplanation, setShowExplanation] = useState(false);
   const [userResponses, setUserResponses] = useState({});
@@ -171,6 +172,8 @@ const KidFriendlySurvey = ({ surveyType = "initial" }) => {
   const [showAnimatedProgress, setShowAnimatedProgress] = useState(false);
   const [animation, setAnimation] = useState(null);
   const [isProcessing, setIsProcessing] = useState(false);
+  const keyboardInitialized = useRef(false);
+
   
   // Create a filtered list of questions for kids if needed
   const [questions, setQuestions] = useState([]);
@@ -235,7 +238,43 @@ const handleSwitchUser = async () => {
 };
 
 
+// Set up keyboard shortcuts
+useEffect(() => {
+  // Function to handle key press
+  const handleKeyPress = (e) => {
+    if (viewingQuestionList.current || isProcessing) return;
 
+      
+    // 'M' key selects Mama
+    if (e.key.toLowerCase() === 'm') {
+      handleSelectParent('Mama');
+    }
+    // 'P' key selects Papa
+    else if (e.key.toLowerCase() === 'p') {
+      handleSelectParent('Papa');
+    }
+  };
+    
+  // Set a small timeout to ensure component is fully rendered
+  const timer = setTimeout(() => {
+    // Clean up previous listeners if they exist
+    if (keyboardInitialized.current) {
+      window.removeEventListener('keydown', handleKeyPress);
+    }
+    
+    // Add new listener
+    window.addEventListener('keydown', handleKeyPress);
+    (keyboardInitialized.current) = true;
+  }, 200);
+    
+  // Cleanup function
+  return () => {
+    clearTimeout(timer);
+    if (keyboardInitialized.current) {
+      window.removeEventListener('keydown', handleKeyPress);
+    }
+  };
+}, [currentQuestionIndex, viewingQuestionList, isProcessing]);
 
   // Redirect if no user is selected
   useEffect(() => {
@@ -586,43 +625,44 @@ const handlePauseSurvey = async () => {
 
   
   // Handle survey completion
-  const handleCompleteSurvey = async () => {
-    // Show a big celebration!
-    setShowReward(true);
-    
-    try {
-      console.log(`Attempting to save ${surveyType} survey data...`);
-      // First try to save the data before any navigation
-      if (surveyType === "weekly") {
-        // Save weekly check-in
-        await completeWeeklyCheckIn(selectedUser.id, currentWeek, currentSurveyResponses);
-        console.log("Weekly check-in saved successfully");
-      } else {
-        // Save initial survey
-        await completeInitialSurvey(selectedUser.id, currentSurveyResponses);
-        console.log("Initial survey saved successfully");
-      }
-      
-      // Only navigate after confirmed save
-      setTimeout(() => {
-        console.log("Navigating to loading screen");
-        navigate('/loading');
-        
-        // Navigate to dashboard after delay
-        setTimeout(() => {
-            console.log("Navigating to dashboard");
-            navigate('/dashboard');
-          }, 1500);
-      }, 2000);
-    } catch (error) {
-      console.error(`Error completing ${surveyType} survey:`, error);
-      alert('There was an error saving your responses. Please try again.');
-      
-      // Don't navigate away on error
-      setShowReward(false);
-      setIsProcessing(false);
+  // Handle survey completion
+const handleCompleteSurvey = async () => {
+  // Show a big celebration!
+  setShowReward(true);
+  
+  try {
+    console.log(`Attempting to save ${surveyType} survey data...`);
+    // First try to save the data before any navigation
+    if (surveyType === "weekly") {
+      // Save weekly check-in
+      await completeWeeklyCheckIn(selectedUser.id, currentWeek, currentSurveyResponses);
+      console.log("Weekly check-in saved successfully");
+    } else {
+      // Save initial survey
+      await completeInitialSurvey(selectedUser.id, currentSurveyResponses);
+      console.log("Initial survey saved successfully");
     }
-  };
+    
+    // Only navigate after confirmed save
+    setTimeout(() => {
+      console.log("Navigating to loading screen");
+      navigate('/loading');
+      
+      // Navigate to dashboard after delay with increased timeout
+      setTimeout(() => {
+        console.log("Navigating to dashboard");
+        navigate('/dashboard');
+      }, 3000); // Increased timeout for more reliable navigation
+    }, 3000); // Increased timeout to show reward longer
+  } catch (error) {
+    console.error(`Error completing ${surveyType} survey:`, error);
+    alert('There was an error saving your responses. Please try again.');
+    
+    // Don't navigate away on error
+    setShowReward(false);
+    setIsProcessing(false);
+  }
+};
   
   // Calculate progress percentage
   const progressPercentage = questions.length > 0 

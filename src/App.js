@@ -24,6 +24,8 @@ import PaymentScreen from './components/payment/PaymentScreen';
 // New code - Add missing imports
 import LandingPage from './components/marketing/LandingPage';
 import OnboardingFlow from './components/onboarding/OnboardingFlow';
+import { ChatProvider } from './contexts/ChatContext';
+
 
 
 // App Routes Component - Used after context providers are set up
@@ -65,6 +67,7 @@ function AppRoutes() {
   );
 }
 
+
 function App() {
   console.log("App rendering..."); // Add this debug line
   
@@ -74,9 +77,11 @@ function App() {
         <AuthProvider>
           <FamilyProvider>
             <SurveyProvider>
-              <div className="App">
-                <AppRoutes />
-              </div>
+              <ChatProvider>
+                <div className="App">
+                  <AppRoutes />
+                </div>
+              </ChatProvider>
             </SurveyProvider>
           </FamilyProvider>
         </AuthProvider>

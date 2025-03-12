@@ -12,6 +12,7 @@ import FamilyMeetingScreen from '../meeting/FamilyMeetingScreen';
 import { useAuth } from '../../contexts/AuthContext';
 import { useNavigate, useLocation } from 'react-router-dom';
 import CoupleRelationshipChart from './CoupleRelationshipChart';
+import AllieChat from '../chat/AllieChat';
 
 
 
@@ -257,12 +258,22 @@ useEffect(() => {
               </div>
             </div>
               
-            <button
-              className="px-4 py-2 bg-blue-500 text-white rounded"
-              onClick={handleLogout}
-            >
-              Switch User
-            </button>
+            <div className="flex space-x-3">
+  <button
+    className="px-4 py-2 bg-black text-white rounded font-roboto"
+    onClick={handleLogout}
+  >
+    Switch User
+  </button>
+  {!selectedUser.completed && (
+    <button
+      className="px-4 py-2 bg-black text-white rounded font-roboto"
+      onClick={() => navigate('/survey')}
+    >
+      Start Initial Survey
+    </button>
+  )}
+</div>
           </div>
         </div>
       );
@@ -314,48 +325,41 @@ useEffect(() => {
   return (
     <div className="min-h-screen bg-gray-50 flex flex-col">
       {/* Header */}
-      <div className="bg-blue-600 text-white p-4">
-        <div className="container mx-auto flex justify-between items-center">
-          <h1 className="text-xl font-bold">{formattedFamilyName}</h1>
-          <div className="flex items-center">
-            <div 
-              className="w-8 h-8 rounded-full overflow-hidden mr-2 cursor-pointer border-2 border-white"
-              onClick={toggleSettings}
-            >
-              <img 
-                src={selectedUser.profilePicture}
-                alt={selectedUser.name}
-                className="w-full h-full object-cover"
-              />
-            </div>
-            <span className="mr-3">{selectedUser.name}</span>
-            <button 
-              onClick={handleLogout}
-              className="flex items-center text-sm bg-blue-700 hover:bg-blue-800 px-2 py-1 rounded"
-            >
-              <LogOut size={14} className="mr-1" />
-              Switch User
-            </button>
-          </div>
-        </div>
+<div className="bg-black text-white p-4">
+  <div className="container mx-auto flex justify-between items-center">
+    <div className="flex flex-col">
+      <h1 className="text-xl font-bold font-roboto">Allie</h1>
+      <p className="text-sm font-roboto">Balance family responsibilities together</p>
+      <p className="text-xs text-gray-300 font-roboto">The {familyName ? familyName.split(' ')[0] : ''} Family</p>
+    </div>
+    <div className="flex items-center">
+      <div 
+        className="w-8 h-8 rounded-full overflow-hidden mr-2 cursor-pointer border-2 border-white"
+        onClick={toggleSettings}
+      >
+        <img 
+          src={selectedUser.profilePicture}
+          alt={selectedUser.name}
+          className="w-full h-full object-cover"
+        />
       </div>
-
+      <span className="mr-3 font-roboto">{selectedUser.name}</span>
+      <button 
+        onClick={handleLogout}
+        className="flex items-center text-sm bg-gray-800 hover:bg-gray-700 px-2 py-1 rounded font-roboto"
+      >
+        <LogOut size={14} className="mr-1" />
+        Switch User
+      </button>
+    </div>
+  </div>
+</div>
       {/* Main content */}
       <div className="flex-1 container mx-auto px-4 py-6">
         {/* Tabs */}
         <div className="flex border-b mb-6 overflow-x-auto">
-          <button 
-            className={`px-4 py-2 font-medium whitespace-nowrap ${activeTab === 'how-it-works' ? 'border-b-2 border-blue-500 text-blue-600' : 'text-gray-600'}`}
-            onClick={() => setActiveTab('how-it-works')}
-          >
-            How This Works?
-          </button>
-          <button 
-            className={`px-4 py-2 font-medium whitespace-nowrap ${activeTab === 'personalized' ? 'border-b-2 border-blue-500 text-blue-600' : 'text-gray-600'}`}
-            onClick={() => setActiveTab('personalized')}
-          >
-            Your Personalized Approach
-          </button>
+          
+          
        
           <button 
             className={`px-4 py-2 font-medium whitespace-nowrap ${activeTab === 'dashboard' ? 'border-b-2 border-blue-500 text-blue-600' : 'text-gray-600'}`}
@@ -415,5 +419,8 @@ useEffect(() => {
     </div>
   );
 };
+
+{/* Allie Chat Widget */}
+<AllieChat />
 
 export default DashboardScreen;
