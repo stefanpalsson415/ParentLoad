@@ -1,5 +1,5 @@
 // src/contexts/FamilyContext.js
-import React, { createContext, useContext, useState, useEffect } from 'react';
+import React, { createContext, useContext, useState, useEffect, useRef, useCallback } from 'react';
 import { useAuth } from './AuthContext';
 import DatabaseService from '../services/DatabaseService';
 import { calculateBalanceScores } from '../utils/TaskWeightCalculator';
@@ -16,6 +16,24 @@ export function useFamily() {
 export function FamilyProvider({ children }) {
   const { currentUser, familyData: initialFamilyData } = useAuth();
   
+  // Reference to store survey data passed from SurveyContext via the bridge component
+  const surveyDataRef = useRef({
+    fullQuestionSet: [],
+    familyPriorities: {
+      highestPriority: "Invisible Parental Tasks",
+      secondaryPriority: "Visible Parental Tasks",
+      tertiaryPriority: "Invisible Household Tasks"
+    }
+  });
+  
+  // Callback to update survey data
+  const setSurveyData = useCallback((data) => {
+    surveyDataRef.current = {
+      ...surveyDataRef.current,
+      ...data
+    };
+  }, []);
+  
   const [familyId, setFamilyId] = useState(null);
   const [familyName, setFamilyName] = useState('');
   const [familyPicture, setFamilyPicture] = useState(null);
@@ -31,11 +49,16 @@ export function FamilyProvider({ children }) {
   const [weekStatus, setWeekStatus] = useState({}); // Status of each week (survey complete, meeting complete, etc.)
   const [lastCompletedFullWeek, setLastCompletedFullWeek] = useState(0); // Last week that was fully completed (including meeting)
   const [taskRecommendations, setTaskRecommendations] = useState([]); // Store task recommendations
-  const [taskEffectivenessData, setTaskEffectivenessData] = useState([]); // NEW: Store task effectiveness data
-  const [impactInsights, setImpactInsights] = useState([]); // NEW: Store task impact insights
-  const [kidTasksData, setKidTasksData] = useState({}); // NEW: Store kid tasks data
+  const [taskEffectivenessData, setTaskEffectivenessData] = useState([]); // Store task effectiveness data
+  const [impactInsights, setImpactInsights] = useState([]); // Store task impact insights
+  const [kidTasksData, setKidTasksData] = useState({}); // Store kid tasks data
   const [coupleCheckInData, setCoupleCheckInData] = useState({});
-
+  // Set family priorities for weighting system
+  const [familyPriorities, setFamilyPriorities] = useState({
+    highestPriority: "Invisible Parental Tasks",
+    secondaryPriority: "Visible Parental Tasks",
+    tertiaryPriority: "Invisible Household Tasks"
+  });
 
   // Initialize family data from auth context
   useEffect(() => {
@@ -52,9 +75,9 @@ export function FamilyProvider({ children }) {
       setWeekStatus(initialFamilyData.weekStatus || {});
       setLastCompletedFullWeek(initialFamilyData.lastCompletedFullWeek || 0);
       setTaskRecommendations(initialFamilyData.tasks || []);
-      setTaskEffectivenessData(initialFamilyData.taskEffectiveness || []); // NEW
-      setImpactInsights(initialFamilyData.impactInsights || []); // NEW
-      setKidTasksData(initialFamilyData.kidTasks || {}); // NEW
+      setTaskEffectivenessData(initialFamilyData.taskEffectiveness || []);
+      setImpactInsights(initialFamilyData.impactInsights || []);
+      setKidTasksData(initialFamilyData.kidTasks || {});
       
       // Set document title with family name
       if (initialFamilyData.familyName) {
@@ -108,13 +131,13 @@ export function FamilyProvider({ children }) {
     setWeekStatus({});
     setLastCompletedFullWeek(0);
     setTaskRecommendations([]);
-    setTaskEffectivenessData([]); // NEW
-    setImpactInsights([]); // NEW
-    setKidTasksData({}); // NEW
+    setTaskEffectivenessData([]);
+    setImpactInsights([]);
+    setKidTasksData({});
     setError(null);
     
     // Reset document title
-    document.title = 'ParentLoad';
+    document.title = 'Allie';
     
     // Reset favicon
     let link = document.querySelector("link[rel*='icon']");
@@ -196,69 +219,68 @@ export function FamilyProvider({ children }) {
   };
 
   // Save couple check-in data
-const saveCoupleCheckInData = async (weekNumber, data) => {
-  try {
-    if (!familyId) throw new Error("No family ID available");
-    
-    await DatabaseService.saveCoupleCheckInData(familyId, weekNumber, data);
-    
-    // Update local state
-    setCoupleCheckInData(prev => ({
-      ...prev,
-      [weekNumber]: data
-    }));
-    
-    return true;
-  } catch (error) {
-    console.error("Error saving couple check-in data:", error);
-    throw error;
-  }
-};
+  const saveCoupleCheckInData = async (weekNumber, data) => {
+    try {
+      if (!familyId) throw new Error("No family ID available");
+      
+      await DatabaseService.saveCoupleCheckInData(familyId, weekNumber, data);
+      
+      // Update local state
+      setCoupleCheckInData(prev => ({
+        ...prev,
+        [weekNumber]: data
+      }));
+      
+      return true;
+    } catch (error) {
+      console.error("Error saving couple check-in data:", error);
+      throw error;
+    }
+  };
 
-// Get couple check-in data for a specific week
-const getCoupleCheckInData = (weekNumber) => {
-  return coupleCheckInData[weekNumber] || null;
-};
+  // Get couple check-in data for a specific week
+  const getCoupleCheckInData = (weekNumber) => {
+    return coupleCheckInData[weekNumber] || null;
+  };
 
-// Get relationship satisfaction trend data
-const getRelationshipTrendData = () => {
-  const trendData = [];
-  
-  // Add initial data point if available
-  if (coupleCheckInData[1]) {
-    trendData.push({
-      week: 'Week 1',
-      satisfaction: coupleCheckInData[1].responses.satisfaction,
-      communication: coupleCheckInData[1].responses.communication,
-      workloadBalance: 50, // From initial survey
-    });
-  }
-  
-  // Add data for each week
-  Object.keys(coupleCheckInData)
-    .map(Number)
-    .sort((a, b) => a - b)
-    .forEach(week => {
-      if (week === 1) return; // Skip week 1 as it's already added
-      
-      const data = coupleCheckInData[week];
-      if (!data) return;
-      
-      // Get workload balance for this week
-      const weekBalance = getWeekHistoryData(week)?.balance || { mama: 50, papa: 50 };
-      const balanceScore = 100 - Math.abs(weekBalance.mama - 50) * 2; // Convert to 0-100 scale where 100 is perfect balance
-      
+  // Get relationship satisfaction trend data
+  const getRelationshipTrendData = () => {
+    const trendData = [];
+    
+    // Add initial data point if available
+    if (coupleCheckInData[1]) {
       trendData.push({
-        week: `Week ${week}`,
-        satisfaction: data.responses.satisfaction,
-        communication: data.responses.communication,
-        workloadBalance: balanceScore
+        week: 'Week 1',
+        satisfaction: coupleCheckInData[1].responses.satisfaction,
+        communication: coupleCheckInData[1].responses.communication,
+        workloadBalance: 50, // From initial survey
       });
-    });
-  
-  return trendData;
-};
-
+    }
+    
+    // Add data for each week
+    Object.keys(coupleCheckInData)
+      .map(Number)
+      .sort((a, b) => a - b)
+      .forEach(week => {
+        if (week === 1) return; // Skip week 1 as it's already added
+        
+        const data = coupleCheckInData[week];
+        if (!data) return;
+        
+        // Get workload balance for this week
+        const weekBalance = getWeekHistoryData(week)?.balance || { mama: 50, papa: 50 };
+        const balanceScore = 100 - Math.abs(weekBalance.mama - 50) * 2; // Convert to 0-100 scale where 100 is perfect balance
+        
+        trendData.push({
+          week: `Week ${week}`,
+          satisfaction: data.responses.satisfaction,
+          communication: data.responses.communication,
+          workloadBalance: balanceScore
+        });
+      });
+    
+    return trendData;
+  };
 
   // Update survey schedule
   const updateSurveySchedule = async (weekNumber, dueDate) => {
@@ -476,6 +498,123 @@ const getRelationshipTrendData = () => {
     }
   };
 
+  // Helper function to analyze survey responses and identify imbalances
+  const analyzeImbalancesByCategory = (responses) => {
+    // Get fullQuestionSet from the bridge
+    const fullQuestionSet = surveyDataRef.current.fullQuestionSet || [];
+    
+    // Categories we track
+    const categories = {
+      "Visible Household Tasks": { mama: 0, papa: 0, total: 0 },
+      "Invisible Household Tasks": { mama: 0, papa: 0, total: 0 },
+      "Visible Parental Tasks": { mama: 0, papa: 0, total: 0 },
+      "Invisible Parental Tasks": { mama: 0, papa: 0, total: 0 }
+    };
+    
+    // Count responses by category
+    Object.entries(responses || {}).forEach(([key, value]) => {
+      // Extract the question ID 
+      let questionId = null;
+      
+      if (key.includes('q')) {
+        questionId = key.includes('-') ? key.split('-').pop() : key;
+        
+        // Find the question in fullQuestionSet
+        const question = fullQuestionSet.find(q => q.id === questionId);
+        
+        // If we have the question, add to the appropriate category
+        if (question && question.category) {
+          categories[question.category].total++;
+          if (value === 'Mama') categories[question.category].mama++;
+          else if (value === 'Papa') categories[question.category].papa++;
+        } else {
+          // Simple categorization based on question ID ranges if question not found
+          // Questions 1-20 are Visible Household Tasks
+          // Questions 21-40 are Invisible Household Tasks
+          // Questions 41-60 are Visible Parental Tasks
+          // Questions 61-80 are Invisible Parental Tasks
+          
+          const qNum = parseInt(questionId.replace('q', ''));
+          
+          let category = null;
+          if (qNum >= 1 && qNum <= 20) {
+            category = "Visible Household Tasks";
+          } else if (qNum >= 21 && qNum <= 40) {
+            category = "Invisible Household Tasks";
+          } else if (qNum >= 41 && qNum <= 60) {
+            category = "Visible Parental Tasks";
+          } else if (qNum >= 61 && qNum <= 80) {
+            category = "Invisible Parental Tasks";
+          }
+          
+          // Update counts if we found a valid category
+          if (category) {
+            categories[category].total++;
+            if (value === 'Mama') categories[category].mama++;
+            else if (value === 'Papa') categories[category].papa++;
+          }
+        }
+      }
+    });
+    
+    // Calculate imbalance scores and percentages
+    const imbalances = [];
+    
+    Object.entries(categories).forEach(([category, counts]) => {
+      if (counts.total > 0) {
+        const mamaPercent = Math.round((counts.mama / counts.total) * 100);
+        const papaPercent = Math.round((counts.papa / counts.total) * 100);
+        const imbalanceScore = Math.abs(mamaPercent - papaPercent);
+        
+        imbalances.push({
+          category,
+          mamaPercent,
+          papaPercent,
+          imbalanceScore,
+          // Determine who should take on more in this category
+          assignTo: mamaPercent > papaPercent ? "Papa" : "Mama"
+        });
+      }
+    });
+    
+    // If we don't have enough data, provide some default imbalances
+    if (imbalances.length === 0 || imbalances.every(i => i.imbalanceScore === 0)) {
+      return [
+        { 
+          category: "Invisible Household Tasks", 
+          mamaPercent: 75, 
+          papaPercent: 25, 
+          imbalanceScore: 50, 
+          assignTo: "Papa" 
+        },
+        { 
+          category: "Invisible Parental Tasks", 
+          mamaPercent: 70, 
+          papaPercent: 30, 
+          imbalanceScore: 40, 
+          assignTo: "Papa" 
+        },
+        { 
+          category: "Visible Household Tasks", 
+          mamaPercent: 60, 
+          papaPercent: 40, 
+          imbalanceScore: 20, 
+          assignTo: "Papa" 
+        },
+        { 
+          category: "Visible Parental Tasks", 
+          mamaPercent: 55, 
+          papaPercent: 45, 
+          imbalanceScore: 10, 
+          assignTo: "Papa" 
+        }
+      ];
+    }
+    
+    // Sort by imbalance score (highest first)
+    return imbalances.sort((a, b) => b.imbalanceScore - a.imbalanceScore);
+  };
+
   // NEW: Analyze task effectiveness
   const analyzeTaskEffectiveness = (completedTasks, weekHistoryData) => {
     console.log("Analyzing task effectiveness based on historical data");
@@ -686,582 +825,7 @@ const getRelationshipTrendData = () => {
     return impactInsights;
   };
 
-  // Complete a week (after family meeting)
-  const completeWeek = async (weekNumber) => {
-    try {
-      if (!familyId) throw new Error("No family ID available");
-      
-      console.log(`Starting completion process for week ${weekNumber}`);
-      
-      // Create a backup of the current tasks
-      const currentTasks = [...taskRecommendations];
-      console.log("Current tasks for backup:", currentTasks.length);
-      
-      // 1. Get meeting notes if available
-      let meetingNotes = {};
-      try {
-        meetingNotes = await DatabaseService.getFamilyMeetingNotes(familyId, weekNumber) || {};
-        console.log("Meeting notes retrieved");
-      } catch (notesError) {
-        console.warn("Could not retrieve meeting notes, using empty object instead:", notesError);
-      }
-      
-      // Extract balance data for the week
-      const extractWeekBalance = () => {
-        const weekResponses = Object.entries(surveyResponses)
-          .filter(([key, _]) => key.includes(`week-${weekNumber}`) || 
-                                key.includes(`weekly-${weekNumber}`) || 
-                                (weekNumber === 1 && (key.includes('weekly') || key.includes('week1'))));
-        
-        let mamaCount = 0;
-        let totalCount = 0;
-        
-        weekResponses.forEach(([_, value]) => {
-          if (value === "Mama" || value === "Papa") {
-            totalCount++;
-            if (value === "Mama") mamaCount++;
-          }
-        });
-        
-        const mamaPercent = totalCount > 0 ? (mamaCount / totalCount) * 100 : 50;
-        return {
-          mama: mamaPercent,
-          papa: 100 - mamaPercent
-        };
-      };
-      
-      // Calculate category-specific balance data
-      const calculateCategoryBalance = () => {
-        const categories = [
-          "Visible Household Tasks",
-          "Invisible Household Tasks",
-          "Visible Parental Tasks",
-          "Invisible Parental Tasks"
-        ];
-        
-        const categoryBalance = {};
-        
-        categories.forEach(category => {
-          // Filter responses for this category
-          const categoryResponses = Object.entries(surveyResponses)
-            .filter(([key, _]) => {
-              // Include responses for this week that match this category
-              if (key.includes(`week-${weekNumber}`) || 
-                  (weekNumber === 1 && (key.includes('weekly') || key.includes('week1')))) {
-                // Check if it's in this category
-                const questionId = key.split('-').pop();
-                const question = fullQuestionSet.find(q => q.id === questionId);
-                return question && question.category === category;
-              }
-              return false;
-            });
-          
-          let mamaCount = 0;
-          let totalCount = 0;
-          
-          categoryResponses.forEach(([_, value]) => {
-            if (value === "Mama" || value === "Papa") {
-              totalCount++;
-              if (value === "Mama") mamaCount++;
-            }
-          });
-          
-          const mamaPercent = totalCount > 0 ? (mamaCount / totalCount) * 100 : 50;
-          categoryBalance[category] = {
-            mamaPercent,
-            papaPercent: 100 - mamaPercent
-          };
-        });
-        
-        return categoryBalance;
-      };
-    
-      const weekData = {
-        weekNumber,
-        familyMembers: familyMembers.map(m => ({
-          id: m.id,
-          name: m.name,
-          role: m.role,
-          completedDate: m.weeklyCompleted?.[weekNumber-1]?.date
-        })),
-        meetingNotes: meetingNotes,
-        tasks: currentTasks,
-        completionDate: new Date().toISOString(),
-        balance: extractWeekBalance(),
-        categoryBalance: calculateCategoryBalance(),
-        surveyResponses: {}
-      };
-
-      // Collect ALL survey responses for this week
-      console.log(`Collecting survey responses for Week ${weekNumber}`);
-      console.log("Available responses:", Object.keys(surveyResponses).length);
-
-      // First, add all general survey responses (without week prefix)
-      Object.keys(surveyResponses).forEach(key => {
-        // Include all question responses (both with and without week prefix)
-        if (key.startsWith('q') || key.includes(`q`)) {
-          weekData.surveyResponses[key] = surveyResponses[key];
-        }
-      });
-
-      // Then add specific week-prefixed responses
-      Object.keys(surveyResponses).forEach(key => {
-        if (key.includes(`week-${weekNumber}`) || 
-            key.includes(`weekly-${weekNumber}`) || 
-            (key.includes(`week${weekNumber}`) || 
-            (weekNumber === 1 && (key.includes('weekly') || key.includes('week1'))))) {
-          weekData.surveyResponses[key] = surveyResponses[key];
-        }
-      });
-
-      console.log(`Collected ${Object.keys(weekData.surveyResponses).length} responses for Week ${weekNumber}`);
-      
-      console.log("Week data prepared:", weekData);
-      
-      // NEW: Generate task impact insights by comparing with previous week
-      let previousWeekData = null;
-      if (weekNumber > 1) {
-        previousWeekData = weekHistory[`week${weekNumber-1}`];
-      } else {
-        previousWeekData = weekHistory.initial;
-      }
-      
-      const newImpactInsights = analyzeTaskImpact(weekData, previousWeekData);
-      console.log("Generated impact insights:", newImpactInsights);
-      
-      // Update impact insights state
-      const updatedImpactInsights = [...impactInsights, ...newImpactInsights];
-      setImpactInsights(updatedImpactInsights);
-      
-      // Calculate task effectiveness from historical data
-      const effectivenessData = analyzeTaskEffectiveness(
-        currentTasks.filter(t => t.completed), 
-        weekHistory
-      );
-      console.log("Task effectiveness analysis:", effectivenessData);
-      
-      // Update task effectiveness state
-      const updatedEffectivenessData = [...taskEffectivenessData, ...effectivenessData];
-      setTaskEffectivenessData(updatedEffectivenessData);
-      
-      // 3. Update week history
-      const updatedHistory = {
-        ...weekHistory,
-        [`week${weekNumber}`]: weekData
-      };
-      
-      // 4. Update week status
-      const updatedStatus = {
-        ...weekStatus,
-        [weekNumber]: {
-          ...weekStatus[weekNumber],
-          completed: true,
-          completionDate: new Date().toISOString()
-        }
-      };
-      
-      // 5. Update completed weeks (if not already included)
-      let updatedCompletedWeeks = [...completedWeeks];
-      if (!updatedCompletedWeeks.includes(weekNumber)) {
-        updatedCompletedWeeks.push(weekNumber);
-      }
-      
-      // 6. Update last completed full week
-      const newLastCompletedWeek = Math.max(lastCompletedFullWeek, weekNumber);
-      
-      // 7. Calculate the next week number
-      const nextWeek = weekNumber + 1;
-
-      const nextWeekDueDate = new Date();
-      nextWeekDueDate.setDate(nextWeekDueDate.getDate() + 7);
-
-      // Update survey schedule with the new date for the next week
-      const updatedSurveySchedule = {
-        ...surveySchedule,
-        [nextWeek]: nextWeekDueDate.toISOString()
-      };
-      
-      // 8. Generate new tasks for the next week - ENHANCED WITH EFFECTIVENESS DATA
-      const newTasks = generateNewWeekTasks(
-        nextWeek, 
-        currentTasks, 
-        weekData.surveyResponses, 
-        updatedEffectivenessData
-      );
-
-      console.log("Saving updates to Firebase...", {
-        completedWeeks: updatedCompletedWeeks,
-        currentWeek: nextWeek,
-        lastCompletedFullWeek: newLastCompletedWeek,
-        tasks: newTasks
-      });
-
-      // Reset weekly completion status for the new week
-      const updatedMembers = familyMembers.map(member => {
-        // Ensure the weeklyCompleted array exists and has an entry for the next week
-        let weeklyCompleted = [...(member.weeklyCompleted || [])];
-        
-        // Add entries for any missing weeks including the new one
-        while (weeklyCompleted.length < nextWeek) {
-          weeklyCompleted.push({
-            completed: false,
-            date: null
-          });
-        }
-        
-        return {
-          ...member,
-          weeklyCompleted
-        };
-      });
-
-      // 9. Save everything to Firebase
-      await DatabaseService.saveFamilyData({
-        weekHistory: updatedHistory,
-        weekStatus: updatedStatus,
-        lastCompletedFullWeek: newLastCompletedWeek,
-        currentWeek: nextWeek,
-        completedWeeks: updatedCompletedWeeks,
-        familyMembers: updatedMembers, 
-        tasks: newTasks,
-        surveySchedule: updatedSurveySchedule,
-        taskEffectiveness: updatedEffectivenessData, // NEW
-        impactInsights: updatedImpactInsights, // NEW
-        updatedAt: new Date().toISOString()
-      }, familyId);
-
-      // 10. Update all state variables
-      setWeekHistory(updatedHistory);
-      setWeekStatus(updatedStatus);
-      setLastCompletedFullWeek(newLastCompletedWeek);
-      setCurrentWeek(nextWeek);
-      setCompletedWeeks(updatedCompletedWeeks);
-      setFamilyMembers(updatedMembers);
-      setTaskRecommendations(newTasks);
-      setSurveySchedule(updatedSurveySchedule);
-      
-      console.log(`Week ${weekNumber} completed successfully, moving to week ${nextWeek}`);
-      
-      return true;
-    } catch (error) {
-      console.error("Error completing week:", error);
-      setError(error.message);
-      throw error;
-    }
-  };
-
-  // ENHANCED: Helper function to generate new tasks for the next week with effectiveness data
-  const generateNewWeekTasks = (weekNumber, previousTasks, previousResponses, effectivenessData = []) => {
-    console.log(`Generating AI-driven tasks for Week ${weekNumber} based on family data and effectiveness`);
-    
-    // Calculate weighted imbalances using the TaskWeightCalculator
-  const weightedScores = calculateBalanceScores(fullQuestionSet, previousResponses, familyPriorities);
-  console.log("Weighted balance scores:", weightedScores);
-  
-  // Find the most imbalanced categories based on weighted scores
-  const imbalancedCategories = Object.entries(weightedScores.categoryBalance)
-    .map(([category, scores]) => ({
-      category,
-      imbalance: scores.imbalance,
-      assignTo: scores.mama > scores.papa ? "Papa" : "Mama"
-    }))
-    .sort((a, b) => b.imbalance - a.imbalance);
-  
-  console.log("Imbalanced categories by weight:", imbalancedCategories);
-  
-  // Use these weighted imbalances to determine priority areas
-  const priorityAreas = determinePriorityAreas(imbalancedCategories, previousFocusAreas);
-  
-
-
-    // First, analyze the survey responses to find imbalances and patterns
-    const categoryImbalances = analyzeImbalancesByCategory(previousResponses);
-    console.log("Category imbalances detected:", categoryImbalances);
-    
-    // Track which areas have been addressed in previous weeks
-    const previousFocusAreas = previousTasks
-      .filter(task => task.isAIGenerated)
-      .map(task => task.focusArea);
-    
-    // Get most and least effective task types from effectiveness data
-    const mostEffectiveTypes = effectivenessData
-      .filter(t => t.effectiveness > 0.7)
-      .map(t => t.taskType);
-      
-    const leastEffectiveTypes = effectivenessData
-      .filter(t => t.effectiveness < 0.3)
-      .map(t => t.taskType);
-    
-    console.log("Most effective task types:", mostEffectiveTypes);
-    console.log("Least effective task types:", leastEffectiveTypes);
-    
-    // Get meeting notes from previous week to incorporate action items and goals
-    const prevWeekNum = weekNumber - 1;
-    let meetingActionItems = [];
-    let meetingGoals = [];
-    
-    // Attempt to get meeting notes for the previous week
-    try {
-      const meetingNotes = weekHistory[`week${prevWeekNum}`]?.meetingNotes || {};
-      
-      // Extract action items and goals
-      if (meetingNotes.actionItems) {
-        meetingActionItems = meetingNotes.actionItems
-          .split('\n')
-          .filter(item => item.trim().length > 0);
-      }
-      
-      if (meetingNotes.nextWeekGoals) {
-        meetingGoals = meetingNotes.nextWeekGoals
-          .split('\n')
-          .filter(goal => goal.trim().length > 0);
-      }
-      
-      console.log("Extracted meeting action items:", meetingActionItems);
-      console.log("Extracted meeting goals:", meetingGoals);
-    } catch (error) {
-      console.error("Error getting meeting notes:", error);
-    }
-    
-// Determine priority areas to focus on this week
-const taskPriorityAreas = determinePriorityAreas(categoryImbalances, previousFocusAreas);
-
-    // Apply effectiveness insights to priority areas
-    taskPriorityAreas.forEach(area => {
-      // Check if this area has proven effective in the past
-      if (mostEffectiveTypes.includes(area.focusArea) || 
-          mostEffectiveTypes.includes(area.category)) {
-        area.priorityBoost += 15;
-        console.log(`Boosting priority for ${area.focusArea} - proven effective`);
-      }
-      
-      // Check if this area has proven ineffective in the past
-      if (leastEffectiveTypes.includes(area.focusArea) || 
-          leastEffectiveTypes.includes(area.category)) {
-        area.priorityBoost -= 10;
-        console.log(`Reducing priority for ${area.focusArea} - proven ineffective`);
-      }
-    });
-    
-    console.log("Priority areas for this week (after effectiveness adjustment):", taskPriorityAreas);
-    
-    // Generate tasks based on the family's specific needs
-    const tasks = [];
-    
-    // 1. Convert meeting action items to tasks
-    meetingActionItems.forEach((item, index) => {
-      // Determine who should be assigned the task
-      // Simple heuristic: assign to Papa if contains "Papa", Mama if contains "Mama", alternate otherwise
-      const assignTo = item.includes("Papa") ? "Papa" : 
-                        item.includes("Mama") ? "Mama" : 
-                        index % 2 === 0 ? "Papa" : "Mama";
-      
-      tasks.push({
-        id: `${weekNumber}-meeting-${index + 1}`,
-        title: `Week ${weekNumber}: Meeting Action Item`,
-        description: item,
-        assignedTo: assignTo,
-        assignedToName: assignTo,
-        taskType: "meeting",
-        focusArea: "Family Meeting Decision",
-        completed: false,
-        completedDate: null,
-        comments: [],
-        subTasks: [
-          {
-            id: `${weekNumber}-meeting-${index + 1}-1`,
-            title: "Make a plan",
-            description: "Plan how to accomplish this action item",
-            completed: false,
-            completedDate: null
-          },
-          {
-            id: `${weekNumber}-meeting-${index + 1}-2`,
-            title: "Execute the plan",
-            description: "Carry out the action item as discussed",
-            completed: false,
-            completedDate: null
-          },
-          {
-            id: `${weekNumber}-meeting-${index + 1}-3`,
-            title: "Report back to family",
-            description: "Share your progress with the family",
-            completed: false,
-            completedDate: null
-          }
-        ]
-      });
-    });
-    
-    // Only add AI and survey tasks if we need more to reach 4 total tasks
-    const tasksNeeded = Math.max(0, 4 - tasks.length);
-    
-    if (tasksNeeded > 0) {
-      // 2. Survey-based task for Papa (from highest priority area)
-      const papaFocusAreas = taskPriorityAreas.filter(area => area.assignTo === "Papa");
-      if (papaFocusAreas.length > 0) {
-        const surveyTask = generateTaskForArea(`${weekNumber}-1`, "Papa", papaFocusAreas[0], weekNumber);
-        surveyTask.taskType = "survey-based";
-        surveyTask.description = `${surveyTask.description} (Based on your family's survey data)`;
-        tasks.push(surveyTask);
-      }
-      
-      // 3. AI-based task for Papa
-      if (tasksNeeded > 1) {
-        const papaInsightTask = generateAIInsightTask(`${weekNumber}-ai-1`, "Papa", taskPriorityAreas, weekNumber);
-        tasks.push(papaInsightTask);
-      }
-      
-      // 4. Survey-based task for Mama (from highest priority area)
-      if (tasksNeeded > 2) {
-        const mamaFocusAreas = taskPriorityAreas.filter(area => area.assignTo === "Mama");
-        if (mamaFocusAreas.length > 0) {
-          const surveyTask = generateTaskForArea(`${weekNumber}-2`, "Mama", mamaFocusAreas[0], weekNumber);
-          surveyTask.taskType = "survey-based";
-          surveyTask.description = `${surveyTask.description} (Based on your family's survey data)`;
-          tasks.push(surveyTask);
-        }
-      }
-      
-      // 5. AI-based task for Mama
-      if (tasksNeeded > 3) {
-        const mamaInsightTask = generateAIInsightTask(`${weekNumber}-ai-2`, "Mama", taskPriorityAreas, weekNumber);
-        tasks.push(mamaInsightTask);
-      }
-    }
-    
-    // Set task priorities based on family goals
-    if (meetingGoals.length > 0) {
-      // Add a goal-tracking task if we have family goals
-      tasks.push({
-        id: `${weekNumber}-goal-1`,
-        title: `Week ${weekNumber}: Family Goals`,
-        description: `Track progress toward this week's family goals: ${meetingGoals.join('; ')}`,
-        assignedTo: "Mama", // Alternate this between parents
-        assignedToName: "Mama",
-        taskType: "goal",
-        focusArea: "Family Goals",
-        completed: false,
-        completedDate: null,
-        comments: [],
-        subTasks: meetingGoals.map((goal, index) => ({
-          id: `${weekNumber}-goal-1-${index + 1}`,
-          title: `Goal ${index + 1}`,
-          description: goal,
-          completed: false,
-          completedDate: null
-        }))
-      });
-    }
-    
-    return tasks;
-  };
-
-  // Helper function to analyze survey responses and identify imbalances
-  const analyzeImbalancesByCategory = (responses) => {
-    // Categories we track
-    const categories = {
-      "Visible Household Tasks": { mama: 0, papa: 0, total: 0 },
-      "Invisible Household Tasks": { mama: 0, papa: 0, total: 0 },
-      "Visible Parental Tasks": { mama: 0, papa: 0, total: 0 },
-      "Invisible Parental Tasks": { mama: 0, papa: 0, total: 0 }
-    };
-    
-    // Count responses by category
-    Object.entries(responses || {}).forEach(([key, value]) => {
-      // Extract the question ID 
-      let questionId = null;
-      
-      if (key.includes('q')) {
-        questionId = key.includes('-') ? key.split('-').pop() : key;
-        
-        // Simple categorization based on question ID ranges
-        // Questions 1-20 are Visible Household Tasks
-        // Questions 21-40 are Invisible Household Tasks
-        // Questions 41-60 are Visible Parental Tasks
-        // Questions 61-80 are Invisible Parental Tasks
-        
-        const qNum = parseInt(questionId.replace('q', ''));
-        
-        let category = null;
-        if (qNum >= 1 && qNum <= 20) {
-          category = "Visible Household Tasks";
-        } else if (qNum >= 21 && qNum <= 40) {
-          category = "Invisible Household Tasks";
-        } else if (qNum >= 41 && qNum <= 60) {
-          category = "Visible Parental Tasks";
-        } else if (qNum >= 61 && qNum <= 80) {
-          category = "Invisible Parental Tasks";
-        }
-        
-        // Update counts if we found a valid category
-        if (category) {
-          categories[category].total++;
-          if (value === 'Mama') categories[category].mama++;
-          else if (value === 'Papa') categories[category].papa++;
-        }
-      }
-    });
-    
-    // Calculate imbalance scores and percentages
-    const imbalances = [];
-    
-    Object.entries(categories).forEach(([category, counts]) => {
-      if (counts.total > 0) {
-        const mamaPercent = Math.round((counts.mama / counts.total) * 100);
-        const papaPercent = Math.round((counts.papa / counts.total) * 100);
-        const imbalanceScore = Math.abs(mamaPercent - papaPercent);
-        
-        imbalances.push({
-          category,
-          mamaPercent,
-          papaPercent,
-          imbalanceScore,
-          // Determine who should take on more in this category
-          assignTo: mamaPercent > papaPercent ? "Papa" : "Mama"
-        });
-      }
-    });
-    
-    // If we don't have enough data, provide some default imbalances
-    if (imbalances.length === 0 || imbalances.every(i => i.imbalanceScore === 0)) {
-      return [
-        { 
-          category: "Invisible Household Tasks", 
-          mamaPercent: 75, 
-          papaPercent: 25, 
-          imbalanceScore: 50, 
-          assignTo: "Papa" 
-        },
-        { 
-          category: "Invisible Parental Tasks", 
-          mamaPercent: 70, 
-          papaPercent: 30, 
-          imbalanceScore: 40, 
-          assignTo: "Papa" 
-        },
-        { 
-          category: "Visible Household Tasks", 
-          mamaPercent: 60, 
-          papaPercent: 40, 
-          imbalanceScore: 20, 
-          assignTo: "Papa" 
-        },
-        { 
-          category: "Visible Parental Tasks", 
-          mamaPercent: 55, 
-          papaPercent: 45, 
-          imbalanceScore: 10, 
-          assignTo: "Papa" 
-        }
-      ];
-    }
-    
-    // Sort by imbalance score (highest first)
-    return imbalances.sort((a, b) => b.imbalanceScore - a.imbalanceScore);
-  };
-
-  // Function to determine priority areas based on imbalances and previous focus
+  // Helper function to determine priority areas based on imbalances and previous focus
   const determinePriorityAreas = (imbalances, previousFocusAreas) => {
     // First, break down into specific task areas for each category
     const taskAreas = [];
@@ -1551,6 +1115,481 @@ const taskPriorityAreas = determinePriorityAreas(categoryImbalances, previousFoc
     };
   };
 
+  // Complete a week (after family meeting)
+  const completeWeek = async (weekNumber) => {
+    try {
+      if (!familyId) throw new Error("No family ID available");
+      
+      console.log(`Starting completion process for week ${weekNumber}`);
+      
+      // Create a backup of the current tasks
+      const currentTasks = [...taskRecommendations];
+      console.log("Current tasks for backup:", currentTasks.length);
+      
+      // 1. Get meeting notes if available
+      let meetingNotes = {};
+      try {
+        meetingNotes = await DatabaseService.getFamilyMeetingNotes(familyId, weekNumber) || {};
+        console.log("Meeting notes retrieved");
+      } catch (notesError) {
+        console.warn("Could not retrieve meeting notes, using empty object instead:", notesError);
+      }
+      
+      // Extract balance data for the week
+      const extractWeekBalance = () => {
+        const weekResponses = Object.entries(surveyResponses)
+          .filter(([key, _]) => key.includes(`week-${weekNumber}`) || 
+                                key.includes(`weekly-${weekNumber}`) || 
+                                (weekNumber === 1 && (key.includes('weekly') || key.includes('week1'))));
+        
+        let mamaCount = 0;
+        let totalCount = 0;
+        
+        weekResponses.forEach(([_, value]) => {
+          if (value === "Mama" || value === "Papa") {
+            totalCount++;
+            if (value === "Mama") mamaCount++;
+          }
+        });
+        
+        const mamaPercent = totalCount > 0 ? (mamaCount / totalCount) * 100 : 50;
+        return {
+          mama: mamaPercent,
+          papa: 100 - mamaPercent
+        };
+      };
+      
+      // Calculate category-specific balance data
+      const calculateCategoryBalance = () => {
+        const categories = [
+          "Visible Household Tasks",
+          "Invisible Household Tasks",
+          "Visible Parental Tasks",
+          "Invisible Parental Tasks"
+        ];
+        
+        const categoryBalance = {};
+        
+        categories.forEach(category => {
+          // Filter responses for this category
+          const categoryResponses = Object.entries(surveyResponses)
+            .filter(([key, _]) => {
+              // Include responses for this week that match this category
+              if (key.includes(`week-${weekNumber}`) || 
+                  (weekNumber === 1 && (key.includes('weekly') || key.includes('week1')))) {
+                // Check if it's in this category
+                const questionId = key.split('-').pop();
+                
+                // Try to find the question in fullQuestionSet from the bridge
+                const fullQuestionSet = surveyDataRef.current.fullQuestionSet || [];
+                const question = fullQuestionSet.find(q => q.id === questionId);
+                
+                return question && question.category === category;
+              }
+              return false;
+            });
+          
+          let mamaCount = 0;
+          let totalCount = 0;
+          
+          categoryResponses.forEach(([_, value]) => {
+            if (value === "Mama" || value === "Papa") {
+              totalCount++;
+              if (value === "Mama") mamaCount++;
+            }
+          });
+          
+          const mamaPercent = totalCount > 0 ? (mamaCount / totalCount) * 100 : 50;
+          categoryBalance[category] = {
+            mamaPercent,
+            papaPercent: 100 - mamaPercent
+          };
+        });
+        
+        return categoryBalance;
+      };
+    
+      const weekData = {
+        weekNumber,
+        familyMembers: familyMembers.map(m => ({
+          id: m.id,
+          name: m.name,
+          role: m.role,
+          completedDate: m.weeklyCompleted?.[weekNumber-1]?.date
+        })),
+        meetingNotes: meetingNotes,
+        tasks: currentTasks,
+        completionDate: new Date().toISOString(),
+        balance: extractWeekBalance(),
+        categoryBalance: calculateCategoryBalance(),
+        surveyResponses: {}
+      };
+
+      // Collect ALL survey responses for this week
+      console.log(`Collecting survey responses for Week ${weekNumber}`);
+      console.log("Available responses:", Object.keys(surveyResponses).length);
+
+      // First, add all general survey responses (without week prefix)
+      Object.keys(surveyResponses).forEach(key => {
+        // Include all question responses (both with and without week prefix)
+        if (key.startsWith('q') || key.includes(`q`)) {
+          weekData.surveyResponses[key] = surveyResponses[key];
+        }
+      });
+
+      // Then add specific week-prefixed responses
+      Object.keys(surveyResponses).forEach(key => {
+        if (key.includes(`week-${weekNumber}`) || 
+            key.includes(`weekly-${weekNumber}`) || 
+            (key.includes(`week${weekNumber}`) || 
+            (weekNumber === 1 && (key.includes('weekly') || key.includes('week1'))))) {
+          weekData.surveyResponses[key] = surveyResponses[key];
+        }
+      });
+
+      console.log(`Collected ${Object.keys(weekData.surveyResponses).length} responses for Week ${weekNumber}`);
+      
+      console.log("Week data prepared:", weekData);
+      
+      // NEW: Generate task impact insights by comparing with previous week
+      let previousWeekData = null;
+      if (weekNumber > 1) {
+        previousWeekData = weekHistory[`week${weekNumber-1}`];
+      } else {
+        previousWeekData = weekHistory.initial;
+      }
+      
+      const newImpactInsights = analyzeTaskImpact(weekData, previousWeekData);
+      console.log("Generated impact insights:", newImpactInsights);
+      
+      // Update impact insights state
+      const updatedImpactInsights = [...impactInsights, ...newImpactInsights];
+      setImpactInsights(updatedImpactInsights);
+      
+      // Calculate task effectiveness from historical data
+      const effectivenessData = analyzeTaskEffectiveness(
+        currentTasks.filter(t => t.completed), 
+        weekHistory
+      );
+      console.log("Task effectiveness analysis:", effectivenessData);
+      
+      // Update task effectiveness state
+      const updatedEffectivenessData = [...taskEffectivenessData, ...effectivenessData];
+      setTaskEffectivenessData(updatedEffectivenessData);
+      
+      // 3. Update week history
+      const updatedHistory = {
+        ...weekHistory,
+        [`week${weekNumber}`]: weekData
+      };
+      
+      // 4. Update week status
+      const updatedStatus = {
+        ...weekStatus,
+        [weekNumber]: {
+          ...weekStatus[weekNumber],
+          completed: true,
+          completionDate: new Date().toISOString()
+        }
+      };
+      
+      // 5. Update completed weeks (if not already included)
+      let updatedCompletedWeeks = [...completedWeeks];
+      if (!updatedCompletedWeeks.includes(weekNumber)) {
+        updatedCompletedWeeks.push(weekNumber);
+      }
+      
+      // 6. Update last completed full week
+      const newLastCompletedWeek = Math.max(lastCompletedFullWeek, weekNumber);
+      
+      // 7. Calculate the next week number
+      const nextWeek = weekNumber + 1;
+
+      const nextWeekDueDate = new Date();
+      nextWeekDueDate.setDate(nextWeekDueDate.getDate() + 7);
+
+      // Update survey schedule with the new date for the next week
+      const updatedSurveySchedule = {
+        ...surveySchedule,
+        [nextWeek]: nextWeekDueDate.toISOString()
+      };
+      
+      // 8. Generate new tasks for the next week - ENHANCED WITH EFFECTIVENESS DATA
+      const newTasks = generateNewWeekTasks(
+        nextWeek, 
+        currentTasks, 
+        weekData.surveyResponses, 
+        updatedEffectivenessData
+      );
+
+      console.log("Saving updates to Firebase...", {
+        completedWeeks: updatedCompletedWeeks,
+        currentWeek: nextWeek,
+        lastCompletedFullWeek: newLastCompletedWeek,
+        tasks: newTasks
+      });
+
+      // Reset weekly completion status for the new week
+      const updatedMembers = familyMembers.map(member => {
+        // Ensure the weeklyCompleted array exists and has an entry for the next week
+        let weeklyCompleted = [...(member.weeklyCompleted || [])];
+        
+        // Add entries for any missing weeks including the new one
+        while (weeklyCompleted.length < nextWeek) {
+          weeklyCompleted.push({
+            completed: false,
+            date: null
+          });
+        }
+        
+        return {
+          ...member,
+          weeklyCompleted
+        };
+      });
+
+      // 9. Save everything to Firebase
+      await DatabaseService.saveFamilyData({
+        weekHistory: updatedHistory,
+        weekStatus: updatedStatus,
+        lastCompletedFullWeek: newLastCompletedWeek,
+        currentWeek: nextWeek,
+        completedWeeks: updatedCompletedWeeks,
+        familyMembers: updatedMembers, 
+        tasks: newTasks,
+        surveySchedule: updatedSurveySchedule,
+        taskEffectiveness: updatedEffectivenessData,
+        impactInsights: updatedImpactInsights,
+        updatedAt: new Date().toISOString()
+      }, familyId);
+
+      // 10. Update all state variables
+      setWeekHistory(updatedHistory);
+      setWeekStatus(updatedStatus);
+      setLastCompletedFullWeek(newLastCompletedWeek);
+      setCurrentWeek(nextWeek);
+      setCompletedWeeks(updatedCompletedWeeks);
+      setFamilyMembers(updatedMembers);
+      setTaskRecommendations(newTasks);
+      setSurveySchedule(updatedSurveySchedule);
+      
+      console.log(`Week ${weekNumber} completed successfully, moving to week ${nextWeek}`);
+      
+      return true;
+    } catch (error) {
+      console.error("Error completing week:", error);
+      setError(error.message);
+      throw error;
+    }
+  };
+
+  // ENHANCED: Helper function to generate new tasks for the next week with effectiveness data
+  const generateNewWeekTasks = (weekNumber, previousTasks, previousResponses, effectivenessData = []) => {
+    console.log(`Generating AI-driven tasks for Week ${weekNumber} based on family data and effectiveness`);
+    
+    // Calculate weighted imbalances using the TaskWeightCalculator
+    // Now uses the bridged data from surveyDataRef
+    const weightedScores = calculateBalanceScores(
+      surveyDataRef.current.fullQuestionSet || [], 
+      previousResponses, 
+      surveyDataRef.current.familyPriorities || familyPriorities
+    );
+    console.log("Weighted balance scores:", weightedScores);
+    
+    // Find the most imbalanced categories based on weighted scores
+    const imbalancedCategories = Object.entries(weightedScores.categoryBalance || {})
+      .map(([category, scores]) => ({
+        category,
+        imbalance: scores.imbalance,
+        assignTo: scores.mama > scores.papa ? "Papa" : "Mama"
+      }))
+      .sort((a, b) => b.imbalance - a.imbalance);
+    
+    console.log("Imbalanced categories by weight:", imbalancedCategories);
+    
+    // First, analyze the survey responses to find imbalances and patterns
+    const categoryImbalances = analyzeImbalancesByCategory(previousResponses);
+    console.log("Category imbalances detected:", categoryImbalances);
+    
+    // Track which areas have been addressed in previous weeks
+    const previousFocusAreas = previousTasks
+      .filter(task => task.isAIGenerated)
+      .map(task => task.focusArea);
+    
+    // Get most and least effective task types from effectiveness data
+    const mostEffectiveTypes = effectivenessData
+      .filter(t => t.effectiveness > 0.7)
+      .map(t => t.taskType);
+      
+    const leastEffectiveTypes = effectivenessData
+      .filter(t => t.effectiveness < 0.3)
+      .map(t => t.taskType);
+    
+    console.log("Most effective task types:", mostEffectiveTypes);
+    console.log("Least effective task types:", leastEffectiveTypes);
+    
+    // Get meeting notes from previous week to incorporate action items and goals
+    const prevWeekNum = weekNumber - 1;
+    let meetingActionItems = [];
+    let meetingGoals = [];
+    
+    // Attempt to get meeting notes for the previous week
+    try {
+      const meetingNotes = weekHistory[`week${prevWeekNum}`]?.meetingNotes || {};
+      
+      // Extract action items and goals
+      if (meetingNotes.actionItems) {
+        meetingActionItems = meetingNotes.actionItems
+          .split('\n')
+          .filter(item => item.trim().length > 0);
+      }
+      
+      if (meetingNotes.nextWeekGoals) {
+        meetingGoals = meetingNotes.nextWeekGoals
+          .split('\n')
+          .filter(goal => goal.trim().length > 0);
+      }
+      
+      console.log("Extracted meeting action items:", meetingActionItems);
+      console.log("Extracted meeting goals:", meetingGoals);
+    } catch (error) {
+      console.error("Error getting meeting notes:", error);
+    }
+    
+    // Use these weighted imbalances to determine priority areas
+    const taskPriorityAreas = determinePriorityAreas(imbalancedCategories, previousFocusAreas);
+
+    // Apply effectiveness insights to priority areas
+    taskPriorityAreas.forEach(area => {
+      // Check if this area has proven effective in the past
+      if (mostEffectiveTypes.includes(area.focusArea) || 
+          mostEffectiveTypes.includes(area.category)) {
+        area.priorityBoost += 15;
+        console.log(`Boosting priority for ${area.focusArea} - proven effective`);
+      }
+      
+      // Check if this area has proven ineffective in the past
+      if (leastEffectiveTypes.includes(area.focusArea) || 
+          leastEffectiveTypes.includes(area.category)) {
+        area.priorityBoost -= 10;
+        console.log(`Reducing priority for ${area.focusArea} - proven ineffective`);
+      }
+    });
+    
+    console.log("Priority areas for this week (after effectiveness adjustment):", taskPriorityAreas);
+    
+    // Generate tasks based on the family's specific needs
+    const tasks = [];
+    
+    // 1. Convert meeting action items to tasks
+    meetingActionItems.forEach((item, index) => {
+      // Determine who should be assigned the task
+      // Simple heuristic: assign to Papa if contains "Papa", Mama if contains "Mama", alternate otherwise
+      const assignTo = item.includes("Papa") ? "Papa" : 
+                        item.includes("Mama") ? "Mama" : 
+                        index % 2 === 0 ? "Papa" : "Mama";
+      
+      tasks.push({
+        id: `${weekNumber}-meeting-${index + 1}`,
+        title: `Week ${weekNumber}: Meeting Action Item`,
+        description: item,
+        assignedTo: assignTo,
+        assignedToName: assignTo,
+        taskType: "meeting",
+        focusArea: "Family Meeting Decision",
+        completed: false,
+        completedDate: null,
+        comments: [],
+        subTasks: [
+          {
+            id: `${weekNumber}-meeting-${index + 1}-1`,
+            title: "Make a plan",
+            description: "Plan how to accomplish this action item",
+            completed: false,
+            completedDate: null
+          },
+          {
+            id: `${weekNumber}-meeting-${index + 1}-2`,
+            title: "Execute the plan",
+            description: "Carry out the action item as discussed",
+            completed: false,
+            completedDate: null
+          },
+          {
+            id: `${weekNumber}-meeting-${index + 1}-3`,
+            title: "Report back to family",
+            description: "Share your progress with the family",
+            completed: false,
+            completedDate: null
+          }
+        ]
+      });
+    });
+    
+    // Only add AI and survey tasks if we need more to reach 4 total tasks
+    const tasksNeeded = Math.max(0, 4 - tasks.length);
+    
+    if (tasksNeeded > 0) {
+      // 2. Survey-based task for Papa (from highest priority area)
+      const papaFocusAreas = taskPriorityAreas.filter(area => area.assignTo === "Papa");
+      if (papaFocusAreas.length > 0) {
+        const surveyTask = generateTaskForArea(`${weekNumber}-1`, "Papa", papaFocusAreas[0], weekNumber);
+        surveyTask.taskType = "survey-based";
+        surveyTask.description = `${surveyTask.description} (Based on your family's survey data)`;
+        tasks.push(surveyTask);
+      }
+      
+      // 3. AI-based task for Papa
+      if (tasksNeeded > 1) {
+        const papaInsightTask = generateAIInsightTask(`${weekNumber}-ai-1`, "Papa", taskPriorityAreas, weekNumber);
+        tasks.push(papaInsightTask);
+      }
+      
+      // 4. Survey-based task for Mama (from highest priority area)
+      if (tasksNeeded > 2) {
+        const mamaFocusAreas = taskPriorityAreas.filter(area => area.assignTo === "Mama");
+        if (mamaFocusAreas.length > 0) {
+          const surveyTask = generateTaskForArea(`${weekNumber}-2`, "Mama", mamaFocusAreas[0], weekNumber);
+          surveyTask.taskType = "survey-based";
+          surveyTask.description = `${surveyTask.description} (Based on your family's survey data)`;
+          tasks.push(surveyTask);
+        }
+      }
+      
+      // 5. AI-based task for Mama
+      if (tasksNeeded > 3) {
+        const mamaInsightTask = generateAIInsightTask(`${weekNumber}-ai-2`, "Mama", taskPriorityAreas, weekNumber);
+        tasks.push(mamaInsightTask);
+      }
+    }
+    
+    // Set task priorities based on family goals
+    if (meetingGoals.length > 0) {
+      // Add a goal-tracking task if we have family goals
+      tasks.push({
+        id: `${weekNumber}-goal-1`,
+        title: `Week ${weekNumber}: Family Goals`,
+        description: `Track progress toward this week's family goals: ${meetingGoals.join('; ')}`,
+        assignedTo: "Mama", // Alternate this between parents
+        assignedToName: "Mama",
+        taskType: "goal",
+        focusArea: "Family Goals",
+        completed: false,
+        completedDate: null,
+        comments: [],
+        subTasks: meetingGoals.map((goal, index) => ({
+          id: `${weekNumber}-goal-1-${index + 1}`,
+          title: `Goal ${index + 1}`,
+          description: goal,
+          completed: false,
+          completedDate: null
+        }))
+      });
+    }
+    
+    return tasks;
+  };
+
   // Add comment to task
   const addTaskComment = async (taskId, text) => {
     try {
@@ -1792,6 +1831,7 @@ const taskPriorityAreas = determinePriorityAreas(categoryImbalances, previousFoc
     taskEffectivenessData,
     impactInsights,
     kidTasksData,
+    familyPriorities,
     loading,
     error,
     selectFamilyMember,
@@ -1816,9 +1856,10 @@ const taskPriorityAreas = determinePriorityAreas(categoryImbalances, previousFoc
     analyzeTaskImpact,
     analyzeTaskEffectiveness,
     coupleCheckInData,
-  saveCoupleCheckInData,
-  getCoupleCheckInData,
-  getRelationshipTrendData
+    saveCoupleCheckInData,
+    getCoupleCheckInData,
+    getRelationshipTrendData,
+    setSurveyData // Add the bridge function to the context value
   };
 
   return (
@@ -1826,4 +1867,20 @@ const taskPriorityAreas = determinePriorityAreas(categoryImbalances, previousFoc
       {children}
     </FamilyContext.Provider>
   );
+}
+
+// Create the bridge component to connect SurveyContext to FamilyContext
+export function SurveyBridge() {
+  const { fullQuestionSet, familyPriorities } = useContext(SurveyContext);
+  const { setSurveyData } = useFamily();
+  
+  // Bridge the data whenever it changes
+  useEffect(() => {
+    setSurveyData({ 
+      fullQuestionSet,
+      familyPriorities
+    });
+  }, [fullQuestionSet, familyPriorities, setSurveyData]);
+  
+  return null; // This component doesn't render anything
 }

@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Lightbulb, Star, Target, Key, BookOpen, ArrowRight, BarChart3, Award, Clock, Download } from 'lucide-react';
 import { useFamily } from '../../contexts/FamilyContext';
 import { 

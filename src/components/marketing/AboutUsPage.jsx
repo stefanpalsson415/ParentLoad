@@ -8,10 +8,11 @@ import stefanProfilePic from '../../assets/stefan-palsson.jpg'; // Add this imag
 import kimberlyProfilePic from '../../assets/kimberly-palsson.jpg'; // Add this image to your assets
 import teamPhoto from '../../assets/team-photo.jpg'; // Add this image to your assets
 
-const { currentUser } = useAuth();
 
 const AboutUsPage = () => {
   const navigate = useNavigate();
+  const { currentUser } = useAuth();
+
   
   useEffect(() => {
     window.scrollTo(0, 0);

@@ -3,6 +3,9 @@ import { Users, Calendar, AlertCircle, CheckCircle, ChevronDown, ChevronUp, Spar
 import { useFamily } from '../../../contexts/FamilyContext';
 import { useSurvey } from '../../../contexts/SurveyContext';
 import DatabaseService from '../../../services/DatabaseService';
+import { LogOut, HelpCircle, Heart } from 'lucide-react';
+import CoupleCheckInScreen from '../../assessment/CoupleCheckInScreen';
+
 
 // AI-powered task generation based on survey data
 const analyzeTaskImbalances = (surveyResponses, fullQuestionSet) => {
@@ -48,8 +51,6 @@ const analyzeTaskImbalances = (surveyResponses, fullQuestionSet) => {
   return categories;
 };
 
-const [showCoupleCheckIn, setShowCoupleCheckIn] = useState(false);
-const [canStartCoupleCheckIn, setCanStartCoupleCheckIn] = useState(false);
 
 
 // Fallback task generator for when no tasks are available
@@ -240,6 +241,8 @@ const TasksTab = ({ onStartWeeklyCheckIn, onOpenFamilyMeeting }) => {
   const [allInitialComplete, setAllInitialComplete] = useState(false);
   const [daysUntilCheckIn, setDaysUntilCheckIn] = useState(6);
   const [canStartCheckIn, setCanStartCheckIn] = useState(false);
+  const [showCoupleCheckIn, setShowCoupleCheckIn] = useState(false);
+  const [canStartCoupleCheckIn, setCanStartCoupleCheckIn] = useState(false);
   
   // Calculate due date based on survey schedule if available
   const calculateDueDate = () => {

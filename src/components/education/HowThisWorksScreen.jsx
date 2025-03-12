@@ -8,9 +8,10 @@ import {
 import { useAuth } from '../../contexts/AuthContext';
 
 
-const { currentUser } = useAuth();
 
 const HowThisWorksScreen = () => {
+  const { currentUser } = useAuth();
+
   const navigate = useNavigate();
 
   useEffect(() => {

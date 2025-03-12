@@ -1,7 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { X, Heart, ThumbsUp, Lightbulb, Calendar, Clock } from 'lucide-react';
 import { useFamily } from '../../contexts/FamilyContext';
-import CoupleCheckInScreen from '../../assessment/CoupleCheckInScreen';
 
 const CoupleCheckInScreen = ({ onClose }) => {
   const { 
