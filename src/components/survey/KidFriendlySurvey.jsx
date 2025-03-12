@@ -151,6 +151,7 @@ const KidFriendlySurvey = ({ surveyType = "initial" }) => {
     familyMembers, 
     completeInitialSurvey,
     completeWeeklyCheckIn,
+    saveSurveyProgress, // Add this line
     currentWeek 
   } = useFamily();
   
@@ -222,50 +223,108 @@ const KidFriendlySurvey = ({ surveyType = "initial" }) => {
     
     let filteredList = questionSet;
     
-    // For very young children, use a much smaller set of simpler questions
-    if (selectedUser && selectedUser.role === 'child' && selectedUser.age < 8) {
-      // Pick simpler questions - 5 from each category
-      const categories = [
-        "Visible Household Tasks",
-        "Invisible Household Tasks",
-        "Visible Parental Tasks",
-        "Invisible Parental Tasks"
-      ];
-      
-      const simpleQuestions = [];
-      categories.forEach(category => {
-        const categoryQuestions = questionSet.filter(q => q.category === category);
-        // Pick 5 questions from each category
-        for (let i = 0; i < 5; i++) {
-          const index = (i < categoryQuestions.length) ? i : i % categoryQuestions.length;
-          simpleQuestions.push(categoryQuestions[index]);
-        }
-      });
-      
-      filteredList = simpleQuestions;
-      setFilterQuestions(true);
-    } else if (selectedUser && selectedUser.role === 'child' && selectedUser.age < 12) {
-      // For older children, use more questions but still fewer than the full set
-      const categories = [
-        "Visible Household Tasks",
-        "Invisible Household Tasks",
-        "Visible Parental Tasks",
-        "Invisible Parental Tasks"
-      ];
-      
-      const mediumQuestions = [];
-      categories.forEach(category => {
-        const categoryQuestions = questionSet.filter(q => q.category === category);
-        // Pick 10 questions per category
-        for (let i = 0; i < 10; i++) {
-          const index = (i < categoryQuestions.length) ? i : i % categoryQuestions.length;
-          mediumQuestions.push(categoryQuestions[index]);
-        }
-      });
-      
-      filteredList = mediumQuestions;
-      setFilterQuestions(true);
+    // For very young children, use a smaller set of simpler questions (40 total)
+if (selectedUser && selectedUser.role === 'child' && selectedUser.age < 8) {
+  // Pick simpler questions - 10 from each category
+  const categories = [
+    "Visible Household Tasks",
+    "Invisible Household Tasks",
+    "Visible Parental Tasks",
+    "Invisible Parental Tasks"
+  ];
+  
+  const simpleQuestions = [];
+  categories.forEach(category => {
+    const categoryQuestions = questionSet.filter(q => q.category === category);
+    // Pick 10 questions from each category (40 total)
+    for (let i = 0; i < 10; i++) {
+      const index = (i < categoryQuestions.length) ? i : i % categoryQuestions.length;
+      simpleQuestions.push(categoryQuestions[index]);
     }
+  });
+  
+  filteredList = simpleQuestions;
+  setFilterQuestions(true);
+} else if (selectedUser && selectedUser.role === 'child' && selectedUser.age < 18) {
+  // For older children, use more questions (60 total)
+  const categories = [
+    "Visible Household Tasks",
+    "Invisible Household Tasks",
+    "Visible Parental Tasks",
+    "Invisible Parental Tasks"
+  ];
+
+  // Add after other functions, before return statement
+const handlePauseSurvey = async () => {
+  if (isProcessing) return; // Prevent actions while processing
+  
+  setIsProcessing(true);
+  
+  try {
+    // Save the current progress without marking as completed
+    if (selectedUser && Object.keys(currentSurveyResponses).length > 0) {
+      console.log("Saving survey progress before pausing...");
+      if (surveyType === "weekly") {
+        await saveSurveyProgress(selectedUser.id, currentSurveyResponses);
+      } else {
+        await saveSurveyProgress(selectedUser.id, currentSurveyResponses);
+      }
+      console.log("Progress saved successfully");
+    }
+    
+    // Now navigate to dashboard
+    navigate('/dashboard');
+  } catch (error) {
+    console.error('Error saving survey progress:', error);
+    alert('There was an error saving your progress, but you can continue later.');
+    navigate('/dashboard');
+  } finally {
+    setIsProcessing(false);
+  }
+};
+
+// Add switch user function
+const handleSwitchUser = async () => {
+  if (isProcessing) return; // Prevent actions while processing
+  
+  setIsProcessing(true);
+  
+  try {
+    // Save the current progress without marking as completed
+    if (selectedUser && Object.keys(currentSurveyResponses).length > 0) {
+      console.log("Saving survey progress before switching user...");
+      if (surveyType === "weekly") {
+        await saveSurveyProgress(selectedUser.id, currentSurveyResponses);
+      } else {
+        await saveSurveyProgress(selectedUser.id, currentSurveyResponses);
+      }
+      console.log("Progress saved successfully");
+    }
+    
+    // Navigate to login screen
+    navigate('/login');
+  } catch (error) {
+    console.error('Error saving survey progress:', error);
+    alert('There was an error saving your progress, but you can still switch users.');
+    navigate('/login');
+  } finally {
+    setIsProcessing(false);
+  }
+};
+  
+  const mediumQuestions = [];
+  categories.forEach(category => {
+    const categoryQuestions = questionSet.filter(q => q.category === category);
+    // Pick 15 questions per category (60 total)
+    for (let i = 0; i < 15; i++) {
+      const index = (i < categoryQuestions.length) ? i : i % categoryQuestions.length;
+      mediumQuestions.push(categoryQuestions[index]);
+    }
+  });
+  
+  filteredList = mediumQuestions;
+  setFilterQuestions(true);
+}
     
     // Simplify question text for children as needed
     const childFriendlyQuestions = filteredList.map(question => {
@@ -317,26 +376,79 @@ const KidFriendlySurvey = ({ surveyType = "initial" }) => {
   const currentQuestion = questions.length > 0 ? questions[currentQuestionIndex] : null;
   
   // Set up keyboard shortcuts
-useEffect(() => {
-  const handleKeyPress = (e) => {
-    if (isProcessing) return; // Don't process keys while already processing
+  const handleSelectParent = (parent) => {
+    if (isProcessing) return; // Prevent multiple selections while processing
+    setIsProcessing(true);
     
-    // 'M' key selects Mama
-    if (e.key.toLowerCase() === 'm') {
-      handleSelectParent('Mama');
+    // Clear any pending timers
+    if (questionTimerRef.current) {
+      clearTimeout(questionTimerRef.current);
+      questionTimerRef.current = null;
     }
-    // 'P' key selects Papa
-    else if (e.key.toLowerCase() === 'p') {
-      handleSelectParent('Papa');
+    
+    setSelectedParent(parent);
+    
+    // Save response
+    if (currentQuestion) {
+      const updatedResponses = {
+        ...userResponses,
+        [currentQuestion.id]: parent
+      };
+      setUserResponses(updatedResponses);
+      
+      // Update parent component through context
+      updateSurveyResponse(currentQuestion.id, parent);
+    
+      // Show some animation
+      setAnimation(`selected-${parent.toLowerCase()}`);
+      setTimeout(() => {
+        setAnimation(null);
+      }, 800);
+      
+      // Move to next question with a shorter delay
+      questionTimerRef.current = setTimeout(() => {
+        if (currentQuestionIndex < questions.length - 1) {
+          // Show progress animation between questions
+          setShowAnimatedProgress(true);
+          
+          // Now update game state ONLY when actually advancing to next question
+          setGameStatus(prev => {
+            const newState = {
+              ...prev,
+              // Use currentQuestionIndex + 1 for positions to match the next question
+              mamaPosition: parent === 'Mama' ? currentQuestionIndex + 1 : prev.mamaPosition,
+              papaPosition: parent === 'Papa' ? currentQuestionIndex + 1 : prev.papaPosition,
+              // Add a star every 20 questions
+              stars: (currentQuestionIndex + 1) % 20 === 0 ? prev.stars + 1 : prev.stars
+            };
+            
+            return newState;
+          });
+          
+          // Show rewards animation every 20 questions
+          if ((currentQuestionIndex + 1) % 20 === 0) {
+            setShowReward(true);
+            setTotalStars(prev => prev + 1);
+            
+            // Hide reward after 3 seconds
+            setTimeout(() => {
+              setShowReward(false);
+            }, 3000);
+          }
+          
+          setTimeout(() => {
+            setCurrentQuestionIndex(prevIndex => prevIndex + 1);
+            setSelectedParent(null);
+            setShowAnimatedProgress(false);
+            setIsProcessing(false); // Reset processing state
+          }, 800);
+        } else {
+          // Survey completed
+          handleCompleteSurvey();
+        }
+      }, 500);
     }
   };
-    
-  window.addEventListener('keydown', handleKeyPress);
-    
-  return () => {
-    window.removeEventListener('keydown', handleKeyPress);
-  };
-}, [currentQuestionIndex, isProcessing]);
   
   // Helper function to get illustration for a question
   function getIllustrationForQuestion(question) {
@@ -435,80 +547,7 @@ useEffect(() => {
     return illustrations[questionHash % illustrations.length];
   }
   
-  // Handle parent selection
-  const handleSelectParent = (parent) => {
-    if (isProcessing) return; // Prevent multiple selections while processing
-    setIsProcessing(true);
-    
-    // Clear any pending timers
-    if (questionTimerRef.current) {
-      clearTimeout(questionTimerRef.current);
-      questionTimerRef.current = null;
-    }
-    
-    setSelectedParent(parent);
-    
-    // Save response
-    if (currentQuestion) {
-      const updatedResponses = {
-        ...userResponses,
-        [currentQuestion.id]: parent
-      };
-      setUserResponses(updatedResponses);
-      
-      // Update parent component through context
-      updateSurveyResponse(currentQuestion.id, parent);
-    
-      // Show some animation
-      setAnimation(`selected-${parent.toLowerCase()}`);
-      setTimeout(() => {
-        setAnimation(null);
-      }, 800);
-      
-      // Move to next question with a shorter delay
-      questionTimerRef.current = setTimeout(() => {
-        if (currentQuestionIndex < questions.length - 1) {
-          // Show progress animation between questions
-          setShowAnimatedProgress(true);
-          
-          // Now update game state ONLY when actually advancing to next question
-          setGameStatus(prev => {
-            const newState = {
-              ...prev,
-              // Use currentQuestionIndex + 1 for positions to match the next question
-              mamaPosition: parent === 'Mama' ? currentQuestionIndex + 1 : prev.mamaPosition,
-              papaPosition: parent === 'Papa' ? currentQuestionIndex + 1 : prev.papaPosition,
-              // Add a star every 5 questions
-              stars: (currentQuestionIndex + 1) % 5 === 0 ? prev.stars + 1 : prev.stars
-            };
-            
-            return newState;
-          });
-          
-          // Show rewards animation every 5 questions
-          if ((currentQuestionIndex + 1) % 5 === 0) {
-            setShowReward(true);
-            setTotalStars(prev => prev + 1);
-            
-            // Hide reward after 3 seconds
-            setTimeout(() => {
-              setShowReward(false);
-            }, 3000);
-          }
-          
-          setTimeout(() => {
-            setCurrentQuestionIndex(prevIndex => prevIndex + 1);
-            setSelectedParent(null);
-            setShowAnimatedProgress(false);
-            setIsProcessing(false); // Reset processing state
-          }, 800);
-        } else {
-          // Survey completed
-          handleCompleteSurvey();
-        }
-      }, 500); // Reduced from 1000ms to 500ms for better responsiveness
-    }
-  };
+
   
   // Handle survey completion
   const handleCompleteSurvey = async () => {
@@ -573,33 +612,40 @@ useEffect(() => {
     <div className="max-w-3xl mx-auto bg-gradient-to-b from-blue-50 to-purple-50 rounded-lg p-4 shadow-lg">
       {/* Header with user info */}
       <div className="flex items-center justify-between mb-4">
-        <div className="flex items-center">
-          <div className="w-10 h-10 rounded-full overflow-hidden mr-2 border-2 border-indigo-300">
-            <img 
-              src={selectedUser?.profilePicture} 
-              alt={selectedUser?.name}
-              className="w-full h-full object-cover"
-            />
-          </div>
-          <div>
-            <h2 className="font-bold text-indigo-800">{selectedUser?.name}'s {surveyType === "weekly" ? "Weekly" : "Survey"}</h2>
-            <div className="flex items-center">
-              {[...Array(totalStars)].map((_, i) => (
-                <Star key={i} size={14} className="text-amber-400 fill-amber-400" />
-              ))}
-              {totalStars > 0 && <span className="text-xs text-amber-600 ml-1">Stars earned!</span>}
-            </div>
-          </div>
-        </div>
-        <div className="text-right">
-          <p className="text-sm font-medium text-purple-700">
-            Question {currentQuestionIndex + 1} of {questions.length}
-          </p>
-          <p className="text-xs text-purple-600">
-            {Math.round(progressPercentage)}% complete
-          </p>
-        </div>
+  <div className="flex items-center">
+    <div className="w-10 h-10 rounded-full overflow-hidden mr-2 border-2 border-indigo-300">
+      <img 
+        src={selectedUser?.profilePicture} 
+        alt={selectedUser?.name}
+        className="w-full h-full object-cover"
+      />
+    </div>
+    <div>
+      <h2 className="font-bold text-indigo-800">{selectedUser?.name}'s {surveyType === "weekly" ? "Weekly" : "Survey"}</h2>
+      <div className="flex items-center">
+        {[...Array(totalStars)].map((_, i) => (
+          <Star key={i} size={14} className="text-amber-400 fill-amber-400" />
+        ))}
+        {totalStars > 0 && <span className="text-xs text-amber-600 ml-1">Stars earned!</span>}
       </div>
+    </div>
+  </div>
+  <div className="flex flex-col items-end">
+    <button 
+      onClick={handleSwitchUser}
+      className="text-xs bg-black text-white px-2 py-1 rounded mb-1"
+      disabled={isProcessing}
+    >
+      Switch User
+    </button>
+    <p className="text-sm font-medium text-purple-700">
+      Question {currentQuestionIndex + 1} of {questions.length}
+    </p>
+    <p className="text-xs text-purple-600">
+      {Math.round(progressPercentage)}% complete
+    </p>
+  </div>
+</div>
       
       {/* Game-like progress tracker */}
       <div className="mb-6 p-4 bg-gradient-to-r from-indigo-100 to-purple-100 rounded-lg">
@@ -787,70 +833,78 @@ useEffect(() => {
       
       {/* Navigation footer with fun design */}
       <div className="flex justify-between items-center bg-indigo-50 p-4 rounded-lg">
-        <button 
-          onClick={() => {
-            if (isProcessing) return;
-            
-            // Clear any pending timers
-            if (questionTimerRef.current) {
-              clearTimeout(questionTimerRef.current);
-              questionTimerRef.current = null;
-            }
-            
-            // Go to previous question
-            if (currentQuestionIndex > 0) {
-              setCurrentQuestionIndex(prevIndex => prevIndex - 1);
-              setSelectedParent(userResponses[questions[currentQuestionIndex - 1].id] || null);
-            }
-          }}
-          disabled={currentQuestionIndex === 0 || isProcessing}
-          className={`px-4 py-2 rounded-md flex items-center ${
-            currentQuestionIndex === 0 || isProcessing
-              ? 'bg-gray-100 text-gray-400 cursor-not-allowed' 
-              : 'bg-white text-indigo-700 hover:bg-indigo-100 border border-indigo-200'
-          }`}
-        >
-          <ArrowLeft size={16} className="mr-1" />
-          Back
-        </button>
-        
-        <div className="font-medium text-indigo-800 bg-white px-3 py-1 rounded-lg border border-indigo-200">
-          <div className="flex items-center">
-            {Math.floor(currentQuestionIndex / (questions.length / 5)) >= 1 && 
-              <Star size={14} className="text-amber-400 fill-amber-400 mr-1" />}
-            Question {currentQuestionIndex + 1} of {questions.length}
-          </div>
-        </div>
-        
-        <button 
-          onClick={() => {
-            if (isProcessing) return;
-            
-            // Clear any pending timers
-            if (questionTimerRef.current) {
-              clearTimeout(questionTimerRef.current);
-              questionTimerRef.current = null;
-            }
-            
-            // Skip to next question
-            if (currentQuestionIndex < questions.length - 1) {
-              setCurrentQuestionIndex(prevIndex => prevIndex + 1);
-              setSelectedParent(null);
-            } else {
-              handleCompleteSurvey();
-            }
-          }}
-          disabled={isProcessing}
-          className={`px-4 py-2 rounded-md ${
-            isProcessing 
-              ? 'bg-gray-100 text-gray-400 cursor-not-allowed'
-              : 'bg-indigo-100 text-indigo-700 hover:bg-indigo-200 border border-indigo-200 flex items-center'
-          }`}
-        >
-          Skip
-          <ArrowRight size={16} className="ml-1" />
-        </button>
-      </div>
+  <button 
+    onClick={() => {
+      if (isProcessing) return;
+      
+      // Clear any pending timers
+      if (questionTimerRef.current) {
+        clearTimeout(questionTimerRef.current);
+        questionTimerRef.current = null;
+      }
+      
+      // Go to previous question
+      if (currentQuestionIndex > 0) {
+        setCurrentQuestionIndex(prevIndex => prevIndex - 1);
+        setSelectedParent(userResponses[questions[currentQuestionIndex - 1].id] || null);
+      }
+    }}
+    disabled={currentQuestionIndex === 0 || isProcessing}
+    className={`px-4 py-2 rounded-md flex items-center ${
+      currentQuestionIndex === 0 || isProcessing
+        ? 'bg-gray-100 text-gray-400 cursor-not-allowed' 
+        : 'bg-white text-indigo-700 hover:bg-indigo-100 border border-indigo-200'
+    }`}
+  >
+    <ArrowLeft size={16} className="mr-1" />
+    Back
+  </button>
+  
+  <button
+    onClick={handlePauseSurvey}
+    disabled={isProcessing}
+    className="px-4 py-2 rounded-md bg-white text-indigo-700 hover:bg-indigo-100 border border-indigo-200"
+  >
+    Pause Survey
+  </button>
+  
+  <div className="font-medium text-indigo-800 bg-white px-3 py-1 rounded-lg border border-indigo-200">
+    <div className="flex items-center">
+      {Math.floor(currentQuestionIndex / (questions.length / 20)) >= 1 && 
+        <Star size={14} className="text-amber-400 fill-amber-400 mr-1" />}
+      Question {currentQuestionIndex + 1} of {questions.length}
+    </div>
+  </div>
+  
+  <button 
+    onClick={() => {
+      if (isProcessing) return;
+      
+      // Clear any pending timers
+      if (questionTimerRef.current) {
+        clearTimeout(questionTimerRef.current);
+        questionTimerRef.current = null;
+      }
+      
+      // Skip to next question
+      if (currentQuestionIndex < questions.length - 1) {
+        setCurrentQuestionIndex(prevIndex => prevIndex + 1);
+        setSelectedParent(null);
+      } else {
+        handleCompleteSurvey();
+      }
+    }}
+    disabled={isProcessing}
+    className={`px-4 py-2 rounded-md ${
+      isProcessing 
+        ? 'bg-gray-100 text-gray-400 cursor-not-allowed'
+        : 'bg-indigo-100 text-indigo-700 hover:bg-indigo-200 border border-indigo-200 flex items-center'
+    }`}
+  >
+    Skip
+    <ArrowRight size={16} className="ml-1" />
+  </button>
+</div>
       
       {/* Celebration overlay - shown when earning stars */}
       {showReward && (
