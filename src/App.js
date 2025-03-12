@@ -66,21 +66,51 @@ function AppRoutes() {
 }
 
 function App() {
+  console.log("App rendering..."); // Add this debug line
+  
   return (
     <Router>
-      <AuthProvider>
-        <FamilyProvider>
-          <SurveyProvider>
-
-            <div className="App">
-              <AppRoutes />
-            </div>
-
-          </SurveyProvider>
-        </FamilyProvider>
-      </AuthProvider>
+      <ErrorBoundary>
+        <AuthProvider>
+          <FamilyProvider>
+            <SurveyProvider>
+              <div className="App">
+                <AppRoutes />
+              </div>
+            </SurveyProvider>
+          </FamilyProvider>
+        </AuthProvider>
+      </ErrorBoundary>
     </Router>
   );
+}
+
+// Add this error boundary component
+class ErrorBoundary extends React.Component {
+  constructor(props) {
+    super(props);
+    this.state = { hasError: false };
+  }
+
+  static getDerivedStateFromError(error) {
+    return { hasError: true };
+  }
+
+  componentDidCatch(error, errorInfo) {
+    console.error("Error in application:", error, errorInfo);
+  }
+
+  render() {
+    if (this.state.hasError) {
+      return (
+        <div style={{padding: 20}}>
+          <h2>Something went wrong</h2>
+          <p>Please refresh the page and try again.</p>
+        </div>
+      );
+    }
+    return this.props.children;
+  }
 }
 
 export default App;

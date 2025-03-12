@@ -146,9 +146,11 @@ async function ensureFamiliesLoaded(userId) {
     }
   }
 
-  // Effect to load user and family data when auth state changes
   useEffect(() => {
+    let isMounted = true;
+    
     const unsubscribe = onAuthStateChanged(auth, async (user) => {
+      if (!isMounted) return;
       setCurrentUser(user);
       
       if (user) {
@@ -169,8 +171,20 @@ async function ensureFamiliesLoaded(userId) {
       
       setLoading(false);
     });
-
-    return unsubscribe;
+  
+    // Add a timeout to prevent hanging indefinitely
+    const timeout = setTimeout(() => {
+      if (isMounted) {
+        console.log("Auth loading timeout - forcing render");
+        setLoading(false);
+      }
+    }, 5000); // 5 seconds timeout
+    
+    return () => {
+      isMounted = false;
+      clearTimeout(timeout);
+      unsubscribe();
+    };
   }, []);
 
   // Context value

@@ -10,6 +10,8 @@ import {
 } from 'lucide-react';
 
 const LandingPage = () => {
+  console.log("LandingPage attempting to render...");
+
   const navigate = useNavigate();
   const { currentUser } = useAuth();
   const [activeDemo, setActiveDemo] = useState(1);
