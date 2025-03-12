@@ -10,6 +10,7 @@ const SurveyScreen = () => {
     selectedUser,
     familyMembers,
     completeInitialSurvey,
+    saveSurveyProgress, // Add this line
     familyPriorities
   } = useFamily();
   
@@ -28,6 +29,9 @@ const SurveyScreen = () => {
   const [showExplanation, setShowExplanation] = useState(false);
   const [keyboardInitialized, setKeyboardInitialized] = useState(false);
   const [showWeightMetrics, setShowWeightMetrics] = useState(false);
+  const [isProcessing, setIsProcessing] = useState(false);
+
+
   
   // Redirect if no user is selected
   useEffect(() => {
@@ -88,6 +92,8 @@ const SurveyScreen = () => {
   // Get current question
   const currentQuestion = fullQuestionSet[currentQuestionIndex];
   
+
+  
   // Handle parent selection
   const handleSelectParent = (parent) => {
     setSelectedParent(parent);
@@ -113,8 +119,11 @@ const SurveyScreen = () => {
     }
   };
   
-  // Handle survey completion
   const handleCompleteSurvey = async () => {
+    if (isProcessing) return; // Prevent multiple submissions
+    
+    setIsProcessing(true); // Add this processing state
+    
     try {
       // First try to save data before any navigation
       console.log("Saving survey responses...");
@@ -136,6 +145,7 @@ const SurveyScreen = () => {
     } catch (error) {
       console.error('Error completing survey:', error);
       alert('There was an error saving your survey. Please try again.');
+      setIsProcessing(false); // Reset processing state
       // Don't navigate away on error, stay on the current page
     }
   };
@@ -162,9 +172,30 @@ const SurveyScreen = () => {
   };
   
   // Handle pause
-  const handlePause = () => {
+  // Handle pause/exit
+const handlePause = async () => {
+  if (isProcessing) return; // Prevent multiple actions while processing
+  
+  setIsProcessing(true);
+  
+  try {
+    // Save the current progress without marking as completed
+    if (selectedUser && Object.keys(currentSurveyResponses).length > 0) {
+      console.log("Saving survey progress before pausing...");
+      await saveSurveyProgress(selectedUser.id, currentSurveyResponses);
+      console.log("Progress saved successfully");
+    }
+    
+    // Now navigate to dashboard
     navigate('/dashboard');
-  };
+  } catch (error) {
+    console.error('Error saving survey progress:', error);
+    alert('There was an error saving your progress, but you can continue later.');
+    navigate('/dashboard');
+  } finally {
+    setIsProcessing(false);
+  }
+};
   
   // Skip question
   const handleSkip = () => {
