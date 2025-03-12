@@ -317,24 +317,26 @@ const KidFriendlySurvey = ({ surveyType = "initial" }) => {
   const currentQuestion = questions.length > 0 ? questions[currentQuestionIndex] : null;
   
   // Set up keyboard shortcuts
-  useEffect(() => {
-    const handleKeyPress = (e) => {
-      // 'M' key selects Mama
-      if (e.key.toLowerCase() === 'm') {
-        handleSelectParent('Mama');
-      }
-      // 'P' key selects Papa
-      else if (e.key.toLowerCase() === 'p') {
-        handleSelectParent('Papa');
-      }
-    };
-      
-    window.addEventListener('keydown', handleKeyPress);
-      
-    return () => {
-      window.removeEventListener('keydown', handleKeyPress);
-    };
-  }, [currentQuestionIndex]);
+useEffect(() => {
+  const handleKeyPress = (e) => {
+    if (isProcessing) return; // Don't process keys while already processing
+    
+    // 'M' key selects Mama
+    if (e.key.toLowerCase() === 'm') {
+      handleSelectParent('Mama');
+    }
+    // 'P' key selects Papa
+    else if (e.key.toLowerCase() === 'p') {
+      handleSelectParent('Papa');
+    }
+  };
+    
+  window.addEventListener('keydown', handleKeyPress);
+    
+  return () => {
+    window.removeEventListener('keydown', handleKeyPress);
+  };
+}, [currentQuestionIndex, isProcessing]);
   
   // Helper function to get illustration for a question
   function getIllustrationForQuestion(question) {

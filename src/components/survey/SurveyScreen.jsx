@@ -27,7 +27,7 @@ const SurveyScreen = () => {
   const [viewingQuestionList, setViewingQuestionList] = useState(false);
   const [showWeightInfo, setShowWeightInfo] = useState(false);
   const [showExplanation, setShowExplanation] = useState(false);
-  const [keyboardInitialized, setKeyboardInitialized] = useState(false);
+  const keyboardInitialized = useRef(false);
   const [showWeightMetrics, setShowWeightMetrics] = useState(false);
   const [isProcessing, setIsProcessing] = useState(false);
 
@@ -63,31 +63,41 @@ const SurveyScreen = () => {
   };
   
   // Set up keyboard shortcuts
-  useEffect(() => {
-    const handleKeyPress = (e) => {
-      if (viewingQuestionList) return;
-        
-      // 'M' key selects Mama
-      if (e.key.toLowerCase() === 'm') {
-        handleSelectParent('Mama');
-      }
-      // 'P' key selects Papa
-      else if (e.key.toLowerCase() === 'p') {
-        handleSelectParent('Papa');
-      }
-    };
-
-    if (!keyboardInitialized) {
-      window.addEventListener('keydown', handleKeyPress);
-      setKeyboardInitialized(true);
-    }
+useEffect(() => {
+  // Function to handle key press
+  const handleKeyPress = (e) => {
+    if (viewingQuestionList || isProcessing) return;
       
-    return () => {
-      if (keyboardInitialized) {
-        window.removeEventListener('keydown', handleKeyPress);
-      }
-    };
-  }, [currentQuestionIndex, viewingQuestionList, keyboardInitialized]);
+    // 'M' key selects Mama
+    if (e.key.toLowerCase() === 'm') {
+      handleSelectParent('Mama');
+    }
+    // 'P' key selects Papa
+    else if (e.key.toLowerCase() === 'p') {
+      handleSelectParent('Papa');
+    }
+  };
+    
+  // Set a small timeout to ensure component is fully rendered
+  const timer = setTimeout(() => {
+    // Clean up previous listeners if they exist
+    if (keyboardInitialized.current) {
+      window.removeEventListener('keydown', handleKeyPress);
+    }
+    
+    // Add new listener
+    window.addEventListener('keydown', handleKeyPress);
+    keyboardInitialized.current = true;
+  }, 200);
+    
+  // Cleanup function
+  return () => {
+    clearTimeout(timer);
+    if (keyboardInitialized.current) {
+      window.removeEventListener('keydown', handleKeyPress);
+    }
+  };
+}, [currentQuestionIndex, viewingQuestionList, isProcessing]);
   
   // Get current question
   const currentQuestion = fullQuestionSet[currentQuestionIndex];
@@ -95,29 +105,33 @@ const SurveyScreen = () => {
 
   
   // Handle parent selection
-  const handleSelectParent = (parent) => {
-    setSelectedParent(parent);
-    
-    // Save response
-    if (currentQuestion) {
-      updateSurveyResponse(currentQuestion.id, parent);
-    
-      // Wait a moment to show selection before moving to next question
-      setTimeout(() => {
-        if (currentQuestionIndex < fullQuestionSet.length - 1) {
-          // Use functional state update to ensure we're using the latest value
-          setCurrentQuestionIndex(prevIndex => prevIndex + 1);
-          setSelectedParent(null);
-          setShowWeightInfo(false);
-          setShowExplanation(false);
-          setShowWeightMetrics(false);
-        } else {
-          // Survey completed, save responses
-          handleCompleteSurvey();
-        }
-      }, 500);
-    }
-  };
+const handleSelectParent = (parent) => {
+  if (isProcessing) return; // Prevent multiple selections while processing
+  setIsProcessing(true);
+  
+  setSelectedParent(parent);
+  
+  // Save response
+  if (currentQuestion) {
+    updateSurveyResponse(currentQuestion.id, parent);
+  
+    // Wait a moment to show selection before moving to next question
+    setTimeout(() => {
+      if (currentQuestionIndex < fullQuestionSet.length - 1) {
+        // Use functional state update to ensure we're using the latest value
+        setCurrentQuestionIndex(prevIndex => prevIndex + 1);
+        setSelectedParent(null);
+        setShowWeightInfo(false);
+        setShowExplanation(false);
+        setShowWeightMetrics(false);
+        setIsProcessing(false); // Reset processing state
+      } else {
+        // Survey completed, save responses
+        handleCompleteSurvey();
+      }
+    }, 500);
+  }
+};
   
   const handleCompleteSurvey = async () => {
     if (isProcessing) return; // Prevent multiple submissions
