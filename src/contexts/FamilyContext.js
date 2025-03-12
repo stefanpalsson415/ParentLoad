@@ -354,32 +354,7 @@ export function FamilyProvider({ children }) {
       }
       
 
-      
-// Save survey progress without marking as completed
-  const saveSurveyProgress = async (memberId, responses) => {
-  try {
-    if (!familyId) throw new Error("No family ID available");
     
-    console.log("Saving survey progress for member:", memberId);
-    console.log("Number of responses:", Object.keys(responses).length);
-    
-    // Update local survey responses state
-    setSurveyResponses({
-      ...surveyResponses,
-      ...responses
-    });
-    
-    // Save to Firebase without marking as completed
-    await DatabaseService.saveSurveyResponses(familyId, memberId, 'initial', responses);
-    
-    console.log("Survey progress saved successfully");
-    return true;
-  } catch (error) {
-    console.error("Error saving survey progress:", error);
-    setError(error.message);
-    throw error;
-  }
-};
 
       // Store initial survey data in week history
 const allComplete = updatedMembers.every(member => member.completed);
@@ -412,6 +387,32 @@ if (allComplete) {
       
       return true;
     } catch (error) {
+      setError(error.message);
+      throw error;
+    }
+  };
+
+  // Save survey progress without marking as completed
+  const saveSurveyProgress = async (memberId, responses) => {
+    try {
+      if (!familyId) throw new Error("No family ID available");
+      
+      console.log("Saving survey progress for member:", memberId);
+      console.log("Number of responses:", Object.keys(responses).length);
+      
+      // Update local survey responses state
+      setSurveyResponses({
+        ...surveyResponses,
+        ...responses
+      });
+      
+      // Save to Firebase without marking as completed
+      await DatabaseService.saveSurveyResponses(familyId, memberId, 'initial', responses);
+      
+      console.log("Survey progress saved successfully");
+      return true;
+    } catch (error) {
+      console.error("Error saving survey progress:", error);
       setError(error.message);
       throw error;
     }
