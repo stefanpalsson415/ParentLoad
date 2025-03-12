@@ -514,6 +514,7 @@ const KidFriendlySurvey = ({ surveyType = "initial" }) => {
     setShowReward(true);
     
     try {
+      console.log(`Attempting to save ${surveyType} survey data...`);
       // First try to save the data before any navigation
       if (surveyType === "weekly") {
         // Save weekly check-in
@@ -527,11 +528,13 @@ const KidFriendlySurvey = ({ surveyType = "initial" }) => {
       
       // Only navigate after confirmed save
       setTimeout(() => {
+        console.log("Navigating to loading screen");
         navigate('/loading');
         
         // Navigate to dashboard after delay
         setTimeout(() => {
-            navigate('/payment');
+            console.log("Navigating to dashboard");
+            navigate('/dashboard');
           }, 1500);
       }, 2000);
     } catch (error) {

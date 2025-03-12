@@ -205,7 +205,7 @@ const WeeklyCheckInScreen = () => {
   
   // Handle logout
   const handleLogout = () => {
-    navigate('/');
+    navigate('/login');
   };
   
   // Calculate progress

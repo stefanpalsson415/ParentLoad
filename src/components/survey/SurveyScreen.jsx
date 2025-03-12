@@ -116,19 +116,27 @@ const SurveyScreen = () => {
   // Handle survey completion
   const handleCompleteSurvey = async () => {
     try {
-      // Save survey responses to database
-      await completeInitialSurvey(selectedUser.id, currentSurveyResponses);
+      // First try to save data before any navigation
+      console.log("Saving survey responses...");
+      const result = await completeInitialSurvey(selectedUser.id, currentSurveyResponses);
       
-      // Show loading screen temporarily
+      if (!result) {
+        throw new Error("Survey completion failed");
+      }
+      
+      console.log("Survey saved successfully, navigating to loading screen");
+      // Only navigate after confirmed save
       navigate('/loading');
       
-      // Navigate to payment page after a delay
+      // Navigate to dashboard after a delay
       setTimeout(() => {
-        navigate('/payment');
+        console.log("Navigating to dashboard");
+        navigate('/dashboard');
       }, 1500);
     } catch (error) {
       console.error('Error completing survey:', error);
       alert('There was an error saving your survey. Please try again.');
+      // Don't navigate away on error, stay on the current page
     }
   };
   
@@ -179,7 +187,7 @@ const SurveyScreen = () => {
   
   // Handle logout
   const handleLogout = () => {
-    navigate('/');
+    navigate('/login');
   };
   
   // Calculate progress

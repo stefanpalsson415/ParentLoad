@@ -527,21 +527,27 @@ useEffect(() => {
           onClick={() => handleSelectUser(member)}
         >
           <div className="flex items-center">
-            <div className="flex-shrink-0 mr-4 relative">
-              <div className="w-16 h-16 rounded-full overflow-hidden border-2 border-gray-200">
-                <img 
-                  src={getDefaultProfileImage(member)} 
-                  alt={`${member.name}'s profile`}
-                  className="w-full h-full object-cover"
-                />
-              </div>
-              <button
-                className="absolute bottom-0 right-0 bg-black text-white p-1 rounded-full"
-                onClick={(e) => handleSelectForUpload(member, e)}
-              >
-                <Camera size={12} />
-              </button>
-            </div>
+          <div className="flex-shrink-0 mr-4 relative">
+  <div className="w-16 h-16 rounded-full overflow-hidden border-2 border-gray-200 relative">
+    <img 
+      src={getDefaultProfileImage(member)} 
+      alt={`${member.name}'s profile`}
+      className="w-full h-full object-cover"
+    />
+    {!member.profilePicture && (
+      <div className="absolute inset-0 bg-black bg-opacity-50 flex flex-col items-center justify-center p-1 text-white">
+        <span className="text-xs font-bold">Add a pic!</span>
+        <span className="text-[7px]">It's better!</span>
+      </div>
+    )}
+  </div>
+  <button
+    className="absolute bottom-0 right-0 bg-black text-white p-1 rounded-full"
+    onClick={(e) => handleSelectForUpload(member, e)}
+  >
+    <Camera size={12} />
+  </button>
+</div>
             <div className="flex-1">
               <h3 className="font-medium text-lg">{member.name}</h3>
               <p className="text-sm text-gray-500 capitalize">{member.role}</p>
