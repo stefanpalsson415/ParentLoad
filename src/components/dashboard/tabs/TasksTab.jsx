@@ -48,6 +48,10 @@ const analyzeTaskImbalances = (surveyResponses, fullQuestionSet) => {
   return categories;
 };
 
+const [showCoupleCheckIn, setShowCoupleCheckIn] = useState(false);
+const [canStartCoupleCheckIn, setCanStartCoupleCheckIn] = useState(false);
+
+
 // Fallback task generator for when no tasks are available
 const generateTaskRecommendations = (weekNumber = 1) => {
   // Generate sample tasks when no tasks are available from other sources
@@ -287,6 +291,30 @@ const TasksTab = ({ onStartWeeklyCheckIn, onOpenFamilyMeeting }) => {
       setCheckInDueDateInput(checkInDueDate.toISOString().split('T')[0]);
     }
   }, [checkInDueDate]);
+
+// Effect to update check-in status when survey schedule or current week changes
+useEffect(() => {
+  // Update check-in due date
+  setCheckInDueDate(calculateDueDate());
+  
+  // Update days until check-in
+  setDaysUntilCheckIn(calculateDaysUntilCheckIn());
+  
+  // Determine if check-in can be started
+  // Allow check-in if it's due within 2 days
+  const canStart = calculateDaysUntilCheckIn() <= 2;
+  setCanStartCheckIn(canStart);
+  
+  // NEW: Determine if couple check-in can be started
+  // Only allow after weekly check-in is completed by at least one parent
+  const parentCompleted = familyMembers
+    .filter(m => m.role === 'parent')
+    .some(m => m.weeklyCompleted && m.weeklyCompleted[currentWeek-1]?.completed);
+  
+  setCanStartCoupleCheckIn(parentCompleted);
+  
+}, [surveySchedule, currentWeek, familyMembers]); // Add familyMembers to dependencies
+
 
   // Effect to recalculate check-in availability immediately after date changes
   useEffect(() => {
@@ -1853,7 +1881,80 @@ const TasksTab = ({ onStartWeeklyCheckIn, onOpenFamilyMeeting }) => {
             </div>
           </div>
         </div>
+
+        {/* Couple Check-In Card */}
+{selectedUser && selectedUser.role === 'parent' && (
+  <div className="bg-white rounded-lg shadow p-6 mt-8">
+    <div className="flex items-start">
+      <div className="flex-shrink-0 mr-4">
+        <div className="w-10 h-10 rounded-full bg-pink-100 flex items-center justify-center">
+          <Heart size={20} className="text-pink-600" />
+        </div>
+      </div>
+      
+      <div className="flex-1">
+        <h3 className="text-lg font-semibold">Weekly Couple Check-In</h3>
+        <p className="text-sm text-gray-600 mt-1">
+          A quick 5-minute check-in to track how workload balance is affecting your relationship
+        </p>
+        
+        <div className="mt-3">
+          {!canStartCoupleCheckIn ? (
+            <div className="text-sm bg-amber-50 text-amber-800 p-3 rounded mb-3">
+              <div className="flex items-center mb-1">
+                <AlertCircle size={16} className="mr-2" />
+                <span className="font-medium">Couple check-in not yet available</span>
+              </div>
+              <p>
+                Complete the weekly check-in first to unlock the couple check-in.
+              </p>
+            </div>
+          ) : (
+            <div className="text-sm bg-pink-50 text-pink-800 p-3 rounded mb-3">
+              <div className="flex items-center mb-1">
+                <Heart size={16} className="mr-2" />
+                <span className="font-medium">Your relationship matters too!</span>
+              </div>
+              <p>
+                Take 5 minutes to check in on how workload sharing is affecting your relationship.
+              </p>
+            </div>
+          )}
           
+          <div className="text-sm text-gray-600 flex items-center">
+            <span>Recommended: 5 minutes</span>
+          </div>
+        </div>
+        
+        <div className="mt-4">
+          <button
+            onClick={() => setShowCoupleCheckIn(true)}
+            disabled={!canStartCoupleCheckIn}
+            className={`px-4 py-2 rounded-md flex items-center ${
+              canStartCoupleCheckIn 
+                ? 'bg-pink-100 text-pink-800 hover:bg-pink-200' 
+                : 'bg-gray-100 text-gray-400 cursor-not-allowed'
+            }`}
+          >
+            Start Couple Check-In
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+)}
+
+{/* Couple Check-In Modal */}
+{showCoupleCheckIn && (
+  <CoupleCheckInScreen onClose={(success) => {
+    setShowCoupleCheckIn(false);
+    // If successful completion, show a message or update UI
+    if (success) {
+      // Maybe show a success notification or update state
+    }
+  }} />
+)}
+
         {/* Family Meeting Card - at the bottom */}
         <div className="bg-white rounded-lg shadow p-6 mt-8">
           <div className="flex items-start">

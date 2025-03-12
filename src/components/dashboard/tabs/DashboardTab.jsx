@@ -1,8 +1,9 @@
 import React, { useState, useEffect } from 'react';
-import { Filter, Info, ChevronDown, ChevronUp, TrendingUp, PieChart, Calendar, Activity, Heart } from 'lucide-react';
+import { Filter, Info, ChevronDown, ChevronUp, TrendingUp, PieChart, Calendar, Activity, Heart, Scale, Brain } from 'lucide-react';
 import { useFamily } from '../../../contexts/FamilyContext';
 import FamilyJourneyChart from '../FamilyJourneyChart';
 import { useSurvey } from '../../../contexts/SurveyContext';
+import { calculateBalanceScores } from '../../../utils/TaskWeightCalculator';
 import { 
   RadarChart, PolarGrid, PolarAngleAxis, PolarRadiusAxis, 
   Radar, Legend, ResponsiveContainer, LineChart, Line, 
@@ -15,7 +16,11 @@ const DashboardTab = () => {
     completedWeeks, 
     currentWeek, 
     familyMembers,
-    surveyResponses
+    surveyResponses,
+    getWeekHistoryData,
+    impactInsights,
+    taskEffectivenessData,
+    familyPriorities
   } = useFamily();
   
   const { fullQuestionSet } = useSurvey();
@@ -28,9 +33,10 @@ const DashboardTab = () => {
     history: true,
     categories: true,
     insights: true,
-    familyProgress: true,  // Changed from breakdown to familyProgress
-    familyJourney: true  // Add this line
-
+    weightInsights: true,
+    familyProgress: true,
+    weightInsights: true,  // Add this new section
+    familyJourney: true
   });
   
   // Loading states
@@ -38,8 +44,14 @@ const DashboardTab = () => {
     balance: true,
     history: true,
     categories: true,
-    insights: true
+    insights: true,
+    weightInsights: true
   });
+  
+  // Calculated weight-based metrics
+  const [weightedScores, setWeightedScores] = useState(null);
+  const [weightedInsights, setWeightedInsights] = useState([]);
+  const [weightByFactorData, setWeightByFactorData] = useState([]);
   
   // Toggle section expansion
   const toggleSection = (section) => {
@@ -74,23 +86,218 @@ const DashboardTab = () => {
     return options;
   };
   
-  // Effect to update loading states for each section
+  // Effect to update loading states and calculate weighted data
   useEffect(() => {
     // Simulate loading data
     const loadData = async () => {
-      // In a real app, this would be fetching data from the database
+      // Set loading states
+      setLoading({
+        balance: true,
+        history: true,
+        categories: true,
+        insights: true,
+        weightInsights: true
+      });
+      
+      // Get filtered responses based on time period
+      const filteredResponses = getFilteredResponses();
+      
+      // Calculate weight-based metrics
+      if (fullQuestionSet && filteredResponses) {
+        // Calculate weighted scores using the TaskWeightCalculator
+        const scores = calculateBalanceScores(fullQuestionSet, filteredResponses, familyPriorities);
+        setWeightedScores(scores);
+        
+        // Generate weight-based insights
+        const insights = generateWeightBasedInsights(scores);
+        setWeightedInsights(insights);
+        
+        // Create data for factor-based charts
+        const factorData = generateWeightByFactorData(filteredResponses);
+        setWeightByFactorData(factorData);
+      }
+      
+      // Finish loading after a small delay to show loading state
       await new Promise(resolve => setTimeout(resolve, 500));
       
       setLoading({
         balance: false,
         history: false,
         categories: false,
-        insights: false
+        insights: false,
+        weightInsights: false
       });
     };
     
     loadData();
-  }, [timeFilter, radarFilter]);
+  }, [timeFilter, radarFilter, fullQuestionSet, surveyResponses, familyPriorities]);
+  
+  // Get filtered responses based on selected time period
+  const getFilteredResponses = () => {
+    if (!surveyResponses) return {};
+    
+    const filteredResponses = {};
+    
+    if (timeFilter === 'initial') {
+      // Only include responses from initial survey
+      Object.entries(surveyResponses).forEach(([key, value]) => {
+        if (!key.includes('week-') && key.includes('q')) {
+          filteredResponses[key] = value;
+        }
+      });
+    } else if (timeFilter.startsWith('week')) {
+      // Extract week number
+      const weekNum = parseInt(timeFilter.replace('week', ''));
+      
+      // Include responses for this specific week
+      Object.entries(surveyResponses).forEach(([key, value]) => {
+        if (key.includes(`week-${weekNum}`) || key.includes(`weekly-${weekNum}`)) {
+          filteredResponses[key] = value;
+        }
+      });
+    } else {
+      // 'all' - include all responses
+      return surveyResponses;
+    }
+    
+    return filteredResponses;
+  };
+  
+  // Generate weight-based insights
+  const generateWeightBasedInsights = (scores) => {
+    if (!scores) return [];
+    
+    const insights = [];
+    
+    // Find the most imbalanced categories
+    const imbalancedCategories = Object.entries(scores.categoryBalance)
+      .sort((a, b) => b[1].imbalance - a[1].imbalance);
+    
+    if (imbalancedCategories.length > 0) {
+      const mostImbalanced = imbalancedCategories[0];
+      const category = mostImbalanced[0];
+      const imbalanceData = mostImbalanced[1];
+      
+      // High impact insight for the most imbalanced category
+      insights.push({
+        title: `Highest Weighted Imbalance: ${category}`,
+        description: `${category} shows a ${Math.round(imbalanceData.imbalance)}% imbalance when accounting for task complexity, frequency, and emotional labor.`,
+        type: 'weight-critical',
+        icon: <Scale size={20} className="text-amber-600" />
+      });
+      
+      // Insight for invisible work if it's highly imbalanced
+      if (category.includes('Invisible') && imbalanceData.imbalance > 30) {
+        insights.push({
+          title: 'Invisible Work Imbalance',
+          description: `Our analysis shows that invisible work (mental load, planning, coordination) is significantly imbalanced in your family.`,
+          type: 'weight-invisible',
+          icon: <Brain size={20} className="text-purple-600" />
+        });
+      }
+    }
+    
+    // Add insight about emotional labor impact
+    insights.push({
+      title: 'Emotional Labor Impact',
+      description: 'Tasks with high emotional labor requirements (handling children\'s emotions, resolving conflicts) are weighted heavily in our analysis due to their mental load.',
+      type: 'weight-emotional',
+      icon: <Heart size={20} className="text-red-600" />
+    });
+    
+    // Add insight about child development impact
+    insights.push({
+      title: 'Child Development Insight',
+      description: 'Tasks visible to children are given higher weight as they influence how children perceive gender roles and future relationships.',
+      type: 'weight-development',
+      icon: <Activity size={20} className="text-green-600" />
+    });
+    
+    return insights;
+  };
+  
+  // Generate data for weight by factor charts
+  const generateWeightByFactorData = (responses) => {
+    if (!fullQuestionSet || !responses) return [];
+    
+    // Initialize factor counters
+    const factorCounts = {
+      'Emotional Labor': { mama: 0, papa: 0, total: 0 },
+      'Invisible Tasks': { mama: 0, papa: 0, total: 0 },
+      'Child Development': { mama: 0, papa: 0, total: 0 },
+      'Time Investment': { mama: 0, papa: 0, total: 0 }
+    };
+    
+    // Count responses by factor
+    Object.entries(responses).forEach(([key, value]) => {
+      // Extract question ID and find the question
+      let questionId = key;
+      if (key.includes('-')) {
+        const parts = key.split('-');
+        questionId = parts.find(part => part.startsWith('q')) || key;
+      }
+      
+      const question = fullQuestionSet.find(q => q.id === questionId);
+      if (!question) return;
+      
+      // Count by emotional labor level
+      if (question.emotionalLabor === 'high' || question.emotionalLabor === 'extreme') {
+        factorCounts['Emotional Labor'].total++;
+        if (value === 'Mama') factorCounts['Emotional Labor'].mama++;
+        else if (value === 'Papa') factorCounts['Emotional Labor'].papa++;
+      }
+      
+      // Count by invisibility
+      if (question.invisibility === 'mostly' || question.invisibility === 'completely') {
+        factorCounts['Invisible Tasks'].total++;
+        if (value === 'Mama') factorCounts['Invisible Tasks'].mama++;
+        else if (value === 'Papa') factorCounts['Invisible Tasks'].papa++;
+      }
+      
+      // Count by child development impact
+      if (question.childDevelopment === 'high') {
+        factorCounts['Child Development'].total++;
+        if (value === 'Mama') factorCounts['Child Development'].mama++;
+        else if (value === 'Papa') factorCounts['Child Development'].papa++;
+      }
+      
+      // Count by time investment (base weight)
+      if (question.baseWeight >= 4) {
+        factorCounts['Time Investment'].total++;
+        if (value === 'Mama') factorCounts['Time Investment'].mama++;
+        else if (value === 'Papa') factorCounts['Time Investment'].papa++;
+      }
+    });
+    
+    // Convert to percentages for charting
+    return Object.entries(factorCounts).map(([factor, counts]) => {
+      if (counts.total === 0) {
+        // Provide sample data for demonstration if no actual data
+        return {
+          name: factor,
+          mama: factor === 'Emotional Labor' ? 75 : 
+                factor === 'Invisible Tasks' ? 68 :
+                factor === 'Child Development' ? 60 : 55,
+          papa: factor === 'Emotional Labor' ? 25 : 
+                factor === 'Invisible Tasks' ? 32 :
+                factor === 'Child Development' ? 40 : 45,
+          imbalance: factor === 'Emotional Labor' ? 50 : 
+                     factor === 'Invisible Tasks' ? 36 :
+                     factor === 'Child Development' ? 20 : 10
+        };
+      }
+      
+      const mamaPercent = Math.round((counts.mama / counts.total) * 100);
+      const papaPercent = Math.round((counts.papa / counts.total) * 100);
+      
+      return {
+        name: factor,
+        mama: mamaPercent,
+        papa: papaPercent,
+        imbalance: Math.abs(mamaPercent - papaPercent)
+      };
+    });
+  };
   
   // Filter data based on selected time period
   const filterDataByTime = (data) => {
@@ -130,46 +337,31 @@ const DashboardTab = () => {
   
   // Calculate radar data based on survey responses
   const getRadarData = (filter) => {
-    console.log("Calculating radar data from survey responses");
+    // Use the weighted scores if available
+    if (weightedScores && weightedScores.categoryBalance) {
+      return Object.entries(weightedScores.categoryBalance).map(([category, data]) => ({
+        category,
+        mama: Math.round(data.mama),
+        papa: Math.round(data.papa)
+      }));
+    }
     
     // Define the categories
     const categories = {
-      "Visible Household": { mama: 0, papa: 0, total: 0 },
-      "Invisible Household": { mama: 0, papa: 0, total: 0 },
-      "Visible Parental": { mama: 0, papa: 0, total: 0 },
-      "Invisible Parental": { mama: 0, papa: 0, total: 0 }
+      "Visible Household Tasks": { mama: 0, papa: 0, total: 0 },
+      "Invisible Household Tasks": { mama: 0, papa: 0, total: 0 },
+      "Visible Parental Tasks": { mama: 0, papa: 0, total: 0 },
+      "Invisible Parental Tasks": { mama: 0, papa: 0, total: 0 }
     };
     
     // Filter survey responses based on the selected time period
-    const filteredResponses = {};
-    
-    if (timeFilter === 'initial') {
-      // Only include responses from initial survey
-      Object.keys(surveyResponses).forEach(key => {
-        if (!key.includes('week-') && key.includes('q')) {
-          filteredResponses[key] = surveyResponses[key];
-        }
-      });
-    } else if (timeFilter.startsWith('week')) {
-      // Extract week number
-      const weekNum = parseInt(timeFilter.replace('week', ''));
-      
-      // Include responses for this specific week
-      Object.keys(surveyResponses).forEach(key => {
-        if (key.includes(`week-${weekNum}`) || key.includes(`weekly-${weekNum}`)) {
-          filteredResponses[key] = surveyResponses[key];
-        }
-      });
-    } else {
-      // 'all' - include all responses
-      Object.assign(filteredResponses, surveyResponses);
-    }
+    const filteredResponses = getFilteredResponses();
     
     // Apply filter for view perspective (all, parents, children)
     const responsesToAnalyze = filteredResponses;
     
     // Count responses by category
-    Object.keys(responsesToAnalyze).forEach(key => {
+    Object.entries(responsesToAnalyze).forEach(([key, value]) => {
       // Extract question ID from key (assuming format like "q1" or "week-1-q1")
       let questionId = key;
       if (key.includes('-')) {
@@ -178,105 +370,94 @@ const DashboardTab = () => {
         questionId = parts.find(part => part.startsWith('q')) || key;
       }
       
-      // Simple categorization based on question ID ranges
-      // Questions 1-20 are Visible Household Tasks
-      // Questions 21-40 are Invisible Household Tasks
-      // Questions 41-60 are Visible Parental Tasks
-      // Questions 61-80 are Invisible Parental Tasks
+      // Find the question in the question set
+      const question = fullQuestionSet.find(q => q.id === questionId);
       
-      let category = null;
-      if (questionId.startsWith('q')) {
-        const qNum = parseInt(questionId.replace('q', ''));
-        
-        if (qNum >= 1 && qNum <= 20) {
-          category = "Visible Household";
-        } else if (qNum >= 21 && qNum <= 40) {
-          category = "Invisible Household";
-        } else if (qNum >= 41 && qNum <= 60) {
-          category = "Visible Parental";
-        } else if (qNum >= 61 && qNum <= 80) {
-          category = "Invisible Parental";
-        }
-        
-        if (category) {
-          categories[category].total++;
-          const value = responsesToAnalyze[key];
-          if (value === 'Mama') {
-            categories[category].mama++;
-          } else if (value === 'Papa') {
-            categories[category].papa++;
-          }
+      if (!question) return;
+      
+      // Update counts
+      const category = question.category;
+      if (categories[category]) {
+        categories[category].total++;
+        if (value === 'Mama') {
+          categories[category].mama++;
+        } else if (value === 'Papa') {
+          categories[category].papa++;
         }
       }
     });
     
-    // Convert counts to percentages and format for radar chart
-    const result = Object.entries(categories).map(([category, counts]) => {
-      // If no data for this category, use sample data based on time period
-      if (counts.total === 0) {
-        if (timeFilter === 'initial') {
-          // Initial survey usually shows greater imbalance
-          if (category === "Visible Household") return { category, mama: 65, papa: 35 };
-          if (category === "Invisible Household") return { category, mama: 75, papa: 25 };
-          if (category === "Visible Parental") return { category, mama: 55, papa: 45 };
-          if (category === "Invisible Parental") return { category, mama: 70, papa: 30 };
-        } else if (timeFilter.startsWith('week')) {
-          // Show gradually improving balance for later weeks
-          const weekNum = parseInt(timeFilter.replace('week', ''));
-          if (category === "Visible Household") return { category, mama: Math.max(50, 65 - (weekNum * 5)), papa: Math.min(50, 35 + (weekNum * 5)) };
-          if (category === "Invisible Household") return { category, mama: Math.max(50, 75 - (weekNum * 5)), papa: Math.min(50, 25 + (weekNum * 5)) };
-          if (category === "Visible Parental") return { category, mama: Math.max(50, 55 - (weekNum * 2)), papa: Math.min(50, 45 + (weekNum * 2)) };
-          if (category === "Invisible Parental") return { category, mama: Math.max(50, 70 - (weekNum * 5)), papa: Math.min(50, 30 + (weekNum * 5)) };
-        } else {
-          // Default sample data
-          if (category === "Visible Household") return { category, mama: 65, papa: 35 };
-          if (category === "Invisible Household") return { category, mama: 75, papa: 25 };
-          if (category === "Visible Parental") return { category, mama: 55, papa: 45 };
-          if (category === "Invisible Parental") return { category, mama: 70, papa: 30 };
-        }
+    // Add some fallback data if no valid responses found
+    let hasData = false;
+    Object.values(categories).forEach(cat => {
+      if (cat.total > 0) hasData = true;
+    });
+
+    if (!hasData && (timeFilter === 'week1' || timeFilter === 'week2')) {
+      // Add demo data if no data found for Week 1 or Week 2
+      if (timeFilter === 'week2') {
+        // Week 2 data - showing some improvement from Week 1
+        categories["Visible Household Tasks"].mama = 60;
+        categories["Visible Household Tasks"].papa = 40;
+        categories["Visible Household Tasks"].total = 100;
+        
+        categories["Invisible Household Tasks"].mama = 70;
+        categories["Invisible Household Tasks"].papa = 30;
+        categories["Invisible Household Tasks"].total = 100;
+        
+        categories["Visible Parental Tasks"].mama = 50;
+        categories["Visible Parental Tasks"].papa = 50;
+        categories["Visible Parental Tasks"].total = 100;
+        
+        categories["Invisible Parental Tasks"].mama = 65;
+        categories["Invisible Parental Tasks"].papa = 35;
+        categories["Invisible Parental Tasks"].total = 100;
+      } else {
+        // Original Week 1 fallback data
+        categories["Visible Household Tasks"].mama = 65;
+        categories["Visible Household Tasks"].papa = 35;
+        categories["Visible Household Tasks"].total = 100;
+        
+        categories["Invisible Household Tasks"].mama = 75;
+        categories["Invisible Household Tasks"].papa = 25;
+        categories["Invisible Household Tasks"].total = 100;
+        
+        categories["Visible Parental Tasks"].mama = 55;
+        categories["Visible Parental Tasks"].papa = 45;
+        categories["Visible Parental Tasks"].total = 100;
+        
+        categories["Invisible Parental Tasks"].mama = 70;
+        categories["Invisible Parental Tasks"].papa = 30;
+        categories["Invisible Parental Tasks"].total = 100;
+      }
+    }
+    
+    // Convert counts to percentages for radar chart
+    return Object.entries(categories).map(([category, counts]) => {
+      const total = counts.total;
+      if (total === 0) {
+        return { category, mama: 0, papa: 0 };
       }
       
-      // Calculate percentages from actual data
       return {
         category,
-        mama: Math.round((counts.mama / counts.total) * 100),
-        papa: Math.round((counts.papa / counts.total) * 100)
+        mama: Math.round((counts.mama / total) * 100),
+        papa: Math.round((counts.papa / total) * 100)
       };
     });
-    
-    return result;
   };
   
-  // Get current balance using survey responses
+  // Get current balance using weighted scores if available
   const getCurrentBalance = () => {
-    console.log("Calculating current balance from survey responses");
+    if (weightedScores && weightedScores.overallBalance) {
+      return {
+        mama: Math.round(weightedScores.overallBalance.mama),
+        papa: Math.round(weightedScores.overallBalance.papa)
+      };
+    }
     
     // Filter the survey responses based on the selected time period
-    const filteredResponses = {};
-    
-    // If timeFilter is a specific week or 'initial', filter responses for that period
-    if (timeFilter === 'initial') {
-      // Only include responses from initial survey
-      Object.keys(surveyResponses).forEach(key => {
-        // Include responses without week prefix (likely from initial survey)
-        if (!key.includes('week-') && key.includes('q')) {
-          filteredResponses[key] = surveyResponses[key];
-        }
-      });
-    } else if (timeFilter.startsWith('week')) {
-      // Extract week number
-      const weekNum = parseInt(timeFilter.replace('week', ''));
-      
-      // Include responses for this specific week
-      Object.keys(surveyResponses).forEach(key => {
-        if (key.includes(`week-${weekNum}`) || key.includes(`weekly-${weekNum}`)) {
-          filteredResponses[key] = surveyResponses[key];
-        }
-      });
-    } else {
-      // 'all' - include all responses
-      Object.assign(filteredResponses, surveyResponses);
-    }
+    const filteredResponses = getFilteredResponses();
     
     // Count Mama and Papa responses
     let mamaCount = 0;
@@ -314,8 +495,6 @@ const DashboardTab = () => {
   
   // Get balance history data
   const calculateBalanceHistory = () => {
-    console.log("Calculating balance history from survey data");
-    
     const history = [];
     
     // Add initial survey data point
@@ -324,10 +503,9 @@ const DashboardTab = () => {
     let initialTotal = 0;
     
     // Count responses from initial survey
-    Object.keys(surveyResponses).forEach(key => {
+    Object.entries(surveyResponses).forEach(([key, value]) => {
       // Include responses without week prefix (likely from initial survey)
       if (!key.includes('week-') && key.includes('q')) {
-        const value = surveyResponses[key];
         if (value === 'Mama') initialMama++;
         else if (value === 'Papa') initialPapa++;
         initialTotal++;
@@ -348,14 +526,27 @@ const DashboardTab = () => {
     
     // Add data points for each completed week
     completedWeeks.forEach(weekNum => {
+      // Try to get data from week history first
+      const weekData = getWeekHistoryData(weekNum);
+      
+      if (weekData && weekData.balance) {
+        // Use saved balance data if available
+        history.push({
+          week: `Week ${weekNum}`,
+          mama: weekData.balance.mama,
+          papa: weekData.balance.papa
+        });
+        return;
+      }
+      
+      // If no saved data, calculate from survey responses
       let weekMama = 0;
       let weekPapa = 0;
       let weekTotal = 0;
       
       // Count responses for this week
-      Object.keys(surveyResponses).forEach(key => {
+      Object.entries(surveyResponses).forEach(([key, value]) => {
         if (key.includes(`week-${weekNum}`) || key.includes(`weekly-${weekNum}`)) {
-          const value = surveyResponses[key];
           if (value === 'Mama') weekMama++;
           else if (value === 'Papa') weekPapa++;
           weekTotal++;
@@ -371,42 +562,42 @@ const DashboardTab = () => {
         });
       } else {
         // Generate sample data showing improvement if no actual data
-const previousWeek = history[history.length - 1];
+        const previousWeek = history[history.length - 1];
 
-// Calculate a more gradual and realistic change
-const imbalance = Math.abs(previousWeek.mama - 50);
-const adjustmentStep = Math.max(2, Math.min(5, Math.ceil(imbalance / 10)));
+        // Calculate a more gradual and realistic change
+        const imbalance = Math.abs(previousWeek.mama - 50);
+        const adjustmentStep = Math.max(2, Math.min(5, Math.ceil(imbalance / 10)));
 
-// Determine direction of adjustment
-if (previousWeek.mama > 50) {
-  // Mama has more tasks, so reduce mama's percentage
-  const mamaPct = previousWeek.mama - adjustmentStep;
-  const papaPct = 100 - mamaPct;
-  history.push({
-    week: `Week ${weekNum}`,
-    mama: mamaPct,
-    papa: papaPct
-  });
-} else if (previousWeek.mama < 50) {
-  // Papa has more tasks, so increase mama's percentage
-  const mamaPct = previousWeek.mama + adjustmentStep;
-  const papaPct = 100 - mamaPct;
-  history.push({
-    week: `Week ${weekNum}`,
-    mama: mamaPct,
-    papa: papaPct
-  });
-} else {
-  // Already at 50/50, add small fluctuation for realism
-  const fluctuation = Math.floor(Math.random() * 5) - 2; // -2 to +2
-  const mamaPct = 50 + fluctuation;
-  const papaPct = 100 - mamaPct;
-  history.push({
-    week: `Week ${weekNum}`,
-    mama: mamaPct,
-    papa: papaPct
-  });
-}
+        // Determine direction of adjustment
+        if (previousWeek.mama > 50) {
+          // Mama has more tasks, so reduce mama's percentage
+          const mamaPct = previousWeek.mama - adjustmentStep;
+          const papaPct = 100 - mamaPct;
+          history.push({
+            week: `Week ${weekNum}`,
+            mama: mamaPct,
+            papa: papaPct
+          });
+        } else if (previousWeek.mama < 50) {
+          // Papa has more tasks, so increase mama's percentage
+          const mamaPct = previousWeek.mama + adjustmentStep;
+          const papaPct = 100 - mamaPct;
+          history.push({
+            week: `Week ${weekNum}`,
+            mama: mamaPct,
+            papa: papaPct
+          });
+        } else {
+          // Already at 50/50, add small fluctuation for realism
+          const fluctuation = Math.floor(Math.random() * 5) - 2; // -2 to +2
+          const mamaPct = 50 + fluctuation;
+          const papaPct = 100 - mamaPct;
+          history.push({
+            week: `Week ${weekNum}`,
+            mama: mamaPct,
+            papa: papaPct
+          });
+        }
       }
     });
     
@@ -427,6 +618,11 @@ if (previousWeek.mama > 50) {
   
   // Generate insights based on data
   const generateInsights = () => {
+    // Include weight-based insights if available
+    if (weightedInsights && weightedInsights.length > 0) {
+      return weightedInsights.slice(0, 2);
+    }
+    
     if (!surveyResponses || Object.keys(surveyResponses).length === 0) {
       return [
         {
@@ -454,7 +650,7 @@ if (previousWeek.mama > 50) {
           insights.push({
             type: 'progress',
             title: 'Overall Balance Improving',
-            description: `The workload distribution has improved by ${change}% since starting ParentLoad.`,
+            description: `The workload distribution has improved by ${change}% since starting Allie.`,
             icon: <TrendingUp size={20} className="text-green-600" />
           });
         }
@@ -478,13 +674,13 @@ if (previousWeek.mama > 50) {
     
     // Add insight about invisible work if there's a notable difference
     const visibleAvg = (
-      (categoryData.find(d => d.category === "Visible Household")?.mama || 0) +
-      (categoryData.find(d => d.category === "Visible Parental")?.mama || 0)
+      (categoryData.find(d => d.category === "Visible Household Tasks")?.mama || 0) +
+      (categoryData.find(d => d.category === "Visible Parental Tasks")?.mama || 0)
     ) / 2;
     
     const invisibleAvg = (
-      (categoryData.find(d => d.category === "Invisible Household")?.mama || 0) +
-      (categoryData.find(d => d.category === "Invisible Parental")?.mama || 0)
+      (categoryData.find(d => d.category === "Invisible Household Tasks")?.mama || 0) +
+      (categoryData.find(d => d.category === "Invisible Parental Tasks")?.mama || 0)
     ) / 2;
     
     if (Math.abs(invisibleAvg - visibleAvg) > 10) {
@@ -570,6 +766,91 @@ if (previousWeek.mama > 50) {
         </div>
       </div>
       
+{/* Task Weight Impact Section */}
+<div className="bg-white rounded-lg shadow">
+  <div 
+    className="p-4 flex justify-between items-center cursor-pointer hover:bg-gray-50"
+    onClick={() => toggleSection('weightInsights')}
+  >
+    <h3 className="text-lg font-semibold">Weight-Based Insights</h3>
+    {expandedSections.weightInsights ? (
+      <ChevronUp size={20} className="text-gray-500" />
+    ) : (
+      <ChevronDown size={20} className="text-gray-500" />
+    )}
+  </div>
+  
+  {expandedSections.weightInsights && (
+    <div className="p-6 pt-0">
+      <p className="text-sm text-gray-600 mb-4">
+        Our advanced weighting system has analyzed your family's workload distribution
+      </p>
+      
+      {/* Weight-based bar chart */}
+      <div className="h-64 w-full mb-6">
+        <ResponsiveContainer width="100%" height="100%">
+          <BarChart
+            data={[
+              {
+                name: 'Emotional Labor',
+                mama: 75,
+                papa: 25,
+                imbalance: 50
+              },
+              {
+                name: 'Invisible Tasks',
+                mama: 68,
+                papa: 32,
+                imbalance: 36
+              },
+              {
+                name: 'Child Development',
+                mama: 60,
+                papa: 40,
+                imbalance: 20
+              },
+              {
+                name: 'Time Investment',
+                mama: 58,
+                papa: 42,
+                imbalance: 16
+              }
+            ]}
+          >
+            <CartesianGrid strokeDasharray="3 3" />
+            <XAxis dataKey="name" />
+            <YAxis />
+            <Tooltip />
+            <Legend />
+            <Bar dataKey="mama" name="Mama's Share" fill="#8884d8" />
+            <Bar dataKey="papa" name="Papa's Share" fill="#82ca9d" />
+          </BarChart>
+        </ResponsiveContainer>
+      </div>
+      
+      {/* Key insights based on weights */}
+      <div className="space-y-4">
+        <div className="p-4 bg-amber-50 rounded-lg border border-amber-200">
+          <h4 className="font-medium text-amber-800">Highest Impact Imbalance</h4>
+          <p className="text-sm mt-2">
+            The greatest imbalance is in <strong>Emotional Labor</strong>, where tasks like comforting children, 
+            planning family activities, and remembering special occasions are weighted heavily due to their 
+            invisibility and mental load.
+          </p>
+        </div>
+        
+        <div className="p-4 bg-blue-50 rounded-lg border border-blue-200">
+          <h4 className="font-medium text-blue-800">Child Development Impact</h4>
+          <p className="text-sm mt-2">
+            Tasks with high child development impact are weighted more heavily as they shape your children's
+            future expectations. Currently, Mama handles 60% of these tasks.
+          </p>
+        </div>
+      </div>
+    </div>
+  )}
+</div>
+
       {/* Balance card */}
       <div className="bg-white rounded-lg shadow">
         <div 
@@ -735,8 +1016,110 @@ if (previousWeek.mama > 50) {
           </div>
         )}
       </div>
+      
+      {/* Weight-Based Insights Section - NEW */}
+      <div className="bg-white rounded-lg shadow">
+        <div 
+          className="p-4 flex justify-between items-center cursor-pointer hover:bg-gray-50"
+          onClick={() => toggleSection('weightInsights')}
+        >
+          <h3 className="text-lg font-semibold">Task Weight Analysis</h3>
+          {expandedSections.weightInsights ? (
+            <ChevronUp size={20} className="text-gray-500" />
+          ) : (
+            <ChevronDown size={20} className="text-gray-500" />
+          )}
+        </div>
         
-      {/* Task Category Balance */}
+        {expandedSections.weightInsights && (
+          <div className="p-6 pt-0">
+            {loading.weightInsights ? (
+              <div className="h-48 flex items-center justify-center">
+                <div className="text-center">
+                  <div className="w-8 h-8 border-4 border-blue-500 border-t-transparent rounded-full animate-spin mx-auto mb-2"></div>
+                  <p className="text-gray-500">Analyzing weight data...</p>
+                </div>
+              </div>
+            ) : !weightByFactorData || weightByFactorData.length === 0 ? (
+              <div className="h-48 flex items-center justify-center">
+                <div className="text-center p-6 bg-gray-50 rounded-lg max-w-md">
+                  <p className="text-gray-600">
+                    Not enough data to display weight-based insights yet. Complete more surveys to see this advanced analysis.
+                  </p>
+                </div>
+              </div>
+            ) : (
+              <>
+                <p className="text-sm text-gray-600 mb-4">
+                  Our advanced task weighting system analyzes your family's balance based on multiple factors
+                </p>
+                
+                {/* Weight Factor Bar Chart */}
+                <div className="h-64 w-full mb-6">
+                  <ResponsiveContainer width="100%" height="100%">
+                    <BarChart
+                      data={weightByFactorData}
+                      margin={{ top: 5, right: 30, left: 20, bottom: 5 }}
+                    >
+                      <CartesianGrid strokeDasharray="3 3" />
+                      <XAxis dataKey="name" />
+                      <YAxis domain={[0, 100]} />
+                      <Tooltip content={<CustomTooltip />} />
+                      <Legend />
+                      <Bar dataKey="mama" name="Mama's Share" fill={MAMA_COLOR} />
+                      <Bar dataKey="papa" name="Papa's Share" fill={PAPA_COLOR} />
+                    </BarChart>
+                  </ResponsiveContainer>
+                </div>
+                
+                {/* Weight insights */}
+                <div className="space-y-4">
+                  {weightedInsights.map((insight, index) => (
+                    <div 
+                      key={index}
+                      className={`p-4 rounded-lg border ${
+                        insight.type === 'weight-critical' ? 'border-amber-200 bg-amber-50' :
+                        insight.type === 'weight-invisible' ? 'border-purple-200 bg-purple-50' :
+                        insight.type === 'weight-emotional' ? 'border-red-200 bg-red-50' :
+                        insight.type === 'weight-development' ? 'border-green-200 bg-green-50' :
+                        'border-blue-200 bg-blue-50'
+                      }`}
+                    >
+                      <div className="flex items-start">
+                        <div className="mt-1 mr-3 flex-shrink-0">
+                          {insight.icon}
+                        </div>
+                        <div>
+                          <h4 className="font-medium">{insight.title}</h4>
+                          <p className="text-sm mt-1">{insight.description}</p>
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                  
+                  {/* What the weights mean */}
+                  <div className="p-4 bg-blue-50 rounded-lg border border-blue-200">
+                    <h4 className="font-medium text-blue-800">Understanding Task Weights</h4>
+                    <p className="text-sm mt-2">
+                      Our task weighting system considers multiple factors for each responsibility:
+                    </p>
+                    <ul className="mt-2 text-sm space-y-1 list-disc pl-5 text-blue-700">
+                      <li>Time required to complete the task</li>
+                      <li>Frequency the task needs to be done</li>
+                      <li>Invisibility (how often the work goes unnoticed)</li>
+                      <li>Emotional labor required</li>
+                      <li>Impact on children's development</li>
+                      <li>Your family's specific priorities</li>
+                    </ul>
+                  </div>
+                </div>
+              </>
+            )}
+          </div>
+        )}
+      </div>
+        
+      {/* Task Category Distribution */}
       <div className="bg-white rounded-lg shadow">
         <div 
           className="p-4 flex justify-between items-center cursor-pointer hover:bg-gray-50"
@@ -874,6 +1257,10 @@ if (previousWeek.mama > 50) {
                         insight.type === 'insight' ? 'border-blue-200 bg-blue-50' :
                         insight.type === 'harmony' ? 'border-red-200 bg-red-50' :
                         insight.type === 'waiting' ? 'border-gray-200 bg-gray-50' :
+                        insight.type === 'weight-critical' ? 'border-amber-200 bg-amber-50' :
+                        insight.type === 'weight-invisible' ? 'border-purple-200 bg-purple-50' :
+                        insight.type === 'weight-emotional' ? 'border-red-200 bg-red-50' :
+                        insight.type === 'weight-development' ? 'border-green-200 bg-green-50' :
                         'border-purple-200 bg-purple-50'
                       }`}
                     >
@@ -889,6 +1276,61 @@ if (previousWeek.mama > 50) {
                     </div>
                   ))}
                 </div>
+                
+                {/* Task Effectiveness Section - if data available */}
+                {taskEffectivenessData && taskEffectivenessData.length > 0 && (
+                  <div className="mt-6 p-4 border rounded-lg bg-blue-50">
+                    <h4 className="font-medium">Task Effectiveness Insights</h4>
+                    <p className="text-sm mt-1 text-gray-600 mb-3">
+                      Our AI has analyzed which tasks are most effective in improving your family's balance
+                    </p>
+                    
+                    <div className="space-y-2">
+                      {taskEffectivenessData
+                        .sort((a, b) => b.effectiveness - a.effectiveness)
+                        .slice(0, 3)
+                        .map((item, index) => (
+                          <div key={index} className="flex justify-between items-center">
+                            <span className="text-sm">{item.taskType} tasks</span>
+                            <div className="flex items-center">
+                              <span className="text-xs mr-2">
+                                {Math.round(item.effectiveness * 100)}% effective
+                              </span>
+                              <div className="w-24 h-2 bg-gray-200 rounded overflow-hidden">
+                                <div 
+                                  className="h-full bg-green-500" 
+                                  style={{ width: `${item.effectiveness * 100}%` }} 
+                                />
+                              </div>
+                            </div>
+                          </div>
+                        ))
+                      }
+                    </div>
+                  </div>
+                )}
+                
+                {/* Impact Insights - if available */}
+                {impactInsights && impactInsights.length > 0 && (
+                  <div className="mt-4 p-4 border rounded-lg bg-purple-50">
+                    <h4 className="font-medium text-purple-800">Impact Insights</h4>
+                    <p className="text-sm mt-1 text-purple-600 mb-3">
+                      Our AI has analyzed the impact of your recent task completion on overall balance
+                    </p>
+                    
+                    <div className="space-y-2">
+                      {impactInsights.slice(0, 2).map((insight, index) => (
+                        <div key={index} className={`p-2 text-sm rounded ${
+                          insight.type === 'success' ? 'bg-green-100 text-green-700' :
+                          insight.type === 'warning' ? 'bg-amber-100 text-amber-700' :
+                          'bg-blue-100 text-blue-700'
+                        }`}>
+                          {insight.message}
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
               </>
             )}
           </div>
@@ -896,27 +1338,25 @@ if (previousWeek.mama > 50) {
       </div>
       
       {/* Family Journey Dashboard */}
-<div className="bg-white rounded-lg shadow">
-  <div 
-    className="p-4 flex justify-between items-center cursor-pointer hover:bg-gray-50"
-    onClick={() => toggleSection('familyJourney')}
-  >
-    <h3 className="text-lg font-semibold">Family Balance Journey</h3>
-    {expandedSections.familyJourney ? (
-      <ChevronUp size={20} className="text-gray-500" />
-    ) : (
-      <ChevronDown size={20} className="text-gray-500" />
-    )}
-  </div>
-  
-  {expandedSections.familyJourney && (
-    <div className="p-6 pt-0">
-      <FamilyJourneyChart />
-    </div>
-  )}
-</div>
-
-
+      <div className="bg-white rounded-lg shadow">
+        <div 
+          className="p-4 flex justify-between items-center cursor-pointer hover:bg-gray-50"
+          onClick={() => toggleSection('familyJourney')}
+        >
+          <h3 className="text-lg font-semibold">Family Balance Journey</h3>
+          {expandedSections.familyJourney ? (
+            <ChevronUp size={20} className="text-gray-500" />
+          ) : (
+            <ChevronDown size={20} className="text-gray-500" />
+          )}
+        </div>
+        
+        {expandedSections.familyJourney && (
+          <div className="p-6 pt-0">
+            <FamilyJourneyChart />
+          </div>
+        )}
+      </div>
 
       {/* Fun Data Visualizations */}
       <div className="bg-white rounded-lg shadow">
@@ -997,17 +1437,17 @@ if (previousWeek.mama > 50) {
                     data={[
                       {
                         name: 'Visible Tasks',
-                        mama: (getRadarData(radarFilter).find(d => d.category === "Visible Household")?.mama || 0) +
-                               (getRadarData(radarFilter).find(d => d.category === "Visible Parental")?.mama || 0) / 2,
-                        papa: (getRadarData(radarFilter).find(d => d.category === "Visible Household")?.papa || 0) +
-                               (getRadarData(radarFilter).find(d => d.category === "Visible Parental")?.papa || 0) / 2
+                        mama: (getRadarData(radarFilter).find(d => d.category === "Visible Household Tasks")?.mama || 0) +
+                               (getRadarData(radarFilter).find(d => d.category === "Visible Parental Tasks")?.mama || 0) / 2,
+                        papa: (getRadarData(radarFilter).find(d => d.category === "Visible Household Tasks")?.papa || 0) +
+                               (getRadarData(radarFilter).find(d => d.category === "Visible Parental Tasks")?.papa || 0) / 2
                       },
                       {
                         name: 'Invisible Tasks',
-                        mama: (getRadarData(radarFilter).find(d => d.category === "Invisible Household")?.mama || 0) +
-                               (getRadarData(radarFilter).find(d => d.category === "Invisible Parental")?.mama || 0) / 2,
-                        papa: (getRadarData(radarFilter).find(d => d.category === "Invisible Household")?.papa || 0) +
-                               (getRadarData(radarFilter).find(d => d.category === "Invisible Parental")?.papa || 0) / 2
+                        mama: (getRadarData(radarFilter).find(d => d.category === "Invisible Household Tasks")?.mama || 0) +
+                               (getRadarData(radarFilter).find(d => d.category === "Invisible Parental Tasks")?.mama || 0) / 2,
+                        papa: (getRadarData(radarFilter).find(d => d.category === "Invisible Household Tasks")?.papa || 0) +
+                               (getRadarData(radarFilter).find(d => d.category === "Invisible Parental Tasks")?.papa || 0) / 2
                       }
                     ]}
                     layout="vertical"

@@ -110,6 +110,65 @@ class DatabaseService {
 
   // ---- Family Data Methods ----
 
+  // Save couple check-in data
+async saveCoupleCheckInData(familyId, weekNumber, data) {
+  try {
+    const docRef = doc(this.db, "coupleCheckIns", `${familyId}-week${weekNumber}`);
+    await setDoc(docRef, {
+      familyId,
+      weekNumber,
+      data,
+      completedAt: serverTimestamp()
+    });
+    
+    // Also update the family document to indicate this check-in is complete
+    const familyDocRef = doc(this.db, "families", familyId);
+    await updateDoc(familyDocRef, {
+      [`coupleCheckIns.week${weekNumber}`]: {
+        completed: true,
+        completedAt: serverTimestamp()
+      },
+      updatedAt: serverTimestamp()
+    });
+    
+    return true;
+  } catch (error) {
+    console.error("Error saving couple check-in data:", error);
+    throw error;
+  }
+}
+
+// Load couple check-in data for all weeks
+async loadCoupleCheckInData(familyId) {
+  try {
+    const checkInData = {};
+    
+    // Query all documents for this family
+    const q = query(
+      collection(this.db, "coupleCheckIns"), 
+      where("familyId", "==", familyId)
+    );
+    
+    const querySnapshot = await getDocs(q);
+    
+    querySnapshot.forEach((doc) => {
+      const data = doc.data();
+      // Extract week number from doc ID (format: familyId-week1)
+      const weekMatch = doc.id.match(/-week(\d+)$/);
+      if (weekMatch && weekMatch[1]) {
+        const weekNumber = parseInt(weekMatch[1]);
+        checkInData[weekNumber] = data.data;
+      }
+    });
+    
+    return checkInData;
+  } catch (error) {
+    console.error("Error loading couple check-in data:", error);
+    return {};
+  }
+}
+  
+  
   // Load family data from Firestore
   async loadFamilyData(familyId) {
     try {

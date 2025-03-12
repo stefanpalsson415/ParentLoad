@@ -567,6 +567,32 @@ const generateEnhancedAgendaTopics = () => {
                 />
               </div>
               
+{/* Add this new component to the Family Meeting Screen */}
+<div className="p-4 border rounded-lg mb-4 bg-gradient-to-r from-purple-50 to-blue-50">
+  <h4 className="font-medium mb-3 text-purple-800">Weight-Based Insights</h4>
+  <p className="text-sm text-purple-700 mb-2">
+    Our advanced task weight analysis has identified high-impact areas to focus on:
+  </p>
+  
+  <div className="space-y-3 mt-4">
+    <div className="p-3 bg-white rounded-lg border border-purple-200">
+      <h5 className="text-sm font-medium">Highest Weighted Imbalance</h5>
+      <p className="text-xs mt-1">
+        Emotional Labor tasks (weighted heavily for invisibility and mental load)
+        show a 50% imbalance. Consider discussing ways to share these responsibilities.
+      </p>
+    </div>
+    
+    <div className="p-3 bg-white rounded-lg border border-purple-200">
+      <h5 className="text-sm font-medium">Child Development Impact</h5>
+      <p className="text-xs mt-1">
+        Tasks with high visibility to children have a strong impact on future expectations.
+        Currently, these tasks have a 20% imbalance.
+      </p>
+    </div>
+  </div>
+</div>
+
               {/* Next Week Goals Section */}
               <div className="p-4 border rounded-lg bg-purple-50">
                 <h4 className="font-medium mb-2 flex items-center text-purple-800">

@@ -1,6 +1,6 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { LogOut } from 'lucide-react';
+import { LogOut, Info, HelpCircle } from 'lucide-react';
 import { useFamily } from '../../contexts/FamilyContext';
 import { useSurvey } from '../../contexts/SurveyContext';
 
@@ -24,6 +24,9 @@ const SurveyScreen = () => {
   const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0);
   const [selectedParent, setSelectedParent] = useState(null);
   const [viewingQuestionList, setViewingQuestionList] = useState(false);
+  const [showWeightInfo, setShowWeightInfo] = useState(false);
+  const [showExplanation, setShowExplanation] = useState(false);
+  const [keyboardInitialized, setKeyboardInitialized] = useState(false);
   
   // Redirect if no user is selected
   useEffect(() => {
@@ -68,13 +71,18 @@ const SurveyScreen = () => {
         handleSelectParent('Papa');
       }
     };
-      
-    window.addEventListener('keydown', handleKeyPress);
+
+    if (!keyboardInitialized) {
+      window.addEventListener('keydown', handleKeyPress);
+      setKeyboardInitialized(true);
+    }
       
     return () => {
-      window.removeEventListener('keydown', handleKeyPress);
+      if (keyboardInitialized) {
+        window.removeEventListener('keydown', handleKeyPress);
+      }
     };
-  }, [currentQuestionIndex, viewingQuestionList]);
+  }, [currentQuestionIndex, viewingQuestionList, keyboardInitialized]);
   
   // Get current question
   const currentQuestion = fullQuestionSet[currentQuestionIndex];
@@ -93,6 +101,8 @@ const SurveyScreen = () => {
           // Use functional state update to ensure we're using the latest value
           setCurrentQuestionIndex(prevIndex => prevIndex + 1);
           setSelectedParent(null);
+          setShowWeightInfo(false);
+          setShowExplanation(false);
         } else {
           // Survey completed, save responses
           handleCompleteSurvey();
@@ -110,12 +120,10 @@ const SurveyScreen = () => {
       // Show loading screen temporarily
       navigate('/loading');
       
-      // Navigate to dashboard after a delay
-// New code
-// Navigate to payment page after a delay
-setTimeout(() => {
-  navigate('/payment');
-}, 1500);
+      // Navigate to payment page after a delay
+      setTimeout(() => {
+        navigate('/payment');
+      }, 1500);
     } catch (error) {
       console.error('Error completing survey:', error);
       alert('There was an error saving your survey. Please try again.');
@@ -127,6 +135,8 @@ setTimeout(() => {
     if (currentQuestionIndex > 0) {
       setCurrentQuestionIndex(prevIndex => prevIndex - 1);
       setSelectedParent(currentSurveyResponses[fullQuestionSet[currentQuestionIndex - 1].id] || null);
+      setShowWeightInfo(false);
+      setShowExplanation(false);
     }
   };
   
@@ -135,6 +145,8 @@ setTimeout(() => {
     setCurrentQuestionIndex(index);
     setSelectedParent(currentSurveyResponses[fullQuestionSet[index].id] || null);
     setViewingQuestionList(false);
+    setShowWeightInfo(false);
+    setShowExplanation(false);
   };
   
   // Handle pause
@@ -147,6 +159,8 @@ setTimeout(() => {
     if (currentQuestionIndex < fullQuestionSet.length - 1) {
       setCurrentQuestionIndex(prevIndex => prevIndex + 1);
       setSelectedParent(null);
+      setShowWeightInfo(false);
+      setShowExplanation(false);
     } else {
       // Survey completed, move to dashboard
       handleCompleteSurvey();
@@ -230,7 +244,14 @@ setTimeout(() => {
                         <span className="w-6 text-right mr-2">{index + 1}.</span>
                         <div className="flex-1">
                           <p>{q.text}</p>
-                          <p className="text-xs text-gray-500 mt-1">{q.category}</p>
+                          <p className="text-xs text-gray-500 mt-1">
+                            {q.category}
+                            {q.totalWeight && (
+                              <span className="ml-2 px-1.5 py-0.5 bg-gray-100 rounded-full text-xs">
+                                Weight: {q.totalWeight}
+                              </span>
+                            )}
+                          </p>
                         </div>
                         {answered && (
                           <div className="flex-shrink-0 ml-2">
@@ -269,7 +290,73 @@ setTimeout(() => {
               </p>
               <p className="text-xs text-gray-500 text-center mt-1">
                 {currentQuestion.category}
+                {currentQuestion.totalWeight && (
+                  <span className="ml-2 px-1.5 py-0.5 bg-blue-100 rounded-full text-xs">
+                    Impact: {parseFloat(currentQuestion.totalWeight) > 10 ? 'High' : 'Medium'}
+                  </span>
+                )}
               </p>
+              
+              {/* Task explanation toggle */}
+              <div className="mt-3 flex justify-center">
+                <button 
+                  onClick={() => setShowExplanation(!showExplanation)}
+                  className="text-xs text-gray-600 flex items-center"
+                >
+                  <HelpCircle size={12} className="mr-1" />
+                  {showExplanation ? "Hide explanation" : "Why are we asking this?"}
+                </button>
+              </div>
+              
+              {/* Task explanation panel */}
+              {showExplanation && (
+                <div className="mt-3 bg-gray-50 p-3 rounded-md text-sm text-gray-600">
+                  <p>{currentQuestion.explanation}</p>
+                </div>
+              )}
+              
+              {/* Weight explanation toggle */}
+              <div className="mt-2 flex justify-center">
+                <button 
+                  onClick={() => setShowWeightInfo(!showWeightInfo)}
+                  className="text-xs text-blue-600 flex items-center"
+                >
+                  <Info size={12} className="mr-1" />
+                  {showWeightInfo ? "Hide task impact info" : "Why does this task matter?"}
+                </button>
+              </div>
+              
+              {/* Weight explanation panel */}
+              {showWeightInfo && (
+                <div className="mt-3 bg-blue-50 p-3 rounded-md text-sm text-blue-800">
+                  <p>{currentQuestion.weightExplanation}</p>
+                  
+                  {/* Weight factors visualization */}
+                  <div className="mt-3 grid grid-cols-3 gap-2">
+                    <div className={`text-center p-1 rounded text-xs ${
+                      currentQuestion.frequency === 'daily' ? 'bg-blue-200' : 'bg-blue-100'
+                    }`}>
+                      <div>{currentQuestion.frequency}</div>
+                      <div className="text-blue-900 font-medium">Frequency</div>
+                    </div>
+                    
+                    <div className={`text-center p-1 rounded text-xs ${
+                      currentQuestion.invisibility === 'completely' ? 'bg-purple-200' : 'bg-purple-100'
+                    }`}>
+                      <div>{currentQuestion.invisibility}</div>
+                      <div className="text-purple-900 font-medium">Visibility</div>
+                    </div>
+                    
+                    <div className={`text-center p-1 rounded text-xs ${
+                      currentQuestion.emotionalLabor === 'extreme' || currentQuestion.emotionalLabor === 'high' 
+                        ? 'bg-red-200' : 'bg-red-100'
+                    }`}>
+                      <div>{currentQuestion.emotionalLabor}</div>
+                      <div className="text-red-900 font-medium">Emotional Load</div>
+                    </div>
+                  </div>
+                </div>
+              )}
             </div>
               
             {/* Parent selection */}

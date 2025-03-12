@@ -1,5 +1,6 @@
 // src/contexts/SurveyContext.js
 import React, { createContext, useContext, useState } from 'react';
+import { calculateTaskWeight } from '../utils/TaskWeightCalculator';
 
 // Create the survey context
 const SurveyContext = createContext();
@@ -11,7 +12,7 @@ export function useSurvey() {
 
 // Provider component
 export function SurveyProvider({ children }) {
-  // Generate full set of 80 questions (20 per category)
+  // Generate full set of 80 questions (20 per category) with weight attributes
   const generateFullQuestionSet = () => {
     const categories = [
       "Visible Household Tasks",
@@ -131,15 +132,153 @@ export function SurveyProvider({ children }) {
         "Who keeps mental track of each child's emotional triggers and coping mechanisms?"
       ]
     };
+    
+    // Define weight attributes for each question category
+    const categoryWeights = {
+      "Visible Household Tasks": {
+        baseWeight: 2,
+        frequency: "weekly",
+        invisibility: "highly",
+        emotionalLabor: "minimal",
+        researchImpact: "medium",
+        childDevelopment: "high"
+      },
+      "Invisible Household Tasks": {
+        baseWeight: 4,
+        frequency: "daily",
+        invisibility: "completely",
+        emotionalLabor: "high",
+        researchImpact: "high",
+        childDevelopment: "moderate"
+      },
+      "Visible Parental Tasks": {
+        baseWeight: 3,
+        frequency: "daily",
+        invisibility: "partially",
+        emotionalLabor: "moderate",
+        researchImpact: "high",
+        childDevelopment: "high"
+      },
+      "Invisible Parental Tasks": {
+        baseWeight: 5,
+        frequency: "daily",
+        invisibility: "completely",
+        emotionalLabor: "extreme",
+        researchImpact: "high",
+        childDevelopment: "high"
+      }
+    };
+    
+    // AI-generated weight variations within categories for specific questions
+    const generateQuestionWeights = (text, category) => {
+      // Base weights from category
+      const weights = { ...categoryWeights[category] };
+      
+      // Use text analysis to determine specific question attributes
+      if (text.includes("meal") || text.includes("cook")) {
+        weights.frequency = "daily";
+        weights.childDevelopment = "high";
+      }
+      
+      if (text.includes("emotional") || text.includes("support") || text.includes("needs")) {
+        weights.emotionalLabor = "extreme";
+        weights.invisibility = "completely";
+      }
+      
+      if (text.includes("plan") || text.includes("research") || text.includes("anticipate")) {
+        weights.invisibility = "completely";
+        weights.emotionalLabor = "high";
+      }
+      
+      if (text.includes("track") || text.includes("schedule") || text.includes("coordinate")) {
+        weights.invisibility = "mostly";
+        weights.emotionalLabor = "moderate";
+      }
+      
+      if (text.includes("children") || text.includes("kids") || text.includes("family")) {
+        weights.childDevelopment = "high";
+      }
+      
+      // Calculate task complexity based on verb count
+      const verbCount = (text.match(/\b(manage|coordinate|research|plan|organize|prepare|arrange|monitor|maintain|develop)\b/gi) || []).length;
+      if (verbCount >= 2) {
+        weights.baseWeight = Math.min(5, weights.baseWeight + 1);
+      }
+      
+      return weights;
+    };
+    
+    // Helper function to generate weight explanation text
+    const getWeightExplanation = (text, weightData) => {
+      let explanation = "This task is ";
+      
+      // Base weight description
+      if (weightData.baseWeight >= 4) {
+        explanation += "extremely time-intensive ";
+      } else if (weightData.baseWeight >= 3) {
+        explanation += "moderately time-consuming ";
+      } else {
+        explanation += "relatively quick ";
+      }
+      
+      // Frequency
+      if (weightData.frequency === "daily") {
+        explanation += "and needs to be done every day. ";
+      } else if (weightData.frequency === "several") {
+        explanation += "and needs to be done several times a week. ";
+      } else if (weightData.frequency === "weekly") {
+        explanation += "and needs to be done weekly. ";
+      } else {
+        explanation += "but doesn't need to be done as frequently. ";
+      }
+      
+      // Invisibility
+      if (weightData.invisibility === "completely" || weightData.invisibility === "mostly") {
+        explanation += "It's largely invisible work that often goes unnoticed but creates mental load. ";
+      }
+      
+      // Emotional labor
+      if (weightData.emotionalLabor === "extreme" || weightData.emotionalLabor === "high") {
+        explanation += "This task requires significant emotional energy. ";
+      }
+      
+      // Child development
+      if (weightData.childDevelopment === "high") {
+        explanation += "How this task is distributed teaches children important lessons about gender roles.";
+      }
+      
+      return explanation;
+    };
       
     let questionId = 1;
     categories.forEach(category => {
       questionTexts[category].forEach(text => {
+        // Generate AI-based weights for this specific question
+        const weightData = generateQuestionWeights(text, category);
+        
+        // Generate weight explanation
+        const weightExplanation = getWeightExplanation(text, weightData);
+        
+        // Calculate the total weight
+        const totalWeight = calculateTaskWeight({
+          ...weightData,
+          category
+        }, null);
+        
         questions.push({
           id: `q${questionId}`,
           text: text,
           category: category,
-          explanation: `This question helps us understand who is primarily handling ${category.toLowerCase()} in your family and allows us to track changes over time.`
+          explanation: `This question helps us understand who is primarily handling ${category.toLowerCase()} in your family and allows us to track changes over time.`,
+          weightExplanation: weightExplanation,
+          totalWeight: totalWeight.toFixed(2),
+          // Weight attributes
+          baseWeight: weightData.baseWeight,
+          frequency: weightData.frequency,
+          invisibility: weightData.invisibility,
+          emotionalLabor: weightData.emotionalLabor,
+          researchImpact: weightData.researchImpact,
+          childDevelopment: weightData.childDevelopment
         });
         questionId++;
       });
@@ -162,14 +301,29 @@ export function SurveyProvider({ children }) {
     
     categories.forEach(category => {
       const categoryQuestions = fullQuestionSet.filter(q => q.category === category);
-      // Get 5 questions from each category
-      for (let i = 0; i < 5; i++) {
-        const index = (weekNumber * i) % categoryQuestions.length; // Use week number to vary questions
+      
+      // AI-driven question selection that prioritizes high-weight questions
+      const highWeightQuestions = categoryQuestions
+        .sort((a, b) => parseFloat(b.totalWeight) - parseFloat(a.totalWeight))
+        .slice(0, 3);
+        
+      // Add some variety with 2 other questions
+      const otherQuestions = categoryQuestions
+        .filter(q => !highWeightQuestions.includes(q))
+        .sort(() => 0.5 - Math.random())
+        .slice(0, 2);
+        
+      // Combine and shuffle for natural order
+      const selectedQuestions = [...highWeightQuestions, ...otherQuestions]
+        .sort(() => 0.5 - Math.random());
+      
+      // Add to weekly questions
+      selectedQuestions.forEach(question => {
         weeklyQuestions.push({
-          ...categoryQuestions[index],
-          weeklyExplanation: `We're asking about this again to track changes over time and see if our recommendations are helping create more balance in your family.`
+          ...question,
+          weeklyExplanation: `We're asking about this again to track changes over time and see if our recommendations are helping create more balance in your family. This is a ${parseFloat(question.totalWeight) > 10 ? 'high-impact' : 'standard'} task.`
         });
-      }
+      });
     });
     
     return weeklyQuestions;
@@ -232,5 +386,3 @@ export function SurveyProvider({ children }) {
     </SurveyContext.Provider>
   );
 }
-
-

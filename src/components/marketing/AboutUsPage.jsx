@@ -1,11 +1,14 @@
 import React, { useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Users, Brain, Heart, Scale, ArrowRight, BarChart, Clock, Star } from 'lucide-react';
+import { useAuth } from '../../contexts/AuthContext';
 
 // Team member profile images - These should be replaced with actual images in your assets folder
 import stefanProfilePic from '../../assets/stefan-palsson.jpg'; // Add this image to your assets
 import kimberlyProfilePic from '../../assets/kimberly-palsson.jpg'; // Add this image to your assets
 import teamPhoto from '../../assets/team-photo.jpg'; // Add this image to your assets
+
+const { currentUser } = useAuth();
 
 const AboutUsPage = () => {
   const navigate = useNavigate();

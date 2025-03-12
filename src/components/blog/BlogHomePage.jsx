@@ -1,6 +1,7 @@
 // src/components/blog/BlogHomePage.jsx
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { useAuth } from '../../contexts/AuthContext';
 import { Search, ArrowRight, Clock, Tag, ChevronRight, BookOpen, Users, Brain, Scale, BarChart3, Heart } from 'lucide-react';
 
 const BlogHomePage = () => {
@@ -8,6 +9,7 @@ const BlogHomePage = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const [filteredPosts, setFilteredPosts] = useState([]);
   const [selectedCategory, setSelectedCategory] = useState('All');
+  const { currentUser } = useAuth();
   
   
   // Sample blog posts

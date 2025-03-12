@@ -11,6 +11,7 @@ import UserSettingsScreen from '../user/UserSettingsScreen';
 import FamilyMeetingScreen from '../meeting/FamilyMeetingScreen';
 import { useAuth } from '../../contexts/AuthContext';
 import { useNavigate, useLocation } from 'react-router-dom';
+import CoupleRelationshipChart from './CoupleRelationshipChart';
 
 
 
@@ -273,6 +274,8 @@ useEffect(() => {
         return <HowThisWorksScreen />;
       case 'personalized':
         return <PersonalizedApproachScreen />;
+        case 'relationship':
+  return <CoupleRelationshipChart />;
 
       case 'dashboard':
         return <DashboardTab />;
@@ -382,6 +385,15 @@ useEffect(() => {
             >
               {tab.name}
             </button>
+            {/* Add this to the Tabs section */}
+{selectedUser && selectedUser.role === 'parent' && (
+  <button 
+    className={`px-4 py-2 font-medium whitespace-nowrap ${activeTab === 'relationship' ? 'border-b-2 border-blue-500 text-blue-600' : 'text-gray-600'}`}
+    onClick={() => setActiveTab('relationship')}
+  >
+    Relationship
+  </button>
+)}
           ))}
         </div>
           

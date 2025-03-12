@@ -5,7 +5,10 @@ import {
   Users, CalculatorIcon, Lightbulb, EqualIcon, FunctionSquare, 
   Puzzle, Zap, Star, Sparkles, HeartPulse, Sigma, LineChart
 } from 'lucide-react';
+import { useAuth } from '../../contexts/AuthContext';
 
+
+const { currentUser } = useAuth();
 
 const HowThisWorksScreen = () => {
   const navigate = useNavigate();

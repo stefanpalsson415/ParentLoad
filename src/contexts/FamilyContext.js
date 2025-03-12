@@ -2,6 +2,7 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { useAuth } from './AuthContext';
 import DatabaseService from '../services/DatabaseService';
+import { calculateBalanceScores } from '../utils/TaskWeightCalculator';
 
 // Create the family context
 const FamilyContext = createContext();
@@ -33,6 +34,8 @@ export function FamilyProvider({ children }) {
   const [taskEffectivenessData, setTaskEffectivenessData] = useState([]); // NEW: Store task effectiveness data
   const [impactInsights, setImpactInsights] = useState([]); // NEW: Store task impact insights
   const [kidTasksData, setKidTasksData] = useState({}); // NEW: Store kid tasks data
+  const [coupleCheckInData, setCoupleCheckInData] = useState({});
+
 
   // Initialize family data from auth context
   useEffect(() => {
@@ -191,6 +194,71 @@ export function FamilyProvider({ children }) {
       throw error;
     }
   };
+
+  // Save couple check-in data
+const saveCoupleCheckInData = async (weekNumber, data) => {
+  try {
+    if (!familyId) throw new Error("No family ID available");
+    
+    await DatabaseService.saveCoupleCheckInData(familyId, weekNumber, data);
+    
+    // Update local state
+    setCoupleCheckInData(prev => ({
+      ...prev,
+      [weekNumber]: data
+    }));
+    
+    return true;
+  } catch (error) {
+    console.error("Error saving couple check-in data:", error);
+    throw error;
+  }
+};
+
+// Get couple check-in data for a specific week
+const getCoupleCheckInData = (weekNumber) => {
+  return coupleCheckInData[weekNumber] || null;
+};
+
+// Get relationship satisfaction trend data
+const getRelationshipTrendData = () => {
+  const trendData = [];
+  
+  // Add initial data point if available
+  if (coupleCheckInData[1]) {
+    trendData.push({
+      week: 'Week 1',
+      satisfaction: coupleCheckInData[1].responses.satisfaction,
+      communication: coupleCheckInData[1].responses.communication,
+      workloadBalance: 50, // From initial survey
+    });
+  }
+  
+  // Add data for each week
+  Object.keys(coupleCheckInData)
+    .map(Number)
+    .sort((a, b) => a - b)
+    .forEach(week => {
+      if (week === 1) return; // Skip week 1 as it's already added
+      
+      const data = coupleCheckInData[week];
+      if (!data) return;
+      
+      // Get workload balance for this week
+      const weekBalance = getWeekHistoryData(week)?.balance || { mama: 50, papa: 50 };
+      const balanceScore = 100 - Math.abs(weekBalance.mama - 50) * 2; // Convert to 0-100 scale where 100 is perfect balance
+      
+      trendData.push({
+        week: `Week ${week}`,
+        satisfaction: data.responses.satisfaction,
+        communication: data.responses.communication,
+        workloadBalance: balanceScore
+      });
+    });
+  
+  return trendData;
+};
+
 
   // Update survey schedule
   const updateSurveySchedule = async (weekNumber, dueDate) => {
@@ -886,6 +954,26 @@ export function FamilyProvider({ children }) {
   const generateNewWeekTasks = (weekNumber, previousTasks, previousResponses, effectivenessData = []) => {
     console.log(`Generating AI-driven tasks for Week ${weekNumber} based on family data and effectiveness`);
     
+    // Calculate weighted imbalances using the TaskWeightCalculator
+  const weightedScores = calculateBalanceScores(fullQuestionSet, previousResponses, familyPriorities);
+  console.log("Weighted balance scores:", weightedScores);
+  
+  // Find the most imbalanced categories based on weighted scores
+  const imbalancedCategories = Object.entries(weightedScores.categoryBalance)
+    .map(([category, scores]) => ({
+      category,
+      imbalance: scores.imbalance,
+      assignTo: scores.mama > scores.papa ? "Papa" : "Mama"
+    }))
+    .sort((a, b) => b.imbalance - a.imbalance);
+  
+  console.log("Imbalanced categories by weight:", imbalancedCategories);
+  
+  // Use these weighted imbalances to determine priority areas
+  const priorityAreas = determinePriorityAreas(imbalancedCategories, previousFocusAreas);
+  
+
+
     // First, analyze the survey responses to find imbalances and patterns
     const categoryImbalances = analyzeImbalancesByCategory(previousResponses);
     console.log("Category imbalances detected:", categoryImbalances);
@@ -1726,7 +1814,11 @@ export function FamilyProvider({ children }) {
     saveKidTaskData,
     getTaskImpactInsights,
     analyzeTaskImpact,
-    analyzeTaskEffectiveness
+    analyzeTaskEffectiveness,
+    coupleCheckInData,
+  saveCoupleCheckInData,
+  getCoupleCheckInData,
+  getRelationshipTrendData
   };
 
   return (
