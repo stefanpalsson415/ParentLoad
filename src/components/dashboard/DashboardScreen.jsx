@@ -378,14 +378,16 @@ useEffect(() => {
           
           {/* Add completed weeks as tabs */}
           {weekTabs.map(tab => (
-            <button 
-              key={tab.id}
-              className={`px-4 py-2 font-medium whitespace-nowrap ${activeTab === tab.id ? 'border-b-2 border-blue-500 text-blue-600' : 'text-gray-600'}`}
-              onClick={() => setActiveTab(tab.id)}
-            >
-              {tab.name}
-            </button>
-            {/* Add this to the Tabs section */}
+  <button 
+    key={tab.id}
+    className={`px-4 py-2 font-medium whitespace-nowrap ${activeTab === tab.id ? 'border-b-2 border-blue-500 text-blue-600' : 'text-gray-600'}`}
+    onClick={() => setActiveTab(tab.id)}
+  >
+    {tab.name}
+  </button>
+))}
+
+{/* Relationship Tab */}
 {selectedUser && selectedUser.role === 'parent' && (
   <button 
     className={`px-4 py-2 font-medium whitespace-nowrap ${activeTab === 'relationship' ? 'border-b-2 border-blue-500 text-blue-600' : 'text-gray-600'}`}

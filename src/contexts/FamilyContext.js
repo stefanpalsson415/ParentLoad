@@ -1023,11 +1023,11 @@ const getRelationshipTrendData = () => {
       console.error("Error getting meeting notes:", error);
     }
     
-    // Determine priority areas to focus on this week
-    const priorityAreas = determinePriorityAreas(categoryImbalances, previousFocusAreas);
-    
+// Determine priority areas to focus on this week
+const taskPriorityAreas = determinePriorityAreas(categoryImbalances, previousFocusAreas);
+
     // Apply effectiveness insights to priority areas
-    priorityAreas.forEach(area => {
+    taskPriorityAreas.forEach(area => {
       // Check if this area has proven effective in the past
       if (mostEffectiveTypes.includes(area.focusArea) || 
           mostEffectiveTypes.includes(area.category)) {
@@ -1043,7 +1043,7 @@ const getRelationshipTrendData = () => {
       }
     });
     
-    console.log("Priority areas for this week (after effectiveness adjustment):", priorityAreas);
+    console.log("Priority areas for this week (after effectiveness adjustment):", taskPriorityAreas);
     
     // Generate tasks based on the family's specific needs
     const tasks = [];
@@ -1098,7 +1098,7 @@ const getRelationshipTrendData = () => {
     
     if (tasksNeeded > 0) {
       // 2. Survey-based task for Papa (from highest priority area)
-      const papaFocusAreas = priorityAreas.filter(area => area.assignTo === "Papa");
+      const papaFocusAreas = taskPriorityAreas.filter(area => area.assignTo === "Papa");
       if (papaFocusAreas.length > 0) {
         const surveyTask = generateTaskForArea(`${weekNumber}-1`, "Papa", papaFocusAreas[0], weekNumber);
         surveyTask.taskType = "survey-based";
@@ -1108,13 +1108,13 @@ const getRelationshipTrendData = () => {
       
       // 3. AI-based task for Papa
       if (tasksNeeded > 1) {
-        const papaInsightTask = generateAIInsightTask(`${weekNumber}-ai-1`, "Papa", priorityAreas, weekNumber);
+        const papaInsightTask = generateAIInsightTask(`${weekNumber}-ai-1`, "Papa", taskPriorityAreas, weekNumber);
         tasks.push(papaInsightTask);
       }
       
       // 4. Survey-based task for Mama (from highest priority area)
       if (tasksNeeded > 2) {
-        const mamaFocusAreas = priorityAreas.filter(area => area.assignTo === "Mama");
+        const mamaFocusAreas = taskPriorityAreas.filter(area => area.assignTo === "Mama");
         if (mamaFocusAreas.length > 0) {
           const surveyTask = generateTaskForArea(`${weekNumber}-2`, "Mama", mamaFocusAreas[0], weekNumber);
           surveyTask.taskType = "survey-based";
@@ -1125,7 +1125,7 @@ const getRelationshipTrendData = () => {
       
       // 5. AI-based task for Mama
       if (tasksNeeded > 3) {
-        const mamaInsightTask = generateAIInsightTask(`${weekNumber}-ai-2`, "Mama", priorityAreas, weekNumber);
+        const mamaInsightTask = generateAIInsightTask(`${weekNumber}-ai-2`, "Mama", taskPriorityAreas, weekNumber);
         tasks.push(mamaInsightTask);
       }
     }
@@ -1470,9 +1470,9 @@ const getRelationshipTrendData = () => {
   };
 
   // Generate special AI insight task
-  const generateAIInsightTask = (taskId, assignedTo, priorityAreas, weekNumber) => {
+  const generateAIInsightTask = (taskId, assignedTo, taskPriorityAreas, weekNumber) => {
     // Find relevant insights for this parent
-    const parentAreas = priorityAreas.filter(area => area.assignTo === assignedTo);
+    const parentAreas = taskPriorityAreas.filter(area => area.assignTo === assignedTo);
     const otherParent = assignedTo === "Mama" ? "Papa" : "Mama";
     
     // Create insights based on the parent's highest priority areas
