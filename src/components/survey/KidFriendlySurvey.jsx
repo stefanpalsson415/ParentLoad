@@ -233,6 +233,69 @@ if (selectedUser && selectedUser.role === 'child' && selectedUser.age < 8) {
     "Invisible Parental Tasks"
   ];
   
+// After all your useEffect hooks and state management, add:
+
+// Handle pause function
+const handlePauseSurvey = async () => {
+  if (isProcessing) return; // Prevent actions while processing
+  
+  setIsProcessing(true);
+  
+  try {
+    // Save the current progress without marking as completed
+    if (selectedUser && Object.keys(currentSurveyResponses).length > 0) {
+      console.log("Saving survey progress before pausing...");
+      if (surveyType === "weekly") {
+        await saveSurveyProgress(selectedUser.id, currentSurveyResponses);
+      } else {
+        await saveSurveyProgress(selectedUser.id, currentSurveyResponses);
+      }
+      console.log("Progress saved successfully");
+    }
+    
+    // Now navigate to dashboard
+    navigate('/dashboard');
+  } catch (error) {
+    console.error('Error saving survey progress:', error);
+    alert('There was an error saving your progress, but you can continue later.');
+    navigate('/dashboard');
+  } finally {
+    setIsProcessing(false);
+  }
+};
+
+// Handle switch user function
+const handleSwitchUser = async () => {
+  if (isProcessing) return; // Prevent actions while processing
+  
+  setIsProcessing(true);
+  
+  try {
+    // Save the current progress without marking as completed
+    if (selectedUser && Object.keys(currentSurveyResponses).length > 0) {
+      console.log("Saving survey progress before switching user...");
+      if (surveyType === "weekly") {
+        await saveSurveyProgress(selectedUser.id, currentSurveyResponses);
+      } else {
+        await saveSurveyProgress(selectedUser.id, currentSurveyResponses);
+      }
+      console.log("Progress saved successfully");
+    }
+    
+    // Navigate to login screen
+    navigate('/login');
+  } catch (error) {
+    console.error('Error saving survey progress:', error);
+    alert('There was an error saving your progress, but you can still switch users.');
+    navigate('/login');
+  } finally {
+    setIsProcessing(false);
+  }
+};
+
+// Then later in your code, you can use these functions in your JSX for button onClick handlers
+
+
   const simpleQuestions = [];
   categories.forEach(category => {
     const categoryQuestions = questionSet.filter(q => q.category === category);
