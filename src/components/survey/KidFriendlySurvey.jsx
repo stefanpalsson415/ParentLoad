@@ -292,32 +292,48 @@ const KidFriendlySurvey = ({ surveyType = "initial" }) => {
     setQuestions(filteredList || []);    
   }, [fullQuestionSet, selectedUser, surveyType, currentWeek, generateWeeklyQuestions]);
   
-  // Check for previously saved progress
-  useEffect(() => {
-    // Only run this if we have a user and loaded questions
-    if (selectedUser && questions.length > 0 && currentSurveyResponses) {
-      console.log("Checking for previously saved progress...");
+// Enhanced useEffect to properly restore survey progress
+useEffect(() => {
+  // Only run this if we have a user and loaded questions
+  if (selectedUser && questions.length > 0 && currentSurveyResponses && Object.keys(currentSurveyResponses).length > 0) {
+    console.log("Checking for previously saved progress...", currentSurveyResponses);
+    
+    // Find the last answered question index
+    let lastAnsweredIndex = -1;
+    
+    // Loop through questions to find the highest index that has an answer
+    questions.forEach((question, index) => {
+      if (currentSurveyResponses[question.id]) {
+        lastAnsweredIndex = Math.max(lastAnsweredIndex, index);
+      }
+    });
+    
+    // If we found saved answers, jump to the next unanswered question
+    if (lastAnsweredIndex >= 0) {
+      console.log(`Found progress! Last answered question: ${lastAnsweredIndex}`);
       
-      // Find the last answered question index
-      let lastAnsweredIndex = -1;
+      // Set current question to the next unanswered one
+      setCurrentQuestionIndex(lastAnsweredIndex + 1);
       
-      // Loop through questions to find the highest index that has an answer
-      questions.forEach((question, index) => {
-        if (currentSurveyResponses[question.id]) {
-          lastAnsweredIndex = Math.max(lastAnsweredIndex, index);
-        }
+      // Load all previous answers into local state
+      setUserResponses(currentSurveyResponses);
+      
+      // Update game state to match saved progress
+      const mamaCount = Object.values(currentSurveyResponses).filter(v => v === 'Mama').length;
+      const papaCount = Object.values(currentSurveyResponses).filter(v => v === 'Papa').length;
+      
+      // Update game status
+      setGameStatus({
+        mamaPosition: mamaCount,
+        papaPosition: papaCount,
+        stars: Math.floor(lastAnsweredIndex / 20)
       });
       
-      // If we found saved answers, jump to the next unanswered question
-      if (lastAnsweredIndex >= 0) {
-        console.log(`Found progress! Last answered question: ${lastAnsweredIndex}`);
-        setCurrentQuestionIndex(lastAnsweredIndex + 1);
-        
-        // Also load previous answers into local state
-        setUserResponses(currentSurveyResponses);
-      }
+      // Also update total stars
+      setTotalStars(Math.floor(lastAnsweredIndex / 20));
     }
-  }, [selectedUser, questions, currentSurveyResponses]);
+  }
+}, [selectedUser, questions, currentSurveyResponses]);
   
   // Set up keyboard shortcuts using useCallback to avoid dependency issues
   const handleSelectParent = useCallback((parent) => {
@@ -398,32 +414,49 @@ const KidFriendlySurvey = ({ surveyType = "initial" }) => {
   }, [currentQuestionIndex, isProcessing, questions, updateSurveyResponse, userResponses]);
 
   // Set up keyboard shortcuts
-  useEffect(() => {
-    // Function to handle key press
-    const handleKeyPress = (e) => {
-      // Guard against processing state or viewing question list
-      if (isProcessing || viewingQuestionList) return;
-      
-      // 'M' key selects Mama
-      if (e.key.toLowerCase() === 'm') {
-        handleSelectParent('Mama');
-      }
-      // 'P' key selects Papa
-      else if (e.key.toLowerCase() === 'p') {
-        handleSelectParent('Papa');
-      }
-    };
+  // Set up keyboard shortcuts with debounce protection
+useEffect(() => {
+  // Track if a key is currently being processed
+  let keyProcessing = false;
+  
+  // Function to handle key press
+  const handleKeyPress = (e) => {
+    // Guard against multiple keypresses, processing state, or viewing question list
+    if (keyProcessing || isProcessing || viewingQuestionList) {
+      e.preventDefault();
+      return;
+    }
     
-    // Add the listener immediately - no delay
-    window.addEventListener('keydown', handleKeyPress);
-    keyboardInitialized.current = true;
+    // Set processing flag to prevent multiple inputs
+    keyProcessing = true;
     
-    // Cleanup function
-    return () => {
-      window.removeEventListener('keydown', handleKeyPress);
-      keyboardInitialized.current = false;
-    };
-  }, [isProcessing, viewingQuestionList, handleSelectParent]);
+    // 'M' key selects Mama
+    if (e.key.toLowerCase() === 'm') {
+      console.log("M key pressed");
+      handleSelectParent('Mama');
+    }
+    // 'P' key selects Papa
+    else if (e.key.toLowerCase() === 'p') {
+      console.log("P key pressed");
+      handleSelectParent('Papa');
+    }
+    
+    // Reset processing flag after a delay (longer than the question transition time)
+    setTimeout(() => {
+      keyProcessing = false;
+    }, 1000);
+  };
+  
+  // Add the listener immediately - no delay
+  window.addEventListener('keydown', handleKeyPress);
+  keyboardInitialized.current = true;
+  
+  // Cleanup function
+  return () => {
+    window.removeEventListener('keydown', handleKeyPress);
+    keyboardInitialized.current = false;
+  };
+}, [isProcessing, viewingQuestionList, handleSelectParent]);
   
   // Find Mama and Papa users from family members
   const mamaUser = familyMembers.find(m => m.roleType === 'Mama' || m.name === 'Mama');
