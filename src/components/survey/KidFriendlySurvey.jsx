@@ -386,6 +386,9 @@ const handleSelectParent = (parent) => {
   // Show selection animation
   setAnimation(`selected-${parent.toLowerCase()}`);
   
+  // Store current index in a local variable to avoid closure issues
+  const currentIdx = currentQuestionIndex;
+  
   // Wait for a moment to show the selection
   questionTimerRef.current = setTimeout(() => {
     // Clear animation
@@ -393,24 +396,22 @@ const handleSelectParent = (parent) => {
     
     // Then decide whether to go to next question or complete survey
     questionTimerRef.current = setTimeout(() => {
-      if (currentQuestionIndex < questions.length - 1) {
-        // Move to next question
-        setCurrentQuestionIndex(prevIndex => {
-          const newIndex = prevIndex + 1;
-          console.log(`Moving to question ${newIndex + 1}`);
-          return newIndex;
-        });
+      if (currentIdx < questions.length - 1) {
+        // Move to next question - use exact index instead of functional update
+        const nextIndex = currentIdx + 1;
+        console.log(`Moving to question ${nextIndex + 1} (from ${currentIdx + 1})`);
+        setCurrentQuestionIndex(nextIndex);
         
-        // Update game state based on answer
+        // Update game state based on answer - use currentIdx instead of currentQuestionIndex
         setGameStatus(prev => ({
           ...prev,
-          mamaPosition: parent === 'Mama' ? currentQuestionIndex + 1 : prev.mamaPosition,
-          papaPosition: parent === 'Papa' ? currentQuestionIndex + 1 : prev.papaPosition,
-          stars: (currentQuestionIndex + 1) % 20 === 0 ? prev.stars + 1 : prev.stars
+          mamaPosition: parent === 'Mama' ? currentIdx + 1 : prev.mamaPosition,
+          papaPosition: parent === 'Papa' ? currentIdx + 1 : prev.papaPosition,
+          stars: (currentIdx + 1) % 20 === 0 ? prev.stars + 1 : prev.stars
         }));
         
         // Show reward if appropriate
-        if ((currentQuestionIndex + 1) % 20 === 0) {
+        if ((currentIdx + 1) % 20 === 0) {
           setShowReward(true);
           setTotalStars(prev => prev + 1);
           
@@ -430,7 +431,6 @@ const handleSelectParent = (parent) => {
     }, 500);
   }, 500);
 };
-
   // FIXED: Set up keyboard shortcuts with better debouncing protection
   useEffect(() => {
     // Create a ref to track processing state that persists between renders
