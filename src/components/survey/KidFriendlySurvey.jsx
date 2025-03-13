@@ -179,20 +179,24 @@ const KidFriendlySurvey = ({ surveyType = "initial" }) => {
   const [questions, setQuestions] = useState([]);
   const questionTimerRef = useRef(null);
   
-  // Handle pause function
+// Handle pause function
 const handlePauseSurvey = async () => {
   if (isProcessing) return; // Prevent actions while processing
   
   setIsProcessing(true);
   
   try {
+    // Ensure we have the latest responses from state
+    const allResponses = {...currentSurveyResponses, ...userResponses};
+    
     // Save the current progress without marking as completed
-    if (selectedUser && Object.keys(currentSurveyResponses).length > 0) {
+    if (selectedUser && Object.keys(allResponses).length > 0) {
       console.log("Saving survey progress before pausing...");
+      console.log("Responses to save:", allResponses);
       if (surveyType === "weekly") {
-        await saveSurveyProgress(selectedUser.id, currentSurveyResponses);
+        await saveSurveyProgress(selectedUser.id, allResponses);
       } else {
-        await saveSurveyProgress(selectedUser.id, currentSurveyResponses);
+        await saveSurveyProgress(selectedUser.id, allResponses);
       }
       console.log("Progress saved successfully");
     }
@@ -215,13 +219,17 @@ const handleSwitchUser = async () => {
   setIsProcessing(true);
   
   try {
+    // Ensure we have the latest responses from state
+    const allResponses = {...currentSurveyResponses, ...userResponses};
+    
     // Save the current progress without marking as completed
-    if (selectedUser && Object.keys(currentSurveyResponses).length > 0) {
+    if (selectedUser && Object.keys(allResponses).length > 0) {
       console.log("Saving survey progress before switching user...");
+      console.log("Responses to save:", allResponses);
       if (surveyType === "weekly") {
-        await saveSurveyProgress(selectedUser.id, currentSurveyResponses);
+        await saveSurveyProgress(selectedUser.id, allResponses);
       } else {
-        await saveSurveyProgress(selectedUser.id, currentSurveyResponses);
+        await saveSurveyProgress(selectedUser.id, allResponses);
       }
       console.log("Progress saved successfully");
     }
@@ -237,44 +245,38 @@ const handleSwitchUser = async () => {
   }
 };
 
-
+// Set up keyboard shortcuts
 // Set up keyboard shortcuts
 useEffect(() => {
   // Function to handle key press
   const handleKeyPress = (e) => {
-    if (viewingQuestionList.current || isProcessing) return;
-
-      
+    // Guard against processing state or viewing question list
+    if (isProcessing || viewingQuestionList === true) return;
+    
+    console.log(`Key pressed: ${e.key}, processing: ${isProcessing}, question: ${currentQuestionIndex}`);
+    
     // 'M' key selects Mama
     if (e.key.toLowerCase() === 'm') {
+      console.log("M key pressed - selecting Mama");
       handleSelectParent('Mama');
     }
     // 'P' key selects Papa
     else if (e.key.toLowerCase() === 'p') {
+      console.log("P key pressed - selecting Papa");
       handleSelectParent('Papa');
     }
   };
-    
-  // Set a small timeout to ensure component is fully rendered
-  const timer = setTimeout(() => {
-    // Clean up previous listeners if they exist
-    if (keyboardInitialized.current) {
-      window.removeEventListener('keydown', handleKeyPress);
-    }
-    
-    // Add new listener
-    window.addEventListener('keydown', handleKeyPress);
-    (keyboardInitialized.current) = true;
-  }, 200);
-    
+  
+  // Add the listener immediately
+  window.addEventListener('keydown', handleKeyPress);
+  keyboardInitialized.current = true;
+  
   // Cleanup function
   return () => {
-    clearTimeout(timer);
-    if (keyboardInitialized.current) {
-      window.removeEventListener('keydown', handleKeyPress);
-    }
+    window.removeEventListener('keydown', handleKeyPress);
+    keyboardInitialized.current = false;
   };
-}, [currentQuestionIndex, viewingQuestionList, isProcessing]);
+}, [currentQuestionIndex, viewingQuestionList, isProcessing]); // Removed handleSelectParent
 
   // Redirect if no user is selected
   useEffect(() => {
@@ -626,6 +628,7 @@ const handlePauseSurvey = async () => {
   
   // Handle survey completion
   // Handle survey completion
+// Handle survey completion
 const handleCompleteSurvey = async () => {
   // Show a big celebration!
   setShowReward(true);
@@ -643,17 +646,27 @@ const handleCompleteSurvey = async () => {
       console.log("Initial survey saved successfully");
     }
     
-    // Only navigate after confirmed save
+    // Only navigate after confirmed save - with error handling
     setTimeout(() => {
-      console.log("Navigating to loading screen");
-      navigate('/loading');
-      
-      // Navigate to dashboard after delay with increased timeout
-      setTimeout(() => {
-        console.log("Navigating to dashboard");
-        navigate('/dashboard');
-      }, 3000); // Increased timeout for more reliable navigation
-    }, 3000); // Increased timeout to show reward longer
+      try {
+        console.log("Navigating to loading screen");
+        navigate('/loading');
+        
+        // Navigate to dashboard after delay with increased timeout
+        setTimeout(() => {
+          try {
+            console.log("Navigating to dashboard");
+            navigate('/dashboard', { replace: true }); // Use replace to prevent back navigation issues
+          } catch (navError) {
+            console.error("Navigation error:", navError);
+            window.location.href = '/dashboard'; // Fallback to direct URL change
+          }
+        }, 3000);
+      } catch (navError) {
+        console.error("Navigation error:", navError);
+        window.location.href = '/dashboard'; // Fallback
+      }
+    }, 3000);
   } catch (error) {
     console.error(`Error completing ${surveyType} survey:`, error);
     alert('There was an error saving your responses. Please try again.');
@@ -662,8 +675,7 @@ const handleCompleteSurvey = async () => {
     setShowReward(false);
     setIsProcessing(false);
   }
-};
-  
+};  
   // Calculate progress percentage
   const progressPercentage = questions.length > 0 
     ? ((currentQuestionIndex) / (questions.length - 1)) * 100 

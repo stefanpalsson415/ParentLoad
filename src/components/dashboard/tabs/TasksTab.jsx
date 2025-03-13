@@ -54,12 +54,26 @@ const analyzeTaskImbalances = (surveyResponses, fullQuestionSet) => {
 
 
 // AI-driven task generator for personalized recommendations
-const generateTaskRecommendations = (weekNumber = 1) => {
+// AI-driven task generator for personalized recommendations
+const generateTaskRecommendations = (weekNumber = 1, surveyResponsesToUse = {}, questionSet = []) => {
   // Analysis of survey data to identify personalized tasks
   const taskPrefix = weekNumber ? `${weekNumber}-` : "";
   
-  // This would normally use actual survey data, but we'll simulate AI analysis
-  const imbalanceAnalysis = analyzeTaskImbalances(surveyResponses, fullQuestionSet);
+// Add this safeguard for empty inputs
+if (!surveyResponsesToUse || Object.keys(surveyResponsesToUse).length === 0 || !questionSet || questionSet.length === 0) {
+  console.log("Warning: Missing survey data or question set for task generation. Using fallback data.");
+  // Return default tasks if no data available
+  return generateDefaultTasks(weekNumber);
+}
+
+// This would normally use actual survey data, but we'll simulate AI analysis
+const imbalanceAnalysis = analyzeTaskImbalances(surveyResponsesToUse, questionSet);
+
+// Add fallback values if analysis returns empty results
+if (!imbalanceAnalysis || Object.keys(imbalanceAnalysis).length === 0) {
+  console.log("Warning: Analysis returned no results. Using fallback tasks.");
+  return generateDefaultTasks(weekNumber);
+}
   
   // Sort categories by imbalance to prioritize most unbalanced areas
   const prioritizedCategories = Object.entries(imbalanceAnalysis)
@@ -76,42 +90,44 @@ const generateTaskRecommendations = (weekNumber = 1) => {
   const aiTasks = [];
   
   // Generate Papa tasks based on highest imbalances where Papa should take on more
-  const papaCategories = prioritizedCategories.filter(c => c.assignTo === "Papa");
-  if (papaCategories.length > 0) {
-    const topPapaCategory = papaCategories[0];
-    aiTasks.push({
-      id: `${taskPrefix}1`,
-      title: `${weekNumber ? `Week ${weekNumber}: ` : ""}${getTaskTitleForCategory(topPapaCategory.category)}`,
-      description: `Address the ${topPapaCategory.imbalance.toFixed(0)}% imbalance in ${topPapaCategory.category}`,
-      assignedTo: "Papa",
-      assignedToName: "Papa",
-      taskType: "ai", // Mark as AI-based
-      completed: false,
-      completedDate: null,
-      insight: `Our AI analysis shows ${topPapaCategory.mamaPercent.toFixed(0)}% of ${topPapaCategory.category} tasks are handled by Mama.`,
-      comments: [],
-      subTasks: generateSubtasksForCategory(topPapaCategory.category, taskPrefix, 1)
-    });
-  }
-  
-  // Generate Mama tasks similarly
-  const mamaCategories = prioritizedCategories.filter(c => c.assignTo === "Mama");
-  if (mamaCategories.length > 0) {
-    const topMamaCategory = mamaCategories[0];
-    aiTasks.push({
-      id: `${taskPrefix}2`,
-      title: `${weekNumber ? `Week ${weekNumber}: ` : ""}${getTaskTitleForCategory(topMamaCategory.category)}`,
-      description: `Address the ${topMamaCategory.imbalance.toFixed(0)}% imbalance in ${topMamaCategory.category}`,
-      assignedTo: "Mama",
-      assignedToName: "Mama",
-      taskType: "ai", // Mark as AI-based
-      completed: false,
-      completedDate: null,
-      insight: `Our AI analysis shows ${topMamaCategory.papaPercent.toFixed(0)}% of ${topMamaCategory.category} tasks are handled by Papa.`,
-      comments: [],
-      subTasks: generateSubtasksForCategory(topMamaCategory.category, taskPrefix, 2)
-    });
-  }
+const papaCategories = prioritizedCategories.filter(c => c.assignTo === "Papa");
+if (papaCategories.length > 0) {
+  const topPapaCategory = papaCategories[0];
+  const imbalanceValue = topPapaCategory.imbalance || 0;
+  aiTasks.push({
+    id: `${taskPrefix}1`,
+    title: `${weekNumber ? `Week ${weekNumber}: ` : ""}${getTaskTitleForCategory(topPapaCategory.category)}`,
+    description: `Address the ${imbalanceValue.toFixed(0)}% imbalance in ${topPapaCategory.category}`,
+    assignedTo: "Papa",
+    assignedToName: "Papa",
+    taskType: "ai", // Mark as AI-based
+    completed: false,
+    completedDate: null,
+    insight: `Our AI analysis shows ${(topPapaCategory.mamaPercent || 0).toFixed(0)}% of ${topPapaCategory.category} tasks are handled by Mama.`,
+    comments: [],
+    subTasks: generateSubtasksForCategory(topPapaCategory.category, taskPrefix, 1)
+  });
+}
+
+// Generate Mama tasks similarly
+const mamaCategories = prioritizedCategories.filter(c => c.assignTo === "Mama");
+if (mamaCategories.length > 0) {
+  const topMamaCategory = mamaCategories[0];
+  const imbalanceValue = topMamaCategory.imbalance || 0;
+  aiTasks.push({
+    id: `${taskPrefix}2`,
+    title: `${weekNumber ? `Week ${weekNumber}: ` : ""}${getTaskTitleForCategory(topMamaCategory.category)}`,
+    description: `Address the ${imbalanceValue.toFixed(0)}% imbalance in ${topMamaCategory.category}`,
+    assignedTo: "Mama",
+    assignedToName: "Mama",
+    taskType: "ai", // Mark as AI-based
+    completed: false,
+    completedDate: null,
+    insight: `Our AI analysis shows ${(topMamaCategory.papaPercent || 0).toFixed(0)}% of ${topMamaCategory.category} tasks are handled by Papa.`,
+    comments: [],
+    subTasks: generateSubtasksForCategory(topMamaCategory.category, taskPrefix, 2)
+  });
+}
   
   // Return AI-generated tasks or fallback to sample tasks if none were generated
   return aiTasks.length > 0 ? aiTasks : sampleTasks;
@@ -188,6 +204,83 @@ const TasksTab = ({ onStartWeeklyCheckIn, onOpenFamilyMeeting }) => {
   const [showCoupleCheckIn, setShowCoupleCheckIn] = useState(false);
   const [canStartCoupleCheckIn, setCanStartCoupleCheckIn] = useState(false);
   
+// Generate default tasks when data is unavailable
+const generateDefaultTasks = (weekNumber) => {
+  const taskPrefix = weekNumber ? `${weekNumber}-` : "";
+  return [
+    {
+      id: `${taskPrefix}1`,
+      title: `${weekNumber ? `Week ${weekNumber}: ` : ""}Family Task Balance`,
+      description: "Work together to improve balance of household responsibilities",
+      assignedTo: "Papa",
+      assignedToName: "Papa",
+      taskType: "default",
+      completed: false,
+      completedDate: null,
+      insight: "Balancing household tasks leads to better family harmony and less stress.",
+      comments: [],
+      subTasks: [
+        { 
+          id: `${taskPrefix}1-1`, 
+          title: "Track household tasks", 
+          description: "Monitor who does which household tasks this week",
+          completed: false,
+          completedDate: null
+        },
+        { 
+          id: `${taskPrefix}1-2`, 
+          title: "Share responsibilities", 
+          description: "Take initiative on tasks you don't normally do",
+          completed: false,
+          completedDate: null
+        },
+        { 
+          id: `${taskPrefix}1-3`, 
+          title: "Discuss as a family", 
+          description: "Talk about how to better distribute tasks",
+          completed: false,
+          completedDate: null
+        }
+      ]
+    },
+    {
+      id: `${taskPrefix}2`,
+      title: `${weekNumber ? `Week ${weekNumber}: ` : ""}Parenting Balance`,
+      description: "Balance parenting responsibilities more evenly",
+      assignedTo: "Mama",
+      assignedToName: "Mama",
+      taskType: "default",
+      completed: false,
+      completedDate: null,
+      insight: "Shared parenting leads to healthier child development and less parent burnout.",
+      comments: [],
+      subTasks: [
+        { 
+          id: `${taskPrefix}2-1`, 
+          title: "Track parenting duties", 
+          description: "Monitor who handles which parenting tasks",
+          completed: false,
+          completedDate: null
+        },
+        { 
+          id: `${taskPrefix}2-2`, 
+          title: "Share responsibilities", 
+          description: "Each take lead on different parenting activities",
+          completed: false,
+          completedDate: null
+        },
+        { 
+          id: `${taskPrefix}2-3`, 
+          title: "Check in with each other", 
+          description: "Discuss how the new balance is working",
+          completed: false,
+          completedDate: null
+        }
+      ]
+    }
+  ];
+};
+
   // Calculate due date based on survey schedule if available
   const calculateDueDate = () => {
     if (surveySchedule && surveySchedule[currentWeek]) {
@@ -375,7 +468,7 @@ useEffect(() => {
         } else {
           // Fallback to default tasks
           console.log("Using fallback tasks");
-          setTaskRecommendations(generateTaskRecommendations(currentWeek));
+          setTaskRecommendations(generateTaskRecommendations(currentWeek, surveyResponses, fullQuestionSet));
         }
         
       } catch (error) {
