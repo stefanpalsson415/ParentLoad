@@ -247,12 +247,12 @@ const handleSwitchUser = async () => {
 };
 
 // Set up keyboard shortcuts
-// Set up keyboard shortcuts
+// Replace the useEffect for keyboard shortcuts (around line 300) with this:
 useEffect(() => {
   // Function to handle key press
   const handleKeyPress = (e) => {
     // Guard against processing state or viewing question list
-    if (isProcessing || viewingQuestionList === true) return;
+    if (isProcessing || viewingQuestionList) return;
     
     console.log(`Key pressed: ${e.key}, processing: ${isProcessing}, question: ${currentQuestionIndex}`);
     
@@ -267,6 +267,17 @@ useEffect(() => {
       handleSelectParent('Papa');
     }
   };
+  
+  // Add the listener immediately - no delay
+  window.addEventListener('keydown', handleKeyPress);
+  keyboardInitialized.current = true;
+  
+  // Cleanup function
+  return () => {
+    window.removeEventListener('keydown', handleKeyPress);
+    keyboardInitialized.current = false;
+  };
+}, [currentQuestionIndex, viewingQuestionList, isProcessing]); // Remove handleSelectParent from dependencies
   
   // Add the listener immediately
   window.addEventListener('keydown', handleKeyPress);
@@ -292,6 +303,9 @@ useEffect(() => {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []); 
   
+
+
+
   // Cleanup function to run when component unmounts
   useEffect(() => {
     return () => {
@@ -310,6 +324,35 @@ useEffect(() => {
       console.log("Kid survey component unmounted, all timers cleared");
     };
   }, []);
+  
+  
+// Add this new useEffect right after the other useEffects (around line 545-550)
+// Add this after your survey data loading useEffect
+useEffect(() => {
+  // Only run this if we have a user and loaded questions
+  if (selectedUser && questions.length > 0 && currentSurveyResponses) {
+    console.log("Checking for previously saved progress...");
+    
+    // Find the last answered question index
+    let lastAnsweredIndex = -1;
+    
+    // Loop through questions to find the highest index that has an answer
+    questions.forEach((question, index) => {
+      if (currentSurveyResponses[question.id]) {
+        lastAnsweredIndex = Math.max(lastAnsweredIndex, index);
+      }
+    });
+    
+    // If we found saved answers, jump to the next unanswered question
+    if (lastAnsweredIndex >= 0) {
+      console.log(`Found progress! Last answered question: ${lastAnsweredIndex}`);
+      setCurrentQuestionIndex(lastAnsweredIndex + 1);
+      
+      // Also load previous answers into local state
+      setUserResponses(currentSurveyResponses);
+    }
+  }
+}, [selectedUser, questions, currentSurveyResponses]);
   
   // Set up questions for kids based on survey type
   // Set up questions for kids based on survey type
@@ -519,7 +562,10 @@ else if (selectedUser && selectedUser.role === 'child' && selectedUser.age < 8) 
   };
   
   // Helper function to get illustration for a question
+// Replace the getIllustrationForQuestion function (around line 1020) with this:
 function getIllustrationForQuestion(question) {
+  if (!question) return 'default';
+  
   // This function determines which illustration to show based on keywords in the question
   const text = question.text.toLowerCase();
   const id = question.id || '';
@@ -595,7 +641,7 @@ function getIllustrationForQuestion(question) {
     return 'planning_kids';
   }
   
-  // Define categories here to avoid undefined reference
+  // Define categories to avoid undefined reference
   const categoryList = [
     "Visible Household Tasks",
     "Invisible Household Tasks",
@@ -618,17 +664,28 @@ function getIllustrationForQuestion(question) {
     return (questionHash % 2 === 0) ? 'emotional' : 'planning_kids';
   }
   
-  // Use hash-based selection as a last resort to ensure consistent variety
+  // Use hash-based selection as a last resort
   const illustrations = ['cleaning', 'cooking', 'planning', 'scheduling', 'homework', 'driving', 'emotional', 'planning_kids'];
   return illustrations[questionHash % illustrations.length];
-}
-  
+}  
 
   
   // Handle survey completion
   // Handle survey completion
-// Handle survey completion
-// Handle survey completion
+// Replace the handleCompleteSurvey function (around line 850) with this improved version:
+const renderIllustration = () => {
+  if (!currentQuestion) return null;
+  
+  // Use our function to determine the illustration type
+  const illustrationType = getIllustrationForQuestion(currentQuestion);
+  
+  // Look up the component
+  const IllustrationComponent = TaskIllustrations[illustrationType] || TaskIllustrations.default;
+  
+  return <IllustrationComponent />;
+};
+
+
 const handleCompleteSurvey = async () => {
   // Show a big celebration!
   setShowReward(true);
@@ -681,7 +738,7 @@ const handleCompleteSurvey = async () => {
     setShowReward(false);
     setIsProcessing(false);
   }
-};  // Calculate progress percentage
+};
   const progressPercentage = questions.length > 0 
     ? ((currentQuestionIndex) / (questions.length - 1)) * 100 
     : 0;
