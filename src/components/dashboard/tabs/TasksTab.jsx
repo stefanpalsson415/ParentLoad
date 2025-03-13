@@ -51,7 +51,82 @@ const analyzeTaskImbalances = (surveyResponses, fullQuestionSet) => {
   return categories;
 };
 
-
+// Generate default tasks when data is unavailable
+const generateDefaultTasks = (weekNumber) => {
+  const taskPrefix = weekNumber ? `${weekNumber}-` : "";
+  return [
+    {
+      id: `${taskPrefix}1`,
+      title: `${weekNumber ? `Week ${weekNumber}: ` : ""}Family Task Balance`,
+      description: "Work together to improve balance of household responsibilities",
+      assignedTo: "Papa",
+      assignedToName: "Papa",
+      taskType: "default",
+      completed: false,
+      completedDate: null,
+      insight: "Balancing household tasks leads to better family harmony and less stress.",
+      comments: [],
+      subTasks: [
+        { 
+          id: `${taskPrefix}1-1`, 
+          title: "Track household tasks", 
+          description: "Monitor who does which household tasks this week",
+          completed: false,
+          completedDate: null
+        },
+        { 
+          id: `${taskPrefix}1-2`, 
+          title: "Share responsibilities", 
+          description: "Take initiative on tasks you don't normally do",
+          completed: false,
+          completedDate: null
+        },
+        { 
+          id: `${taskPrefix}1-3`, 
+          title: "Discuss as a family", 
+          description: "Talk about how to better distribute tasks",
+          completed: false,
+          completedDate: null
+        }
+      ]
+    },
+    {
+      id: `${taskPrefix}2`,
+      title: `${weekNumber ? `Week ${weekNumber}: ` : ""}Parenting Balance`,
+      description: "Balance parenting responsibilities more evenly",
+      assignedTo: "Mama",
+      assignedToName: "Mama",
+      taskType: "default",
+      completed: false,
+      completedDate: null,
+      insight: "Shared parenting leads to healthier child development and less parent burnout.",
+      comments: [],
+      subTasks: [
+        { 
+          id: `${taskPrefix}2-1`, 
+          title: "Track parenting duties", 
+          description: "Monitor who handles which parenting tasks",
+          completed: false,
+          completedDate: null
+        },
+        { 
+          id: `${taskPrefix}2-2`, 
+          title: "Share responsibilities", 
+          description: "Each take lead on different parenting activities",
+          completed: false,
+          completedDate: null
+        },
+        { 
+          id: `${taskPrefix}2-3`, 
+          title: "Check in with each other", 
+          description: "Discuss how the new balance is working",
+          completed: false,
+          completedDate: null
+        }
+      ]
+    }
+  ];
+};
 
 // AI-driven task generator for personalized recommendations
 // AI-driven task generator for personalized recommendations
