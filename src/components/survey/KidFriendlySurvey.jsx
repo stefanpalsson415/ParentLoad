@@ -178,6 +178,8 @@ const KidFriendlySurvey = ({ surveyType = "initial" }) => {
   const keyboardInitialized = useRef(false);
 
   const questionTimerRef = useRef(null);
+  const keyBlockerRef = useRef(false); // Add this line
+
 
   // Redirect if no user is selected
   useEffect(() => {
@@ -201,9 +203,9 @@ const KidFriendlySurvey = ({ surveyType = "initial" }) => {
         questionTimerRef.current = null;
       }
       
-      // Clear any other possible timeouts
-      const allTimeouts = [];
-      for (let i = setTimeout(() => {}, 0); i > 0; i--) {
+      // For extra safety, clear all possible timeouts
+      const highestTimeoutId = setTimeout(() => {}, 0);
+      for (let i = 0; i < highestTimeoutId; i++) {
         clearTimeout(i);
       }
     };
@@ -342,95 +344,97 @@ const KidFriendlySurvey = ({ surveyType = "initial" }) => {
     }
   }, [selectedUser, questions, currentSurveyResponses]);
   
-  // FIXED: Enhanced handleSelectParent function with better protection against rapid calls
-  const handleSelectParent = useCallback((parent) => {
-    // Multiple layers of protection against rapid calls
-    if (isProcessing) {
-      console.log("Ignoring parent selection - already processing");
-      return; 
-    }
+// Simple function without useCallback
+const handleSelectParent = (parent) => {
+  // Prevent multiple calls while processing
+  if (isProcessing) {
+    console.log("Ignoring selection - already processing");
+    return;
+  }
+  
+  // Set processing state immediately
+  setIsProcessing(true);
+  console.log(`Selected ${parent} for question ${currentQuestionIndex + 1}`);
+  
+  // Cancel any existing timers
+  if (questionTimerRef.current) {
+    clearTimeout(questionTimerRef.current);
+    questionTimerRef.current = null;
+  }
+  
+  // Set the selected parent for UI feedback
+  setSelectedParent(parent);
+  
+  // Get current question
+  const currentQuestion = questions[currentQuestionIndex];
+  if (!currentQuestion) {
+    console.error("No current question found");
+    setIsProcessing(false);
+    return;
+  }
+  
+  // Record response
+  const updatedResponses = {
+    ...userResponses,
+    [currentQuestion.id]: parent
+  };
+  setUserResponses(updatedResponses);
+  
+  // Update parent context
+  updateSurveyResponse(currentQuestion.id, parent);
+  
+  // Show selection animation
+  setAnimation(`selected-${parent.toLowerCase()}`);
+  
+  // Wait for a moment to show the selection
+  questionTimerRef.current = setTimeout(() => {
+    // Clear animation
+    setAnimation(null);
     
-    // Set processing state immediately
-    setIsProcessing(true);
-    console.log(`Selecting parent: ${parent} for question ${currentQuestionIndex + 1}`);
-    
-    // Clear any pending timers
-    if (questionTimerRef.current) {
-      clearTimeout(questionTimerRef.current);
-      questionTimerRef.current = null;
-    }
-    
-    setSelectedParent(parent);
-    
-    // Get current question safely
-    const currentQuestion = questions[currentQuestionIndex];
-    
-    // Save response
-    if (currentQuestion) {
-      const updatedResponses = {
-        ...userResponses,
-        [currentQuestion.id]: parent
-      };
-      setUserResponses(updatedResponses);
-      
-      // Update parent component through context
-      updateSurveyResponse(currentQuestion.id, parent);
-    
-      // Show some animation
-      setAnimation(`selected-${parent.toLowerCase()}`);
-      setTimeout(() => {
-        setAnimation(null);
-      }, 800);
-      
-      // Move to next question with a shorter delay
-      questionTimerRef.current = setTimeout(() => {
-        if (currentQuestionIndex < questions.length - 1) {
-          // Show progress animation between questions
-          setShowAnimatedProgress(true);
+    // Then decide whether to go to next question or complete survey
+    questionTimerRef.current = setTimeout(() => {
+      if (currentQuestionIndex < questions.length - 1) {
+        // Move to next question
+        setCurrentQuestionIndex(prevIndex => {
+          const newIndex = prevIndex + 1;
+          console.log(`Moving to question ${newIndex + 1}`);
+          return newIndex;
+        });
+        
+        // Update game state based on answer
+        setGameStatus(prev => ({
+          ...prev,
+          mamaPosition: parent === 'Mama' ? currentQuestionIndex + 1 : prev.mamaPosition,
+          papaPosition: parent === 'Papa' ? currentQuestionIndex + 1 : prev.papaPosition,
+          stars: (currentQuestionIndex + 1) % 20 === 0 ? prev.stars + 1 : prev.stars
+        }));
+        
+        // Show reward if appropriate
+        if ((currentQuestionIndex + 1) % 20 === 0) {
+          setShowReward(true);
+          setTotalStars(prev => prev + 1);
           
-          // Now update game state ONLY when actually advancing to next question
-          setGameStatus(prev => {
-            const newState = {
-              ...prev,
-              // Use currentQuestionIndex + 1 for positions to match the next question
-              mamaPosition: parent === 'Mama' ? currentQuestionIndex + 1 : prev.mamaPosition,
-              papaPosition: parent === 'Papa' ? currentQuestionIndex + 1 : prev.papaPosition,
-              // Add a star every 20 questions
-              stars: (currentQuestionIndex + 1) % 20 === 0 ? prev.stars + 1 : prev.stars
-            };
-            
-            return newState;
-          });
-          
-          // Show rewards animation every 20 questions
-          if ((currentQuestionIndex + 1) % 20 === 0) {
-            setShowReward(true);
-            setTotalStars(prev => prev + 1);
-            
-            // Hide reward after 3 seconds
-            setTimeout(() => {
-              setShowReward(false);
-            }, 3000);
-          }
-          
+          // Hide reward after delay
           setTimeout(() => {
-            setCurrentQuestionIndex(prevIndex => prevIndex + 1);
-            setSelectedParent(null);
-            setShowAnimatedProgress(false);
-            setIsProcessing(false); // Reset processing state
-          }, 800);
-        } else {
-          // Survey completed
-          handleCompleteSurvey();
+            setShowReward(false);
+          }, 3000);
         }
-      }, 500);
-    }
-  }, [currentQuestionIndex, isProcessing, questions, updateSurveyResponse, userResponses]);
+        
+        // Reset selection state
+        setSelectedParent(null);
+        setIsProcessing(false);
+      } else {
+        // Complete the survey
+        handleCompleteSurvey();
+      }
+    }, 500);
+  }, 500);
+};
 
   // FIXED: Set up keyboard shortcuts with better debouncing protection
   useEffect(() => {
     // Create a ref to track processing state that persists between renders
-    const keyBlockerRef = useRef(false);
+    let keyBlocked = false;
     
     // Function to handle key press with strict debounce
     const handleKeyPress = (e) => {
@@ -460,6 +464,8 @@ const KidFriendlySurvey = ({ surveyType = "initial" }) => {
       }, 1500);
     };
     
+
+
     // Add the listener - use capture phase to get the event first
     window.addEventListener('keydown', handleKeyPress, { capture: true });
     keyboardInitialized.current = true;
