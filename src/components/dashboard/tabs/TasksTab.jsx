@@ -135,11 +135,15 @@ mamaCategories
       subTasks: generateSubtasksForCategory(category.category, taskPrefix, index+1)
     });
   });
-}
-  
-  // Return AI-generated tasks or fallback to sample tasks if none were generated
-  return aiTasks.length > 0 ? aiTasks : sampleTasks;
+
+  // Return AI-generated tasks or fallback to default tasks if none were generated
+return aiTasks.length > 0 ? aiTasks : generateDefaultTasks(weekNumber);
 };
+
+
+
+  
+
 
 // Helper function to generate task titles based on category
 const getTaskTitleForCategory = (category) => {
@@ -216,7 +220,7 @@ const TasksTab = ({ onStartWeeklyCheckIn, onOpenFamilyMeeting }) => {
 
   
 // Generate default tasks when data is unavailable
-const generateDefaultTasks = (weekNumber) => {
+const generateDefaultTasks (weekNumber) {
   const taskPrefix = weekNumber ? `${weekNumber}-` : "";
   return [
     {
