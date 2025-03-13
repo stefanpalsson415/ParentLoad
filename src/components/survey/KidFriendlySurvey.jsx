@@ -311,94 +311,121 @@ useEffect(() => {
   }, []);
   
   // Set up questions for kids based on survey type
-  useEffect(() => {
-    if (!fullQuestionSet || fullQuestionSet.length === 0) return;
-    
-    let questionSet;
-    
-    // Determine which questions to use based on the survey type
-    if (surveyType === "weekly") {
-      questionSet = generateWeeklyQuestions(currentWeek);
-    } else {
-      questionSet = fullQuestionSet;
-    }
-    
-    let filteredList = questionSet;
-    
-    // For very young children, use a smaller set of simpler questions (40 total)
-if (selectedUser && selectedUser.role === 'child' && selectedUser.age < 8) {
-  // Pick simpler questions - 10 from each category
-  const categories = [
-    "Visible Household Tasks",
-    "Invisible Household Tasks",
-    "Visible Parental Tasks",
-    "Invisible Parental Tasks"
-  ];
+// Set up questions for kids based on survey type
+useEffect(() => {
+  if (!fullQuestionSet || fullQuestionSet.length === 0) return;
   
-
+  let questionSet;
   
-  
-  const simpleQuestions = [];
-  categories.forEach(category => {
-    const categoryQuestions = questionSet.filter(q => q.category === category);
-    // Pick 10 questions from each category (40 total)
-    for (let i = 0; i < 10; i++) {
-      const index = (i < categoryQuestions.length) ? i : i % categoryQuestions.length;
-      simpleQuestions.push(categoryQuestions[index]);
-    }
-  });
-  
-  filteredList = simpleQuestions;
-  setFilterQuestions(true);
-} else if (selectedUser && selectedUser.role === 'child' && selectedUser.age < 18) {
-  // For older children, use more questions (60 total)
-  const categories = [
-    "Visible Household Tasks",
-    "Invisible Household Tasks",
-    "Visible Parental Tasks",
-    "Invisible Parental Tasks"
-  ];
-
-  // Add after other functions, before return statement
-const handlePauseSurvey = async () => {
-  if (isProcessing) return; // Prevent actions while processing
-  
-  setIsProcessing(true);
-  
-  try {
-    // Save the current progress without marking as completed
-    if (selectedUser && Object.keys(currentSurveyResponses).length > 0) {
-      console.log("Saving survey progress before pausing...");
-      if (surveyType === "weekly") {
-        await saveSurveyProgress(selectedUser.id, currentSurveyResponses);
-      } else {
-        await saveSurveyProgress(selectedUser.id, currentSurveyResponses);
-      }
-      console.log("Progress saved successfully");
-    }
-    
-    // Now navigate to dashboard
-    navigate('/dashboard');
-  } catch (error) {
-    console.error('Error saving survey progress:', error);
-    alert('There was an error saving your progress, but you can continue later.');
-    navigate('/dashboard');
-  } finally {
-    setIsProcessing(false);
+  // Determine which questions to use based on the survey type
+  if (surveyType === "weekly") {
+    console.log(`Generating weekly questions for week ${currentWeek}`);
+    questionSet = generateWeeklyQuestions(currentWeek);
+    console.log(`Generated ${questionSet?.length || 0} weekly questions`);
+  } else {
+    console.log(`Using full question set with ${fullQuestionSet.length} questions`);
+    questionSet = fullQuestionSet;
   }
-};
-
   
-  const mediumQuestions = [];
-  categories.forEach(category => {
-    const categoryQuestions = questionSet.filter(q => q.category === category);
-    // Pick 15 questions per category (60 total)
-    for (let i = 0; i < 15; i++) {
-      const index = (i < categoryQuestions.length) ? i : i % categoryQuestions.length;
-      mediumQuestions.push(categoryQuestions[index]);
+  let filteredList = questionSet;
+  console.log(`Initial filtered list has ${filteredList?.length || 0} questions before age/type filtering`);
+  
+  // For weekly survey, use exactly 20 questions for any child
+  if (surveyType === "weekly" && selectedUser && selectedUser.role === 'child') {
+    const categories = [
+      "Visible Household Tasks",
+      "Invisible Household Tasks",
+      "Visible Parental Tasks",
+      "Invisible Parental Tasks"
+    ];
+    
+    const weeklyKidQuestions = [];
+    categories.forEach(category => {
+      const categoryQuestions = questionSet.filter(q => q.category === category);
+      // Pick 5 questions per category (20 total)
+      for (let i = 0; i < 5; i++) {
+        const index = (i < categoryQuestions.length) ? i : i % categoryQuestions.length;
+        weeklyKidQuestions.push(categoryQuestions[index]);
+      }
+    });
+    
+    filteredList = weeklyKidQuestions;
+    setFilterQuestions(true);
+  } 
+  // For initial survey, filter based on age
+  else if (selectedUser && selectedUser.role === 'child' && selectedUser.age < 8) {
+    // Pick simpler questions - 10 from each category
+    const categories = [
+      "Visible Household Tasks",
+      "Invisible Household Tasks",
+      "Visible Parental Tasks",
+      "Invisible Parental Tasks"
+    ];
+    
+    const simpleQuestions = [];
+    categories.forEach(category => {
+      const categoryQuestions = questionSet.filter(q => q.category === category);
+      // Pick 10 questions from each category (40 total)
+      for (let i = 0; i < 10; i++) {
+        const index = (i < categoryQuestions.length) ? i : i % categoryQuestions.length;
+        simpleQuestions.push(categoryQuestions[index]);
+      }
+    });
+    
+    filteredList = simpleQuestions;
+    setFilterQuestions(true);
+  } else if (selectedUser && selectedUser.role === 'child' && selectedUser.age < 18) {
+    // For older children, use more questions (60 total)
+    const categories = [
+      "Visible Household Tasks",
+      "Invisible Household Tasks",
+      "Visible Parental Tasks",
+      "Invisible Parental Tasks"
+    ];
+    
+    const mediumQuestions = [];
+    categories.forEach(category => {
+      const categoryQuestions = questionSet.filter(q => q.category === category);
+      // Pick 15 questions per category (60 total)
+      for (let i = 0; i < 15; i++) {
+        const index = (i < categoryQuestions.length) ? i : i % categoryQuestions.length;
+        mediumQuestions.push(categoryQuestions[index]);
+      }
+    });
+    
+    filteredList = mediumQuestions;
+    setFilterQuestions(true);
+  }
+  
+  // Simplify question text for children as needed
+  const childFriendlyQuestions = filteredList.map(question => {
+    // Create a more child-friendly version of question text
+    let childText = question.text;
+    
+    // Simplify language for children
+    childText = childText.replace("responsible for", "does");
+    childText = childText.replace("typically", "usually");
+    childText = childText.replace("coordinates", "plans");
+    childText = childText.replace("manages", "takes care of");
+    childText = childText.replace("oversees", "watches over");
+    childText = childText.replace("maintains", "keeps up");
+    childText = childText.replace("anticipates", "thinks ahead about");
+    
+    // Add "Who" at the beginning if not already there
+    if (!childText.startsWith("Who")) {
+      childText = "Who " + childText.toLowerCase();
     }
+    
+    return {
+      ...question,
+      childText: childText,
+      illustration: getIllustrationForQuestion(question)
+    };
   });
   
+  setQuestions(childFriendlyQuestions);
+  
+}, [fullQuestionSet, selectedUser, surveyType, currentWeek, generateWeeklyQuestions]);  
   filteredList = mediumQuestions;
   setFilterQuestions(true);
 }
@@ -629,20 +656,27 @@ const handlePauseSurvey = async () => {
   // Handle survey completion
   // Handle survey completion
 // Handle survey completion
+// Handle survey completion
 const handleCompleteSurvey = async () => {
   // Show a big celebration!
   setShowReward(true);
   
   try {
     console.log(`Attempting to save ${surveyType} survey data...`);
+    
+    // Ensure we have the latest responses from state
+    const allResponses = {...currentSurveyResponses};
+    
     // First try to save the data before any navigation
     if (surveyType === "weekly") {
       // Save weekly check-in
-      await completeWeeklyCheckIn(selectedUser.id, currentWeek, currentSurveyResponses);
+      console.log("Completing weekly check-in with responses:", Object.keys(allResponses).length);
+      await completeWeeklyCheckIn(selectedUser.id, currentWeek, allResponses);
       console.log("Weekly check-in saved successfully");
     } else {
       // Save initial survey
-      await completeInitialSurvey(selectedUser.id, currentSurveyResponses);
+      console.log("Completing initial survey with responses:", Object.keys(allResponses).length);
+      await completeInitialSurvey(selectedUser.id, allResponses);
       console.log("Initial survey saved successfully");
     }
     
@@ -675,8 +709,7 @@ const handleCompleteSurvey = async () => {
     setShowReward(false);
     setIsProcessing(false);
   }
-};  
-  // Calculate progress percentage
+};  // Calculate progress percentage
   const progressPercentage = questions.length > 0 
     ? ((currentQuestionIndex) / (questions.length - 1)) * 100 
     : 0;
@@ -699,9 +732,9 @@ const handleCompleteSurvey = async () => {
   return (
     <div className="max-w-3xl mx-auto bg-gradient-to-b from-blue-50 to-purple-50 rounded-lg p-4 shadow-lg">
       {/* Header with user info */}
-      <div className="flex items-center justify-between mb-4">
+<div className="flex items-center justify-between mb-4">
   <div className="flex items-center">
-    <div className="w-10 h-10 rounded-full overflow-hidden mr-2 border-2 border-indigo-300">
+    <div className="w-12 h-12 rounded-full overflow-hidden mr-3 border-2 border-indigo-400 shadow-md">
       <img 
         src={selectedUser?.profilePicture} 
         alt={selectedUser?.name}
@@ -709,29 +742,40 @@ const handleCompleteSurvey = async () => {
       />
     </div>
     <div>
-      <h2 className="font-bold text-indigo-800">{selectedUser?.name}'s {surveyType === "weekly" ? "Weekly" : "Survey"}</h2>
+      <h2 className="font-bold text-indigo-800 text-xl font-roboto">
+        {selectedUser?.name}'s {surveyType === "weekly" ? "Weekly Adventure" : "Family Survey"}
+      </h2>
       <div className="flex items-center">
         {[...Array(totalStars)].map((_, i) => (
-          <Star key={i} size={14} className="text-amber-400 fill-amber-400" />
+          <Star key={i} size={16} className="text-amber-400 fill-amber-400" />
         ))}
-        {totalStars > 0 && <span className="text-xs text-amber-600 ml-1">Stars earned!</span>}
+        {totalStars > 0 && 
+          <span className="text-xs text-amber-600 ml-1 font-medium font-roboto">
+            {totalStars} {totalStars === 1 ? 'Star' : 'Stars'} earned!
+          </span>
+        }
       </div>
     </div>
   </div>
   <div className="flex flex-col items-end">
     <button 
       onClick={handleSwitchUser}
-      className="text-xs bg-black text-white px-2 py-1 rounded mb-1"
+      className="text-xs bg-black text-white px-3 py-1.5 rounded mb-2 hover:bg-gray-800 transition font-roboto"
       disabled={isProcessing}
     >
       Switch User
     </button>
-    <p className="text-sm font-medium text-purple-700">
-      Question {currentQuestionIndex + 1} of {questions.length}
-    </p>
-    <p className="text-xs text-purple-600">
-      {Math.round(progressPercentage)}% complete
-    </p>
+    <div className="bg-indigo-100 px-3 py-1.5 rounded-lg shadow-sm border border-indigo-200">
+      <p className="text-sm font-medium text-indigo-800 font-roboto">
+        Question {currentQuestionIndex + 1} of {questions.length}
+      </p>
+      <div className="w-full bg-indigo-200 h-1.5 mt-1 rounded-full overflow-hidden">
+        <div 
+          className="h-full bg-indigo-500 rounded-full" 
+          style={{ width: `${progressPercentage}%` }}
+        ></div>
+      </div>
+    </div>
   </div>
 </div>
       
