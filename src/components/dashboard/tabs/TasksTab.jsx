@@ -977,64 +977,29 @@ setCanStartCheckIn(canStart);
         // CRITICAL CHANGES: Save to both context and directly to Firebase
         // Save directly to Firebase first for immediate persistence
         // Save directly to Firebase first for immediate persistence
-if (familyId) {
-  console.log(`Saving updated tasks directly to Firebase for Week ${currentWeek}`);
-  try {
-    // First, get the latest tasks data to avoid overwriting changes
-    const latestFamilyData = await DatabaseService.loadFamilyData(familyId);
-    
-    // Start with latest tasks if available, otherwise use our updated ones
-    let tasksToSave = updatedTasks;
-    
-    if (latestFamilyData && latestFamilyData.tasks && latestFamilyData.tasks.length > 0) {
-      console.log("Found existing tasks in Firebase, merging updates");
-      
-      // Create a map of tasks by ID for quick lookup
-      const updatedTasksMap = {};
-      updatedTasks.forEach(task => {
-        updatedTasksMap[task.id] = task;
-      });
-      
-      // Apply our updates to the latest data
-      tasksToSave = latestFamilyData.tasks.map(task => {
-        return updatedTasksMap[task.id] || task;
-      });
-      
-      // Add any new tasks that might not exist in the latest data
-      updatedTasks.forEach(task => {
-        if (!tasksToSave.some(t => t.id === task.id)) {
-          tasksToSave.push(task);
-        }
-      });
+// Simplified approach - just use the context method which handles persistence correctly
+try {
+  console.log(`Saving subtask ${subtaskId} of task ${taskId} for Week ${currentWeek} using context method`);
+  
+  // Call the context method which will properly save to Firebase
+  await updateSubtaskCompletion(taskId, subtaskId, isCompleted);
+  console.log("Task updated successfully via context method");
+  
+  // No need to also call direct Firebase updates
+  
+  // Force a reload of the task data to ensure state is in sync
+  if (familyId) {
+    console.log("Reloading current tasks to ensure data is in sync");
+    const freshTasks = await DatabaseService.getTasksForWeek(familyId, currentWeek);
+    if (freshTasks && freshTasks.length > 0) {
+      setTaskRecommendations(freshTasks);
+      console.log("Tasks reloaded after update");
     }
-    
-    // Now save the merged data back to Firebase
-    await DatabaseService.saveFamilyData({
-      tasks: tasksToSave,
-      updatedAt: new Date().toISOString()
-    }, familyId);
-    
-    console.log("Tasks saved to Firebase successfully");
-    
-    // Update local state with the saved tasks
-    setTaskRecommendations(tasksToSave);
-  } catch (firebaseError) {
-    console.error("Error saving to Firebase directly:", firebaseError);
-    // Alert user of error
-    alert("Error saving your progress. Please try again.");
-    return; // Stop execution if Firebase save fails
   }
-}
-        
-        // Also update through context method as backup
-        try {
-          await updateSubtaskCompletion(taskId, subtaskId, isCompleted);
-          console.log("Tasks also updated via context method");
-        } catch (contextError) {
-          console.error("Error updating through context:", contextError);
-          // Not alerting here since Firebase save already succeeded
-        }
-        
+} catch (error) {
+  console.error("Error updating subtask:", error);
+  alert("There was an error saving your task. Please try again.");
+}        
       } catch (error) {
         console.error("Error updating subtask:", error);
         alert("There was an error updating the subtask. Please try again.");
