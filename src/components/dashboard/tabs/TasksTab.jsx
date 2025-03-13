@@ -89,43 +89,51 @@ if (!imbalanceAnalysis || Object.keys(imbalanceAnalysis).length === 0) {
   // Generate tasks based on actual imbalances
   const aiTasks = [];
   
-  // Generate Papa tasks based on highest imbalances where Papa should take on more
+// NEW CODE
+// Generate Papa tasks based on importance calculated by Allie Task Weighting System
 const papaCategories = prioritizedCategories.filter(c => c.assignTo === "Papa");
-if (papaCategories.length > 0) {
-  const topPapaCategory = papaCategories[0];
-  const imbalanceValue = topPapaCategory.imbalance || 0;
-  aiTasks.push({
-    id: `${taskPrefix}1`,
-    title: `${weekNumber ? `Week ${weekNumber}: ` : ""}${getTaskTitleForCategory(topPapaCategory.category)}`,
-    description: `Address the ${imbalanceValue.toFixed(0)}% imbalance in ${topPapaCategory.category}`,
-    assignedTo: "Papa",
-    assignedToName: "Papa",
-    taskType: "ai", // Mark as AI-based
-    completed: false,
-    completedDate: null,
-    insight: `Our AI analysis shows ${(topPapaCategory.mamaPercent || 0).toFixed(0)}% of ${topPapaCategory.category} tasks are handled by Mama.`,
-    comments: [],
-    subTasks: generateSubtasksForCategory(topPapaCategory.category, taskPrefix, 1)
-  });
-}
+const papaTasksToCreate = Math.min(3, papaCategories.length); // Up to 3 based on importance
 
-// Generate Mama tasks similarly
+papaCategories
+  .slice(0, papaTasksToCreate)
+  .forEach((category, index) => {
+    const imbalanceValue = category.imbalance || 0;
+    aiTasks.push({
+      id: `${taskPrefix}p${index+1}`,
+      title: `${weekNumber ? `Cycle ${weekNumber}: ` : ""}${getTaskTitleForCategory(category.category)}`,
+      description: `Address the ${imbalanceValue.toFixed(0)}% imbalance in ${category.category}`,
+      assignedTo: "Papa",
+      assignedToName: "Papa",
+      taskType: "ai", // Mark as AI-based
+      completed: false,
+      completedDate: null,
+      insight: `Our AI analysis using the Allie Task Weighting System shows ${(category.mamaPercent || 0).toFixed(0)}% of ${category.category} tasks are handled by Mama.`,
+      comments: [],
+      subTasks: generateSubtasksForCategory(category.category, taskPrefix, index+1)
+    });
+  });
+
+// Generate Mama tasks based on importance
 const mamaCategories = prioritizedCategories.filter(c => c.assignTo === "Mama");
-if (mamaCategories.length > 0) {
-  const topMamaCategory = mamaCategories[0];
-  const imbalanceValue = topMamaCategory.imbalance || 0;
-  aiTasks.push({
-    id: `${taskPrefix}2`,
-    title: `${weekNumber ? `Week ${weekNumber}: ` : ""}${getTaskTitleForCategory(topMamaCategory.category)}`,
-    description: `Address the ${imbalanceValue.toFixed(0)}% imbalance in ${topMamaCategory.category}`,
-    assignedTo: "Mama",
-    assignedToName: "Mama",
-    taskType: "ai", // Mark as AI-based
-    completed: false,
-    completedDate: null,
-    insight: `Our AI analysis shows ${(topMamaCategory.papaPercent || 0).toFixed(0)}% of ${topMamaCategory.category} tasks are handled by Papa.`,
-    comments: [],
-    subTasks: generateSubtasksForCategory(topMamaCategory.category, taskPrefix, 2)
+const mamaTasksToCreate = Math.min(3, mamaCategories.length); // Up to 3 based on importance
+
+mamaCategories
+  .slice(0, mamaTasksToCreate)
+  .forEach((category, index) => {
+    const imbalanceValue = category.imbalance || 0;
+    aiTasks.push({
+      id: `${taskPrefix}m${index+1}`,
+      title: `${weekNumber ? `Cycle ${weekNumber}: ` : ""}${getTaskTitleForCategory(category.category)}`,
+      description: `Address the ${imbalanceValue.toFixed(0)}% imbalance in ${category.category}`,
+      assignedTo: "Mama",
+      assignedToName: "Mama",
+      taskType: "ai", // Mark as AI-based
+      completed: false,
+      completedDate: null,
+      insight: `Our AI analysis using the Allie Task Weighting System shows ${(category.papaPercent || 0).toFixed(0)}% of ${category.category} tasks are handled by Papa.`,
+      comments: [],
+      subTasks: generateSubtasksForCategory(category.category, taskPrefix, index+1)
+    });
   });
 }
   
@@ -203,6 +211,9 @@ const TasksTab = ({ onStartWeeklyCheckIn, onOpenFamilyMeeting }) => {
   const [canStartCheckIn, setCanStartCheckIn] = useState(false);
   const [showCoupleCheckIn, setShowCoupleCheckIn] = useState(false);
   const [canStartCoupleCheckIn, setCanStartCoupleCheckIn] = useState(false);
+  const [showFamilyMeeting, setShowFamilyMeeting] = useState(false);
+
+
   
 // Generate default tasks when data is unavailable
 const generateDefaultTasks = (weekNumber) => {
@@ -343,7 +354,7 @@ useEffect(() => {
   // Determine if check-in can be started
   // Allow check-in if it's due within 2 days
   const canStart = calculateDaysUntilCheckIn() <= 2;
-  setCanStartCheckIn(canStart);
+setCanStartCheckIn(canStart);
   
   // NEW: Determine if couple check-in can be started
   // Only allow after weekly check-in is completed by at least one parent
@@ -952,15 +963,18 @@ useEffect(() => {
   return (
     <div className="space-y-4">
       <div className="bg-white rounded-lg shadow p-6">
-        <h3 className="text-lg font-semibold mb-3">Week {currentWeek} Focus</h3>
+      <h3 className="text-lg font-semibold mb-3 font-roboto">Cycle {currentWeek} Focus</h3>
+<p className="text-sm text-gray-600 mb-1 font-roboto">
+  Complete at your own pace - could be days or weeks
+</p>
         <p className="text-sm text-gray-600 mb-4">
           Suggested tasks to help balance your family's workload
         </p>
         
         {/* Weekly Check-in Status */}
         <div className="bg-white rounded-lg shadow p-6 mb-6">
-          <h3 className="text-lg font-semibold mb-3">Weekly Check-in Status</h3>
-          <div className="bg-blue-50 p-4 rounded">
+        <h3 className="text-lg font-semibold mb-3 font-roboto">Cycle Check-in Status</h3>
+        <div className="bg-blue-50 p-4 rounded">
             <div className="flex items-center mb-3">
               <Calendar className="text-blue-600 mr-2" size={18} />
               <p className="text-sm">

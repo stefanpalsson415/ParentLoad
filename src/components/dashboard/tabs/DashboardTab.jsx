@@ -1030,6 +1030,55 @@ const DashboardTab = () => {
             <ChevronDown size={20} className="text-gray-500" />
           )}
         </div>
+
+        // Add after weight metrics visualization section
+<div className="bg-white rounded-lg p-4 mb-4 border border-black">
+  <h4 className="font-medium text-lg mb-2 font-roboto">Allie Task Weighting System</h4>
+  <p className="text-sm font-roboto mb-3">
+    Our proprietary task weighting system goes beyond simple counting to analyze the true impact of different tasks:
+  </p>
+  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+    <div className="flex items-start">
+      <div className="flex-shrink-0 w-8 h-8 rounded-full bg-blue-100 flex items-center justify-center mr-2">
+        <Clock size={16} className="text-blue-600" />
+      </div>
+      <div>
+        <h5 className="font-medium text-sm font-roboto">Time & Frequency</h5>
+        <p className="text-xs text-gray-600 font-roboto">Tasks done daily or requiring significant time receive higher weight</p>
+      </div>
+    </div>
+    
+    <div className="flex items-start">
+      <div className="flex-shrink-0 w-8 h-8 rounded-full bg-purple-100 flex items-center justify-center mr-2">
+        <Brain size={16} className="text-purple-600" />
+      </div>
+      <div>
+        <h5 className="font-medium text-sm font-roboto">Invisibility Factor</h5>
+        <p className="text-xs text-gray-600 font-roboto">Mental load from tasks that go unnoticed receives higher weight</p>
+      </div>
+    </div>
+    
+    <div className="flex items-start">
+      <div className="flex-shrink-0 w-8 h-8 rounded-full bg-red-100 flex items-center justify-center mr-2">
+        <Heart size={16} className="text-red-600" />
+      </div>
+      <div>
+        <h5 className="font-medium text-sm font-roboto">Emotional Labor</h5>
+        <p className="text-xs text-gray-600 font-roboto">Tasks requiring emotional energy are weighted more heavily</p>
+      </div>
+    </div>
+    
+    <div className="flex items-start">
+      <div className="flex-shrink-0 w-8 h-8 rounded-full bg-green-100 flex items-center justify-center mr-2">
+        <Users size={16} className="text-green-600" />
+      </div>
+      <div>
+        <h5 className="font-medium text-sm font-roboto">Child Development Impact</h5>
+        <p className="text-xs text-gray-600 font-roboto">Tasks that influence how children view gender roles receive higher weight</p>
+      </div>
+    </div>
+  </div>
+</div>
         
         {expandedSections.weightInsights && (
           <div className="p-6 pt-0">

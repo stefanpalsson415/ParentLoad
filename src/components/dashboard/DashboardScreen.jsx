@@ -383,12 +383,13 @@ useEffect(() => {
           {/* Add completed weeks as tabs */}
           {weekTabs.map(tab => (
   <button 
-    key={tab.id}
-    className={`px-4 py-2 font-medium whitespace-nowrap ${activeTab === tab.id ? 'border-b-2 border-blue-500 text-blue-600' : 'text-gray-600'}`}
-    onClick={() => setActiveTab(tab.id)}
-  >
-    {tab.name}
-  </button>
+  key={tab.id}
+  className={`px-4 py-2 font-medium whitespace-nowrap ${activeTab === tab.id ? 'border-b-2 border-blue-500 text-blue-600' : 'text-gray-600'}`}
+  onClick={() => setActiveTab(tab.id)}
+>
+  {tab.name.replace('Week', 'Cycle')}
+  <span className="text-xs block text-gray-500 font-roboto">Flexible timeframe</span>
+</button>
 ))}
 
 {/* Relationship Tab */}
