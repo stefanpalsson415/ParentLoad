@@ -143,6 +143,7 @@ const KidFriendlySurvey = ({ surveyType = "initial" }) => {
     resetSurvey, 
     getSurveyProgress,
     generateWeeklyQuestions,
+    childFriendlyQuestions,
     currentSurveyResponses
   } = useSurvey();
   
@@ -311,7 +312,7 @@ useEffect(() => {
   }, []);
   
   // Set up questions for kids based on survey type
-// Set up questions for kids based on survey type
+  // Set up questions for kids based on survey type
 useEffect(() => {
   if (!fullQuestionSet || fullQuestionSet.length === 0) return;
   
@@ -321,144 +322,135 @@ useEffect(() => {
   if (surveyType === "weekly") {
     console.log(`Generating weekly questions for week ${currentWeek}`);
     questionSet = generateWeeklyQuestions(currentWeek);
-    console.log(`Generated ${questionSet?.length || 0} weekly questions`);
+    console.log(`Generated ${questionSet.length} weekly questions`);
   } else {
     console.log(`Using full question set with ${fullQuestionSet.length} questions`);
     questionSet = fullQuestionSet;
   }
   
   let filteredList = questionSet;
-  console.log(`Initial filtered list has ${filteredList?.length || 0} questions before age/type filtering`);
+  console.log(`Initial filtered list has ${filteredList.length} questions before age/type filtering`);
   
-  // For weekly survey, use exactly 20 questions for any child
-  if (surveyType === "weekly" && selectedUser && selectedUser.role === 'child') {
-    const categories = [
-      "Visible Household Tasks",
-      "Invisible Household Tasks",
-      "Visible Parental Tasks",
-      "Invisible Parental Tasks"
-    ];
+  // Rest of the function...
     
-    const weeklyKidQuestions = [];
-    categories.forEach(category => {
-      const categoryQuestions = questionSet.filter(q => q.category === category);
-      // Pick 5 questions per category (20 total)
-      for (let i = 0; i < 5; i++) {
-        const index = (i < categoryQuestions.length) ? i : i % categoryQuestions.length;
-        weeklyKidQuestions.push(categoryQuestions[index]);
-      }
-    });
-    
-    filteredList = weeklyKidQuestions;
-    setFilterQuestions(true);
-  } 
-  // For initial survey, filter based on age
-  else if (selectedUser && selectedUser.role === 'child' && selectedUser.age < 8) {
-    // Pick simpler questions - 10 from each category
-    const categories = [
-      "Visible Household Tasks",
-      "Invisible Household Tasks",
-      "Visible Parental Tasks",
-      "Invisible Parental Tasks"
-    ];
-    
-    const simpleQuestions = [];
-    categories.forEach(category => {
-      const categoryQuestions = questionSet.filter(q => q.category === category);
-      // Pick 10 questions from each category (40 total)
-      for (let i = 0; i < 10; i++) {
-        const index = (i < categoryQuestions.length) ? i : i % categoryQuestions.length;
-        simpleQuestions.push(categoryQuestions[index]);
-      }
-    });
-    
-    filteredList = simpleQuestions;
-    setFilterQuestions(true);
-  } else if (selectedUser && selectedUser.role === 'child' && selectedUser.age < 18) {
-    // For older children, use more questions (60 total)
-    const categories = [
-      "Visible Household Tasks",
-      "Invisible Household Tasks",
-      "Visible Parental Tasks",
-      "Invisible Parental Tasks"
-    ];
-    
-    const mediumQuestions = [];
-    categories.forEach(category => {
-      const categoryQuestions = questionSet.filter(q => q.category === category);
-      // Pick 15 questions per category (60 total)
-      for (let i = 0; i < 15; i++) {
-        const index = (i < categoryQuestions.length) ? i : i % categoryQuestions.length;
-        mediumQuestions.push(categoryQuestions[index]);
-      }
-    });
-    
-    filteredList = mediumQuestions;
-    setFilterQuestions(true);
-  }
+    // For weekly survey, use exactly 20 questions for any child
+if (surveyType === "weekly" && selectedUser && selectedUser.role === 'child') {
+  const categories = [
+    "Visible Household Tasks",
+    "Invisible Household Tasks",
+    "Visible Parental Tasks",
+    "Invisible Parental Tasks"
+  ];
   
-  // Simplify question text for children as needed
-  const childFriendlyQuestions = filteredList.map(question => {
-    // Create a more child-friendly version of question text
-    let childText = question.text;
-    
-    // Simplify language for children
-    childText = childText.replace("responsible for", "does");
-    childText = childText.replace("typically", "usually");
-    childText = childText.replace("coordinates", "plans");
-    childText = childText.replace("manages", "takes care of");
-    childText = childText.replace("oversees", "watches over");
-    childText = childText.replace("maintains", "keeps up");
-    childText = childText.replace("anticipates", "thinks ahead about");
-    
-    // Add "Who" at the beginning if not already there
-    if (!childText.startsWith("Who")) {
-      childText = "Who " + childText.toLowerCase();
+  const weeklyKidQuestions = [];
+  categories.forEach(category => {
+    const categoryQuestions = questionSet.filter(q => q.category === category);
+    // Pick 5 questions per category (20 total)
+    for (let i = 0; i < 5; i++) {
+      const index = (i < categoryQuestions.length) ? i : i % categoryQuestions.length;
+      weeklyKidQuestions.push(categoryQuestions[index]);
     }
-    
-    return {
-      ...question,
-      childText: childText,
-      illustration: getIllustrationForQuestion(question)
-    };
   });
   
-  setQuestions(childFriendlyQuestions);
+  filteredList = weeklyKidQuestions;
+  setFilterQuestions(true);
+} 
+// For initial survey, filter based on age
+else if (selectedUser && selectedUser.role === 'child' && selectedUser.age < 8) {
+  // Pick simpler questions - 10 from each category
+  const categories = [
+    "Visible Household Tasks",
+    "Invisible Household Tasks",
+    "Visible Parental Tasks",
+    "Invisible Parental Tasks"
+  ];
   
-}, [fullQuestionSet, selectedUser, surveyType, currentWeek, generateWeeklyQuestions]);  
+  const simpleQuestions = [];
+  categories.forEach(category => {
+    const categoryQuestions = questionSet.filter(q => q.category === category);
+    // Pick 10 questions from each category (40 total)
+    for (let i = 0; i < 10; i++) {
+      const index = (i < categoryQuestions.length) ? i : i % categoryQuestions.length;
+      simpleQuestions.push(categoryQuestions[index]);
+    }
+  });
+  
+  filteredList = simpleQuestions;
+  setFilterQuestions(true);
+} else if (selectedUser && selectedUser.role === 'child' && selectedUser.age < 18) {
+  // For older children, use more questions (60 total)
+  const categories = [
+    "Visible Household Tasks",
+    "Invisible Household Tasks",
+    "Visible Parental Tasks",
+    "Invisible Parental Tasks"
+  ];
+  
+  const mediumQuestions = [];
+  categories.forEach(category => {
+    const categoryQuestions = questionSet.filter(q => q.category === category);
+    // Pick 15 questions per category (60 total)
+    for (let i = 0; i < 15; i++) {
+      const index = (i < categoryQuestions.length) ? i : i % categoryQuestions.length;
+      mediumQuestions.push(categoryQuestions[index]);
+    }
+  });
+  
   filteredList = mediumQuestions;
   setFilterQuestions(true);
 }
-    
-    // Simplify question text for children as needed
-    const childFriendlyQuestions = filteredList.map(question => {
-      // Create a more child-friendly version of question text
-      let childText = question.text;
-      
-      // Simplify language for children
-      childText = childText.replace("responsible for", "does");
-      childText = childText.replace("typically", "usually");
-      childText = childText.replace("coordinates", "plans");
-      childText = childText.replace("manages", "takes care of");
-      childText = childText.replace("oversees", "watches over");
-      childText = childText.replace("maintains", "keeps up");
-      childText = childText.replace("anticipates", "thinks ahead about");
-      
-      // Add "Who" at the beginning if not already there
-      if (!childText.startsWith("Who")) {
-        childText = "Who " + childText.toLowerCase();
+
+  // Add after other functions, before return statement
+const handlePauseSurvey = async () => {
+  if (isProcessing) return; // Prevent actions while processing
+  
+  setIsProcessing(true);
+  
+  try {
+    // Save the current progress without marking as completed
+    if (selectedUser && Object.keys(currentSurveyResponses).length > 0) {
+      console.log("Saving survey progress before pausing...");
+      if (surveyType === "weekly") {
+        await saveSurveyProgress(selectedUser.id, currentSurveyResponses);
+      } else {
+        await saveSurveyProgress(selectedUser.id, currentSurveyResponses);
       }
-      
-      return {
-        ...question,
-        childText: childText,
-        illustration: getIllustrationForQuestion(question)
-      };
-    });
+      console.log("Progress saved successfully");
+    }
+    
+    // Now navigate to dashboard
+    navigate('/dashboard');
+  } catch (error) {
+    console.error('Error saving survey progress:', error);
+    alert('There was an error saving your progress, but you can continue later.');
+    navigate('/dashboard');
+  } finally {
+    setIsProcessing(false);
+  }
+};
+
+  
+  const mediumQuestions = [];
+  const categories = [
+    "Visible Household Tasks",
+    "Invisible Household Tasks",
+    "Visible Parental Tasks",
+    "Invisible Parental Tasks"
+  ];
+  categories.forEach(category => {
+    const categoryQuestions = questionSet.filter(q => q.category === category);
+    // Pick 15 questions per category (60 total)
+    for (let i = 0; i < 15; i++) {
+      const index = (i < categoryQuestions.length) ? i : i % categoryQuestions.length;
+      mediumQuestions.push(categoryQuestions[index]);
+    }
+  });
+  
     
     setQuestions(childFriendlyQuestions);
     
   }, [fullQuestionSet, selectedUser, surveyType, currentWeek, generateWeeklyQuestions]);
+  
   
   // Find Mama and Papa users from family members
   const mamaUser = familyMembers.find(m => m.roleType === 'Mama' || m.name === 'Mama');
@@ -555,101 +547,109 @@ useEffect(() => {
   };
   
   // Helper function to get illustration for a question
-  function getIllustrationForQuestion(question) {
-    // This function determines which illustration to show based on keywords in the question
-    const text = question.text.toLowerCase();
-    const id = question.id || '';
-    
-    // Create a simple hash from the question text or ID for consistent selection
-    const hashCode = (str) => {
-      let hash = 0;
-      for (let i = 0; i < str.length; i++) {
-        const char = str.charCodeAt(i);
-        hash = ((hash << 5) - hash) + char;
-        hash = hash & hash; // Convert to 32bit integer
-      }
-      return Math.abs(hash);
-    };
-    
-    const questionHash = hashCode(text + id);
-    
-    // More extensive keyword matching
-    // Cleaning related
-    if (text.includes('clean') || text.includes('dust') || text.includes('vacuum') || 
-        text.includes('mop') || text.includes('sweep') || text.includes('tidy') ||
-        text.includes('wash') || text.includes('dishes') || text.includes('laundry') ||
-        text.includes('clothes') || text.includes('fold')) {
-      return 'cleaning';
+function getIllustrationForQuestion(question) {
+  // This function determines which illustration to show based on keywords in the question
+  const text = question.text.toLowerCase();
+  const id = question.id || '';
+  
+  // Create a simple hash from the question text or ID for consistent selection
+  const hashCode = (str) => {
+    let hash = 0;
+    for (let i = 0; i < str.length; i++) {
+      const char = str.charCodeAt(i);
+      hash = ((hash << 5) - hash) + char;
+      hash = hash & hash; // Convert to 32bit integer
     }
-    
-    // Cooking related
-    else if (text.includes('cook') || text.includes('meal') || text.includes('food') || 
-             text.includes('dinner') || text.includes('breakfast') || text.includes('lunch') ||
-             text.includes('kitchen') || text.includes('recipe') || text.includes('grocery') ||
-             text.includes('shopping')) {
-      return 'cooking';
-    }
-    
-    // Planning related
-    else if (text.includes('plan') || text.includes('remember') || text.includes('organize') ||
-             text.includes('arrange') || text.includes('prepare') || text.includes('manage') ||
-             text.includes('coordinate') || text.includes('oversee') || text.includes('supervise')) {
-      return 'planning';
-    }
-    
-    // Scheduling related
-    else if (text.includes('schedule') || text.includes('calendar') || text.includes('appointment') ||
-             text.includes('date') || text.includes('time') || text.includes('event') || 
-             text.includes('activity')) {
-      return 'scheduling';
-    }
-    
-    // Homework/school related
-    else if (text.includes('homework') || text.includes('school') || text.includes('study') ||
-             text.includes('learn') || text.includes('education') || text.includes('teacher') ||
-             text.includes('class') || text.includes('assignment') || text.includes('project')) {
-      return 'homework';
-    }
-    
-    // Driving/transportation related
-    else if (text.includes('drive') || text.includes('pick up') || text.includes('transport') ||
-             text.includes('car') || text.includes('vehicle') || text.includes('ride')) {
-      return 'driving';
-    }
-    
-    // Emotional support related
-    else if (text.includes('emotional') || text.includes('support') || text.includes('feel') ||
-             text.includes('comfort') || text.includes('care') || text.includes('listen') ||
-             text.includes('talk') || text.includes('discuss') || text.includes('help')) {
-      return 'emotional';
-    }
-    
-    // Child planning/scheduling related
-    else if ((text.includes('plan') || text.includes('schedule') || text.includes('organize')) && 
-             (text.includes('child') || text.includes('kid') || text.includes('son') || 
-              text.includes('daughter') || text.includes('children'))) {
-      return 'planning_kids';
-    }
-    
-    // Default illustration based on category and question hash
-    if (question.category === "Visible Household Tasks") {
-      // Use hash to consistently select between cleaning and cooking
-      return (questionHash % 2 === 0) ? 'cleaning' : 'cooking';
-    } else if (question.category === "Invisible Household Tasks") {
-      // Use hash to consistently select between planning and scheduling
-      return (questionHash % 2 === 0) ? 'planning' : 'scheduling';
-    } else if (question.category === "Visible Parental Tasks") {
-      // Use hash to consistently select between homework and driving
-      return (questionHash % 2 === 0) ? 'homework' : 'driving';
-    } else if (question.category === "Invisible Parental Tasks") {
-      // Use hash to consistently select between emotional and planning_kids
-      return (questionHash % 2 === 0) ? 'emotional' : 'planning_kids';
-    }
-    
-    // Use hash-based selection as a last resort to ensure consistent variety
-    const illustrations = ['cleaning', 'cooking', 'planning', 'scheduling', 'homework', 'driving', 'emotional', 'planning_kids'];
-    return illustrations[questionHash % illustrations.length];
+    return Math.abs(hash);
+  };
+  
+  const questionHash = hashCode(text + id);
+  
+  // More extensive keyword matching
+  // Cleaning related
+  if (text.includes('clean') || text.includes('dust') || text.includes('vacuum') || 
+      text.includes('mop') || text.includes('sweep') || text.includes('tidy') ||
+      text.includes('wash') || text.includes('dishes') || text.includes('laundry') ||
+      text.includes('clothes') || text.includes('fold')) {
+    return 'cleaning';
   }
+  
+  // Cooking related
+  else if (text.includes('cook') || text.includes('meal') || text.includes('food') || 
+           text.includes('dinner') || text.includes('breakfast') || text.includes('lunch') ||
+           text.includes('kitchen') || text.includes('recipe') || text.includes('grocery') ||
+           text.includes('shopping')) {
+    return 'cooking';
+  }
+  
+  // Planning related
+  else if (text.includes('plan') || text.includes('remember') || text.includes('organize') ||
+           text.includes('arrange') || text.includes('prepare') || text.includes('manage') ||
+           text.includes('coordinate') || text.includes('oversee') || text.includes('supervise')) {
+    return 'planning';
+  }
+  
+  // Scheduling related
+  else if (text.includes('schedule') || text.includes('calendar') || text.includes('appointment') ||
+           text.includes('date') || text.includes('time') || text.includes('event') || 
+           text.includes('activity')) {
+    return 'scheduling';
+  }
+  
+  // Homework/school related
+  else if (text.includes('homework') || text.includes('school') || text.includes('study') ||
+           text.includes('learn') || text.includes('education') || text.includes('teacher') ||
+           text.includes('class') || text.includes('assignment') || text.includes('project')) {
+    return 'homework';
+  }
+  
+  // Driving/transportation related
+  else if (text.includes('drive') || text.includes('pick up') || text.includes('transport') ||
+           text.includes('car') || text.includes('vehicle') || text.includes('ride')) {
+    return 'driving';
+  }
+  
+  // Emotional support related
+  else if (text.includes('emotional') || text.includes('support') || text.includes('feel') ||
+           text.includes('comfort') || text.includes('care') || text.includes('listen') ||
+           text.includes('talk') || text.includes('discuss') || text.includes('help')) {
+    return 'emotional';
+  }
+  
+  // Child planning/scheduling related
+  else if ((text.includes('plan') || text.includes('schedule') || text.includes('organize')) && 
+           (text.includes('child') || text.includes('kid') || text.includes('son') || 
+            text.includes('daughter') || text.includes('children'))) {
+    return 'planning_kids';
+  }
+  
+  // Define categories here to avoid undefined reference
+  const categoryList = [
+    "Visible Household Tasks",
+    "Invisible Household Tasks",
+    "Visible Parental Tasks",
+    "Invisible Parental Tasks"
+  ];
+  
+  // Default illustration based on category and question hash
+  if (question.category === categoryList[0]) {
+    // Use hash to consistently select between cleaning and cooking
+    return (questionHash % 2 === 0) ? 'cleaning' : 'cooking';
+  } else if (question.category === categoryList[1]) {
+    // Use hash to consistently select between planning and scheduling
+    return (questionHash % 2 === 0) ? 'planning' : 'scheduling';
+  } else if (question.category === categoryList[2]) {
+    // Use hash to consistently select between homework and driving
+    return (questionHash % 2 === 0) ? 'homework' : 'driving';
+  } else if (question.category === categoryList[3]) {
+    // Use hash to consistently select between emotional and planning_kids
+    return (questionHash % 2 === 0) ? 'emotional' : 'planning_kids';
+  }
+  
+  // Use hash-based selection as a last resort to ensure consistent variety
+  const illustrations = ['cleaning', 'cooking', 'planning', 'scheduling', 'homework', 'driving', 'emotional', 'planning_kids'];
+  return illustrations[questionHash % illustrations.length];
+}
   
 
   
