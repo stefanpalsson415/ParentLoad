@@ -173,8 +173,10 @@ const KidFriendlySurvey = ({ surveyType = "initial" }) => {
   const [animation, setAnimation] = useState(null);
   const [isProcessing, setIsProcessing] = useState(false);
   
+  
   // Refs
   const keyboardInitialized = useRef(false);
+
   const questionTimerRef = useRef(null);
 
   // Redirect if no user is selected
