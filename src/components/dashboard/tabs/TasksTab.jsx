@@ -137,8 +137,44 @@ mamaCategories
   });
 
   // Return AI-generated tasks or fallback to default tasks if none were generated
-return aiTasks.length > 0 ? aiTasks : generateDefaultTasks(weekNumber);
-};
+// Ensure both parents have at least one task
+const papaTasks = aiTasks.filter(task => task.assignedTo === "Papa");
+const mamaTasks = aiTasks.filter(task => task.assignedTo === "Mama");
+
+// If either parent has no tasks, create a balanced task for them
+if (papaTasks.length === 0) {
+  aiTasks.push({
+    id: `${taskPrefix}p-balance`,
+    title: `${weekNumber ? `Cycle ${weekNumber}: ` : ""}Balance Initiative`,
+    description: "Take initiative on tasks that might typically be handled by Mama",
+    assignedTo: "Papa",
+    assignedToName: "Papa",
+    taskType: "balance",
+    completed: false,
+    completedDate: null,
+    insight: "Taking initiative on unfamiliar tasks helps create better family balance.",
+    comments: [],
+    subTasks: generateSubtasksForCategory("Visible Household Tasks", taskPrefix, "p-balance")
+  });
+}
+
+if (mamaTasks.length === 0) {
+  aiTasks.push({
+    id: `${taskPrefix}m-balance`,
+    title: `${weekNumber ? `Cycle ${weekNumber}: ` : ""}Balance Initiative`,
+    description: "Take initiative on tasks that might typically be handled by Papa",
+    assignedTo: "Mama",
+    assignedToName: "Mama",
+    taskType: "balance",
+    completed: false,
+    completedDate: null,
+    insight: "Taking initiative on unfamiliar tasks helps create better family balance.",
+    comments: [],
+    subTasks: generateSubtasksForCategory("Visible Household Tasks", taskPrefix, "m-balance")
+  });
+}
+
+return aiTasks;};
 
 
 
@@ -220,9 +256,11 @@ const TasksTab = ({ onStartWeeklyCheckIn, onOpenFamilyMeeting }) => {
 
   
 // Generate default tasks when data is unavailable
-const generateDefaultTasks (weekNumber) {
+// Generate default tasks when data is unavailable
+const generateDefaultTasks = (weekNumber) => {
   const taskPrefix = weekNumber ? `${weekNumber}-` : "";
   return [
+    // ...
     {
       id: `${taskPrefix}1`,
       title: `${weekNumber ? `Week ${weekNumber}: ` : ""}Family Task Balance`,
@@ -824,6 +862,9 @@ setCanStartCheckIn(canStart);
   const handleCompleteSubtask = async (taskId, subtaskId, isCompleted) => {
     const task = taskRecommendations.find(t => t.id.toString() === taskId.toString());
     
+    console.log(`Starting subtask completion: taskId=${taskId}, subtaskId=${subtaskId}, isCompleted=${isCompleted}, user=${selectedUser?.name}, role=${selectedUser?.role}`);
+
+
     // Check permissions - only assigned parent can complete tasks
     if (canCompleteTask(task)) {
       try {
@@ -860,21 +901,55 @@ setCanStartCheckIn(canStart);
         
         // CRITICAL CHANGES: Save to both context and directly to Firebase
         // Save directly to Firebase first for immediate persistence
-        if (familyId) {
-          console.log(`Saving updated tasks directly to Firebase for Week ${currentWeek}`);
-          try {
-            await DatabaseService.saveFamilyData({
-              tasks: updatedTasks,
-              updatedAt: new Date().toISOString()
-            }, familyId);
-            console.log("Tasks saved to Firebase successfully");
-          } catch (firebaseError) {
-            console.error("Error saving to Firebase directly:", firebaseError);
-            // Alert user of error instead of silently failing
-            alert("Error saving your progress. Please try again.");
-            return; // Stop execution if Firebase save fails
-          }
+        // Save directly to Firebase first for immediate persistence
+if (familyId) {
+  console.log(`Saving updated tasks directly to Firebase for Week ${currentWeek}`);
+  try {
+    // First, get the latest tasks data to avoid overwriting changes
+    const latestFamilyData = await DatabaseService.loadFamilyData(familyId);
+    
+    // Start with latest tasks if available, otherwise use our updated ones
+    let tasksToSave = updatedTasks;
+    
+    if (latestFamilyData && latestFamilyData.tasks && latestFamilyData.tasks.length > 0) {
+      console.log("Found existing tasks in Firebase, merging updates");
+      
+      // Create a map of tasks by ID for quick lookup
+      const updatedTasksMap = {};
+      updatedTasks.forEach(task => {
+        updatedTasksMap[task.id] = task;
+      });
+      
+      // Apply our updates to the latest data
+      tasksToSave = latestFamilyData.tasks.map(task => {
+        return updatedTasksMap[task.id] || task;
+      });
+      
+      // Add any new tasks that might not exist in the latest data
+      updatedTasks.forEach(task => {
+        if (!tasksToSave.some(t => t.id === task.id)) {
+          tasksToSave.push(task);
         }
+      });
+    }
+    
+    // Now save the merged data back to Firebase
+    await DatabaseService.saveFamilyData({
+      tasks: tasksToSave,
+      updatedAt: new Date().toISOString()
+    }, familyId);
+    
+    console.log("Tasks saved to Firebase successfully");
+    
+    // Update local state with the saved tasks
+    setTaskRecommendations(tasksToSave);
+  } catch (firebaseError) {
+    console.error("Error saving to Firebase directly:", firebaseError);
+    // Alert user of error
+    alert("Error saving your progress. Please try again.");
+    return; // Stop execution if Firebase save fails
+  }
+}
         
         // Also update through context method as backup
         try {

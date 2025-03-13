@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { LogOut, HelpCircle } from 'lucide-react';
+import { LogOut, HelpCircle, Brain, Scale } from 'lucide-react';
 import { useFamily } from '../../contexts/FamilyContext';
 import { useSurvey } from '../../contexts/SurveyContext';
 
@@ -10,7 +10,8 @@ const WeeklyCheckInScreen = () => {
     selectedUser,
     familyMembers,
     completeWeeklyCheckIn,
-    currentWeek
+    currentWeek,
+    saveSurveyProgress
   } = useFamily();
   
   const { 
@@ -26,6 +27,8 @@ const WeeklyCheckInScreen = () => {
   const [showExplanation, setShowExplanation] = useState(false);
   const [weeklyQuestions, setWeeklyQuestions] = useState([]);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isProcessing, setIsProcessing] = useState(false);
+
   
   // Ref to track if keyboard listeners are initialized
   const keyboardInitialized = useRef(false);
@@ -57,6 +60,47 @@ const WeeklyCheckInScreen = () => {
   const mamaUser = familyMembers.find(m => m.roleType === 'Mama' || m.name === 'Mama');
   const papaUser = familyMembers.find(m => m.roleType === 'Papa' || m.name === 'Papa');
   
+// Generate AI explanation for a specific question
+const generateAIExplanation = (question) => {
+  if (!question) return "";
+  
+  // Base explanation parts
+  let aiLogic = "";
+  
+  // Add category-specific insights
+  switch (question.category) {
+    case "Visible Household Tasks":
+      aiLogic = `This question about ${question.text.toLowerCase()} helps reveal imbalances in day-to-day household management that are easily observable. The AI selected it because visible tasks often show the most immediate opportunities for rebalancing.`;
+      break;
+    case "Invisible Household Tasks":
+      aiLogic = `This question about ${question.text.toLowerCase()} targets the mental load and planning work that often goes unnoticed. The AI prioritized it because invisible work imbalance is a significant predictor of relationship strain.`;
+      break;
+    case "Visible Parental Tasks":
+      aiLogic = `This question about ${question.text.toLowerCase()} helps identify patterns in direct childcare responsibilities. The AI selected it because balancing these tasks has immediate impact on parent stress levels and child development.`;
+      break;
+    case "Invisible Parental Tasks":
+      aiLogic = `This question about ${question.text.toLowerCase()} addresses the emotional labor and planning work of parenting. The AI prioritized it because these tasks often account for the largest imbalances in family workload.`;
+      break;
+    default:
+      aiLogic = `This question was selected because it addresses a key aspect of family workload balance.`;
+  }
+  
+  // Add weight-related explanation if available
+  if (question.totalWeight) {
+    const weightNum = parseFloat(question.totalWeight);
+    if (weightNum > 10) {
+      aiLogic += ` With an impact score of ${weightNum.toFixed(1)}, this is considered a high-impact task that significantly affects family dynamics.`;
+    } else if (weightNum > 7) {
+      aiLogic += ` With an impact score of ${weightNum.toFixed(1)}, this task has medium-high impact on overall family balance.`;
+    } else {
+      aiLogic += ` Tracking this task over time provides valuable insights for improving family balance.`;
+    }
+  }
+  
+  return aiLogic;
+};
+
+
   // Parent profile images with fallbacks
   const parents = {
     mama: {
@@ -71,9 +115,16 @@ const WeeklyCheckInScreen = () => {
   
   // Set up keyboard shortcuts - with a slight delay to ensure component is mounted
   useEffect(() => {
+    // Only set up listener if not in processing state
+    if (isProcessing) return;
+    
     // Function to handle key press
     const handleKeyPress = (e) => {
-      console.log("Key pressed:", e.key);
+      // Check if we have a valid question at current index
+      const hasValidQuestion = weeklyQuestions && weeklyQuestions[currentQuestionIndex];
+      
+      if (isProcessing || !hasValidQuestion) return; // Prevent actions during processing
+      
       // 'M' key selects Mama
       if (e.key.toLowerCase() === 'm') {
         handleSelectParent('Mama');
@@ -83,36 +134,25 @@ const WeeklyCheckInScreen = () => {
         handleSelectParent('Papa');
       }
     };
-      
-    // Set a small timeout to ensure component is fully rendered
-    const timer = setTimeout(() => {
-      console.log("Setting up keyboard listeners for question", currentQuestionIndex);
-      
-      // Clean up previous listeners if they exist
-      if (keyboardInitialized.current) {
-        window.removeEventListener('keydown', handleKeyPress);
-      }
-      
-      // Add new listener
-      window.addEventListener('keydown', handleKeyPress);
-      keyboardInitialized.current = true;
-    }, 200);
-      
+    
+    // Add listener
+    window.addEventListener('keydown', handleKeyPress);
+    keyboardInitialized.current = true;
+    
     // Cleanup function
     return () => {
-      clearTimeout(timer);
-      if (keyboardInitialized.current) {
-        window.removeEventListener('keydown', handleKeyPress);
-      }
+      window.removeEventListener('keydown', handleKeyPress);
     };
-  }, [currentQuestionIndex]); // Re-run when currentQuestionIndex changes
-  
+  }, [currentQuestionIndex, isProcessing, weeklyQuestions]); // Fixed dependencies - use primitive sources
+
   // Get current question
   const currentQuestion = weeklyQuestions[currentQuestionIndex];
   
   // Handle parent selection
   const handleSelectParent = (parent) => {
-    console.log("Parent selected:", parent);
+    if (isProcessing) return; // Prevent multiple selections while processing
+    setIsProcessing(true);
+    
     setSelectedParent(parent);
     
     // Save response
@@ -126,6 +166,7 @@ const WeeklyCheckInScreen = () => {
           setCurrentQuestionIndex(prevIndex => prevIndex + 1);
           setSelectedParent(null);
           setShowExplanation(false);
+          setIsProcessing(false); // Reset processing state
         } else {
           // Survey completed, save responses - works for both Mama and Papa
           console.log("Last question answered, completing survey with parent:", parent);
@@ -194,8 +235,27 @@ const WeeklyCheckInScreen = () => {
   };
   
   // Handle pause/exit
-  const handleExit = () => {
-    navigate('/dashboard');
+  const handleExit = async () => {
+    if (isProcessing) return;
+    setIsProcessing(true);
+    
+    try {
+      // Only save if we have at least one response
+      if (Object.keys(currentSurveyResponses).length > 0) {
+        console.log("Saving survey progress before exiting...");
+        await saveSurveyProgress(selectedUser.id, currentSurveyResponses);
+        console.log("Progress saved successfully");
+      }
+      
+      // Now navigate to dashboard
+      navigate('/dashboard');
+    } catch (error) {
+      console.error('Error saving survey progress:', error);
+      alert('There was an error saving your progress, but you can continue later.');
+      navigate('/dashboard');
+    } finally {
+      setIsProcessing(false);
+    }
   };
   
   // Toggle explanation
@@ -219,36 +279,36 @@ const WeeklyCheckInScreen = () => {
   return (
     <div className="flex flex-col min-h-screen bg-gray-50">
       {/* Header */}
-      <div className="bg-blue-600 text-white p-4">
-        <div className="max-w-3xl mx-auto flex items-center justify-between">
-          <div className="flex items-center">
-            <div className="w-8 h-8 rounded-full overflow-hidden mr-2">
-              <img 
-                src={selectedUser.profilePicture} 
-                alt={selectedUser.name}
-                className="w-full h-full object-cover"
-              />
-            </div>
-            <span>{selectedUser.name}</span>
-          </div>
-          <button 
-            onClick={handleLogout}
-            className="flex items-center text-sm bg-blue-700 hover:bg-blue-800 px-2 py-1 rounded"
-          >
-            <LogOut size={14} className="mr-1" />
-            Switch User
-          </button>
-        </div>
+      <div className="bg-black text-white p-4">
+  <div className="max-w-3xl mx-auto flex items-center justify-between">
+    <div className="flex items-center">
+      <div className="w-8 h-8 rounded-full overflow-hidden mr-2">
+        <img 
+          src={selectedUser.profilePicture} 
+          alt={selectedUser.name}
+          className="w-full h-full object-cover"
+        />
       </div>
+      <span className="font-roboto">{selectedUser.name}</span>
+    </div>
+    <button 
+      onClick={handleLogout}
+      className="flex items-center text-sm bg-gray-800 hover:bg-gray-700 px-2 py-1 rounded font-roboto"
+    >
+      <LogOut size={14} className="mr-1" />
+      Switch User
+    </button>
+  </div>
+</div>
       
       {/* Main content */}
       <div className="flex-1 p-4">
         <div className="max-w-3xl mx-auto">
           {/* Survey title */}
           <div className="text-center mb-4">
-            <h2 className="text-2xl font-bold">Weekly Check-in - Week {currentWeek}</h2>
-            <p className="text-gray-600 mt-1">Help us track your family's balance progress</p>
-          </div>
+  <h2 className="text-2xl font-bold font-roboto">Weekly Check-in - Cycle {currentWeek}</h2>
+  <p className="text-gray-600 mt-1 font-roboto">Help us track your family's balance progress</p>
+</div>
             
           {/* Question */}
           <div className="bg-white rounded-lg p-6 shadow-sm mb-4">
@@ -260,22 +320,130 @@ const WeeklyCheckInScreen = () => {
             </p>
             
             {/* Question explanation toggle */}
-            <div className="flex justify-center mt-3">
-              <button 
-                onClick={toggleExplanation}
-                className="flex items-center text-sm text-blue-600"
-              >
-                <HelpCircle size={16} className="mr-1" />
-                {showExplanation ? "Hide explanation" : "Why are we asking this again?"}
-              </button>
+<div className="flex justify-center mt-3">
+  <button 
+    onClick={toggleExplanation}
+    className="flex items-center text-sm text-blue-600"
+  >
+    <HelpCircle size={16} className="mr-1" />
+    {showExplanation ? "Hide explanation" : "Why are we asking this again?"}
+  </button>
+</div>
+
+{/* Explanation panel - Always show part of it */}
+<div className="mt-3">
+  {/* Weekly explanation - always visible */}
+  <div className="bg-gray-50 p-3 rounded-md border text-sm text-gray-600 mb-2">
+    <p className="font-roboto">{currentQuestion.weeklyExplanation}</p>
+  </div>
+  
+  {/* AI explanation - always visible */}
+  <div className="p-3 bg-purple-50 border border-purple-200 rounded">
+    <div className="flex items-start">
+      <Brain size={16} className="text-purple-600 mr-2 mt-0.5 flex-shrink-0" />
+      <div>
+        <p className="text-purple-800 font-medium mb-1">AI Selection Logic:</p>
+        <p className="text-purple-800 font-roboto text-sm">
+          {generateAIExplanation(currentQuestion)}
+        </p>
+      </div>
+    </div>
+  </div>
+
+  {/* Weight metrics visualization */}
+  {currentQuestion.totalWeight && (
+    <div className="mt-4 p-3 bg-gray-50 rounded-md border">
+      <h4 className="text-sm font-medium mb-2 flex items-center">
+        <Scale size={16} className="mr-2 text-gray-700" />
+        Task Weight Analysis
+      </h4>
+      <div className="grid grid-cols-2 gap-2">
+        <div className="text-xs">
+          <div className="flex items-center justify-between">
+            <span className="text-gray-600">Base Time:</span>
+            <span className="font-medium">{currentQuestion.baseWeight}/5</span>
+          </div>
+          <div className="w-full bg-gray-200 h-1.5 mt-1 rounded-full overflow-hidden">
+            <div 
+              className="bg-blue-500 h-full rounded-full" 
+              style={{ width: `${(currentQuestion.baseWeight / 5) * 100}%` }}
+            ></div>
+          </div>
+        </div>
+        <div className="text-xs">
+          <div className="flex items-center justify-between">
+            <span className="text-gray-600">Frequency:</span>
+            <span className="font-medium">{currentQuestion.frequency}</span>
+          </div>
+          <div className="w-full bg-gray-200 h-1.5 mt-1 rounded-full overflow-hidden">
+            <div 
+              className="bg-green-500 h-full rounded-full" 
+              style={{ 
+                width: `${
+                  currentQuestion.frequency === 'daily' ? 100 :
+                  currentQuestion.frequency === 'several' ? 80 :
+                  currentQuestion.frequency === 'weekly' ? 60 :
+                  currentQuestion.frequency === 'monthly' ? 40 : 
+                  20
+                }%` 
+              }}
+            ></div>
+          </div>
+        </div>
+        {currentQuestion.invisibility && (
+          <div className="text-xs">
+            <div className="flex items-center justify-between">
+              <span className="text-gray-600">Invisibility:</span>
+              <span className="font-medium">{currentQuestion.invisibility}</span>
             </div>
-            
-            {/* Explanation panel */}
-            {showExplanation && (
-              <div className="mt-3 bg-blue-50 p-3 rounded-md text-sm text-blue-800">
-                {currentQuestion.weeklyExplanation}
-              </div>
-            )}
+            <div className="w-full bg-gray-200 h-1.5 mt-1 rounded-full overflow-hidden">
+              <div 
+                className="bg-purple-500 h-full rounded-full" 
+                style={{ 
+                  width: `${
+                    currentQuestion.invisibility === 'completely' ? 100 :
+                    currentQuestion.invisibility === 'mostly' ? 75 :
+                    currentQuestion.invisibility === 'partially' ? 50 : 
+                    25
+                  }%` 
+                }}
+              ></div>
+            </div>
+          </div>
+        )}
+        {currentQuestion.emotionalLabor && (
+          <div className="text-xs">
+            <div className="flex items-center justify-between">
+              <span className="text-gray-600">Emotional Labor:</span>
+              <span className="font-medium">{currentQuestion.emotionalLabor}</span>
+            </div>
+            <div className="w-full bg-gray-200 h-1.5 mt-1 rounded-full overflow-hidden">
+              <div 
+                className="bg-red-500 h-full rounded-full" 
+                style={{ 
+                  width: `${
+                    currentQuestion.emotionalLabor === 'extreme' ? 100 :
+                    currentQuestion.emotionalLabor === 'high' ? 80 :
+                    currentQuestion.emotionalLabor === 'moderate' ? 60 :
+                    currentQuestion.emotionalLabor === 'low' ? 40 : 
+                    20
+                  }%` 
+                }}
+              ></div>
+            </div>
+          </div>
+        )}
+      </div>
+      <div className="mt-2 pt-2 border-t text-xs text-gray-600">
+        <div className="flex justify-between">
+          <span>Total Weight Impact:</span>
+          <span className="font-bold">{parseFloat(currentQuestion.totalWeight).toFixed(1)}</span>
+        </div>
+      </div>
+    </div>
+  )}
+</div>
+)}
           </div>
             
           {/* Parent selection */}
@@ -339,42 +507,42 @@ const WeeklyCheckInScreen = () => {
       
       {/* Footer with navigation */}
       <div className="border-t bg-white p-4">
-        <div className="max-w-3xl mx-auto flex justify-between">
-          <button 
-            onClick={handlePrevious}
-            disabled={currentQuestionIndex === 0 || isSubmitting}
-            className={`px-4 py-2 border rounded ${
-              currentQuestionIndex === 0 || isSubmitting
-                ? 'bg-gray-100 text-gray-400 cursor-not-allowed' 
-                : 'bg-white hover:bg-gray-50'
-            }`}
-          >
-            Previous
-          </button>
-          <button 
-            className={`px-4 py-2 border rounded ${
-              isSubmitting 
-                ? 'bg-gray-100 text-gray-400 cursor-not-allowed'
-                : 'bg-white hover:bg-gray-50'
-            }`}
-            onClick={handleExit}
-            disabled={isSubmitting}
-          >
-            Save & Exit
-          </button>
-          <button 
-            className={`px-4 py-2 border rounded ${
-              isSubmitting 
-                ? 'bg-gray-100 text-gray-400 cursor-not-allowed'
-                : 'bg-white hover:bg-gray-50'
-            }`}
-            onClick={handleSkip}
-            disabled={isSubmitting}
-          >
-            Skip
-          </button>
-        </div>
-      </div>
+  <div className="max-w-3xl mx-auto flex justify-between">
+    <button 
+      onClick={handlePrevious}
+      disabled={currentQuestionIndex === 0 || isSubmitting || isProcessing}
+      className={`px-4 py-2 border rounded font-roboto ${
+        currentQuestionIndex === 0 || isSubmitting || isProcessing
+          ? 'bg-gray-100 text-gray-400 cursor-not-allowed' 
+          : 'bg-white hover:bg-gray-50'
+      }`}
+    >
+      Previous
+    </button>
+    <button 
+      className={`px-4 py-2 border rounded font-roboto ${
+        isSubmitting || isProcessing
+          ? 'bg-gray-100 text-gray-400 cursor-not-allowed'
+          : 'bg-white hover:bg-gray-50'
+      }`}
+      onClick={handleExit}
+      disabled={isSubmitting || isProcessing}
+    >
+      Save & Exit
+    </button>
+    <button 
+      className={`px-4 py-2 border rounded font-roboto ${
+        isSubmitting || isProcessing
+          ? 'bg-gray-100 text-gray-400 cursor-not-allowed'
+          : 'bg-white hover:bg-gray-50'
+      }`}
+      onClick={handleSkip}
+      disabled={isSubmitting || isProcessing}
+    >
+      Skip
+    </button>
+  </div>
+</div>
     </div>
   );
 };

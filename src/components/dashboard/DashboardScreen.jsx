@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { LogOut, Filter, Settings } from 'lucide-react';
+import { LogOut, Filter, Settings, Users } from 'lucide-react';
 import { useFamily } from '../../contexts/FamilyContext';
 import DashboardTab from './tabs/DashboardTab';
 import TasksTab from './tabs/TasksTab';
@@ -13,6 +13,7 @@ import { useAuth } from '../../contexts/AuthContext';
 import { useNavigate, useLocation } from 'react-router-dom';
 import CoupleRelationshipChart from './CoupleRelationshipChart';
 import AllieChat from '../chat/AllieChat';
+
 
 
 
@@ -401,7 +402,7 @@ useEffect(() => {
     Relationship
   </button>
 )}
-          ))}
+          
         </div>
           
         {/* Tab content */}

@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Filter, Info, ChevronDown, ChevronUp, TrendingUp, PieChart, Calendar, Activity, Heart, Scale, Brain } from 'lucide-react';
+import { Filter, Info, Users, ChevronDown, ChevronUp, TrendingUp, PieChart, Calendar, Activity, Heart, Scale, Brain, Clock } from 'lucide-react';
 import { useFamily } from '../../../contexts/FamilyContext';
 import FamilyJourneyChart from '../FamilyJourneyChart';
 import { useSurvey } from '../../../contexts/SurveyContext';
