@@ -401,33 +401,6 @@ else if (selectedUser && selectedUser.role === 'child' && selectedUser.age < 8) 
 }
 
   // Add after other functions, before return statement
-const handlePauseSurvey = async () => {
-  if (isProcessing) return; // Prevent actions while processing
-  
-  setIsProcessing(true);
-  
-  try {
-    // Save the current progress without marking as completed
-    if (selectedUser && Object.keys(currentSurveyResponses).length > 0) {
-      console.log("Saving survey progress before pausing...");
-      if (surveyType === "weekly") {
-        await saveSurveyProgress(selectedUser.id, currentSurveyResponses);
-      } else {
-        await saveSurveyProgress(selectedUser.id, currentSurveyResponses);
-      }
-      console.log("Progress saved successfully");
-    }
-    
-    // Now navigate to dashboard
-    navigate('/dashboard');
-  } catch (error) {
-    console.error('Error saving survey progress:', error);
-    alert('There was an error saving your progress, but you can continue later.');
-    navigate('/dashboard');
-  } finally {
-    setIsProcessing(false);
-  }
-};
 
   
   const mediumQuestions = [];
@@ -447,8 +420,7 @@ const handlePauseSurvey = async () => {
   });
   
     
-    setQuestions(childFriendlyQuestions);
-    
+  setQuestions(filteredList || []);    
   }, [fullQuestionSet, selectedUser, surveyType, currentWeek, generateWeeklyQuestions]);
   
   
