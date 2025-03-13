@@ -9,8 +9,6 @@ import HowThisWorksScreen from './components/education/HowThisWorksScreen';
 import ProductOverviewPage from './components/marketing/ProductOverviewPage'; 
 import BlogHomePage from './components/blog/BlogHomePage';
 import BlogArticlePage from './components/blog/BlogArticlePage';
-
-// Components
 import MiniSurvey from './components/survey/MiniSurvey';
 import MiniResultsScreen from './components/survey/MiniResultsScreen';
 import FamilySelectionScreen from './components/user/FamilySelectionScreen';
@@ -21,12 +19,9 @@ import LoadingScreen from './components/common/LoadingScreen';
 import UserSignupScreen from './components/user/UserSignupScreen';
 import KidFriendlySurvey from './components/survey/KidFriendlySurvey';
 import PaymentScreen from './components/payment/PaymentScreen';
-// New code - Add missing imports
 import LandingPage from './components/marketing/LandingPage';
 import OnboardingFlow from './components/onboarding/OnboardingFlow';
 import { ChatProvider } from './contexts/ChatContext';
-
-
 
 // App Routes Component - Used after context providers are set up
 function AppRoutes() {
@@ -67,9 +62,96 @@ function AppRoutes() {
   );
 }
 
+// Enhanced error boundary with better user feedback and recovery options
+class ErrorBoundary extends React.Component {
+  constructor(props) {
+    super(props);
+    this.state = { 
+      hasError: false, 
+      errorDetails: null,
+      errorInfo: null
+    };
+  }
+
+  static getDerivedStateFromError(error) {
+    return { hasError: true };
+  }
+
+  componentDidCatch(error, errorInfo) {
+    // Log to console and potentially a monitoring service
+    console.error("Error in application:", error, errorInfo);
+    this.setState({ 
+      errorDetails: error.message,
+      errorInfo: errorInfo
+    });
+    
+    // You could add reporting to a service like Sentry here
+    // if (window.Sentry) {
+    //   window.Sentry.captureException(error, { extra: errorInfo });
+    // }
+  }
+
+  handleReset = () => {
+    // Clear any stored state that might be causing issues
+    try {
+      localStorage.removeItem('directFamilyAccess');
+      localStorage.removeItem('selectedFamilyId');
+      sessionStorage.clear();
+    } catch (e) {
+      console.error("Error clearing storage:", e);
+    }
+    
+    // Reload the page
+    window.location.href = '/';
+  }
+
+  render() {
+    if (this.state.hasError) {
+      return (
+        <div className="min-h-screen flex items-center justify-center bg-gray-50 p-4 font-roboto">
+          <div className="bg-white rounded-lg shadow-lg p-6 max-w-lg w-full">
+            <h2 className="text-2xl font-bold mb-4 font-roboto">Something went wrong</h2>
+            
+            {this.state.errorDetails && (
+              <div className="mb-6 p-4 bg-red-50 text-red-700 rounded border border-red-200 text-sm overflow-auto">
+                <p className="font-medium mb-1">Error:</p>
+                <p className="font-roboto">{this.state.errorDetails}</p>
+              </div>
+            )}
+            
+            <p className="mb-4 font-roboto">Please try one of the following:</p>
+            <ul className="list-disc pl-5 mb-6 space-y-2 font-roboto">
+              <li>Refresh the page</li>
+              <li>Clear your browser cache</li>
+              <li>Log out and log back in</li>
+            </ul>
+            
+            <div className="flex flex-col sm:flex-row gap-3">
+              <button 
+                onClick={() => window.location.reload()} 
+                className="px-4 py-2 bg-black text-white rounded hover:bg-gray-800 font-roboto"
+              >
+                Refresh Page
+              </button>
+              
+              <button 
+                onClick={this.handleReset} 
+                className="px-4 py-2 border border-black text-black rounded hover:bg-gray-50 font-roboto"
+              >
+                Reset & Go to Homepage
+              </button>
+            </div>
+          </div>
+        </div>
+      );
+    }
+    
+    return this.props.children;
+  }
+}
 
 function App() {
-  console.log("App rendering..."); // Add this debug line
+  console.log("App rendering..."); 
   
   return (
     <Router>
@@ -88,34 +170,6 @@ function App() {
       </ErrorBoundary>
     </Router>
   );
-}
-
-// Add this error boundary component
-class ErrorBoundary extends React.Component {
-  constructor(props) {
-    super(props);
-    this.state = { hasError: false };
-  }
-
-  static getDerivedStateFromError(error) {
-    return { hasError: true };
-  }
-
-  componentDidCatch(error, errorInfo) {
-    console.error("Error in application:", error, errorInfo);
-  }
-
-  render() {
-    if (this.state.hasError) {
-      return (
-        <div style={{padding: 20}}>
-          <h2>Something went wrong</h2>
-          <p>Please refresh the page and try again.</p>
-        </div>
-      );
-    }
-    return this.props.children;
-  }
 }
 
 export default App;
