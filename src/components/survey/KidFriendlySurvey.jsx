@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { HelpCircle, Volume2, ArrowRight, ArrowLeft, Star, Medal, Info, ChevronDown, ChevronUp } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { useFamily } from '../../contexts/FamilyContext';
@@ -143,7 +143,6 @@ const KidFriendlySurvey = ({ surveyType = "initial" }) => {
     resetSurvey, 
     getSurveyProgress,
     generateWeeklyQuestions,
-    childFriendlyQuestions,
     currentSurveyResponses
   } = useSurvey();
   
@@ -152,7 +151,7 @@ const KidFriendlySurvey = ({ surveyType = "initial" }) => {
     familyMembers, 
     completeInitialSurvey,
     completeWeeklyCheckIn,
-    saveSurveyProgress, // Add this line
+    saveSurveyProgress,
     currentWeek 
   } = useFamily();
   
@@ -169,126 +168,14 @@ const KidFriendlySurvey = ({ surveyType = "initial" }) => {
   });
   const [showReward, setShowReward] = useState(false);
   const [totalStars, setTotalStars] = useState(0);
-  const [filterQuestions, setFilterQuestions] = useState(false);
+  const [questions, setQuestions] = useState([]);
   const [showAnimatedProgress, setShowAnimatedProgress] = useState(false);
   const [animation, setAnimation] = useState(null);
   const [isProcessing, setIsProcessing] = useState(false);
+  
+  // Refs
   const keyboardInitialized = useRef(false);
-
-  
-  // Create a filtered list of questions for kids if needed
-  const [questions, setQuestions] = useState([]);
   const questionTimerRef = useRef(null);
-  
-// Handle pause function
-const handlePauseSurvey = async () => {
-  if (isProcessing) return; // Prevent actions while processing
-  
-  setIsProcessing(true);
-  
-  try {
-    // Ensure we have the latest responses from state
-    const allResponses = {...currentSurveyResponses, ...userResponses};
-    
-    // Save the current progress without marking as completed
-    if (selectedUser && Object.keys(allResponses).length > 0) {
-      console.log("Saving survey progress before pausing...");
-      console.log("Responses to save:", allResponses);
-      if (surveyType === "weekly") {
-        await saveSurveyProgress(selectedUser.id, allResponses);
-      } else {
-        await saveSurveyProgress(selectedUser.id, allResponses);
-      }
-      console.log("Progress saved successfully");
-    }
-    
-    // Now navigate to dashboard
-    navigate('/dashboard');
-  } catch (error) {
-    console.error('Error saving survey progress:', error);
-    alert('There was an error saving your progress, but you can continue later.');
-    navigate('/dashboard');
-  } finally {
-    setIsProcessing(false);
-  }
-};
-
-// Handle switch user function
-const handleSwitchUser = async () => {
-  if (isProcessing) return; // Prevent actions while processing
-  
-  setIsProcessing(true);
-  
-  try {
-    // Ensure we have the latest responses from state
-    const allResponses = {...currentSurveyResponses, ...userResponses};
-    
-    // Save the current progress without marking as completed
-    if (selectedUser && Object.keys(allResponses).length > 0) {
-      console.log("Saving survey progress before switching user...");
-      console.log("Responses to save:", allResponses);
-      if (surveyType === "weekly") {
-        await saveSurveyProgress(selectedUser.id, allResponses);
-      } else {
-        await saveSurveyProgress(selectedUser.id, allResponses);
-      }
-      console.log("Progress saved successfully");
-    }
-    
-    // Navigate to login screen
-    navigate('/login');
-  } catch (error) {
-    console.error('Error saving survey progress:', error);
-    alert('There was an error saving your progress, but you can still switch users.');
-    navigate('/login');
-  } finally {
-    setIsProcessing(false);
-  }
-};
-
-// Set up keyboard shortcuts
-// Replace the useEffect for keyboard shortcuts (around line 300) with this:
-useEffect(() => {
-  // Function to handle key press
-  const handleKeyPress = (e) => {
-    // Guard against processing state or viewing question list
-    if (isProcessing || viewingQuestionList) return;
-    
-    console.log(`Key pressed: ${e.key}, processing: ${isProcessing}, question: ${currentQuestionIndex}`);
-    
-    // 'M' key selects Mama
-    if (e.key.toLowerCase() === 'm') {
-      console.log("M key pressed - selecting Mama");
-      handleSelectParent('Mama');
-    }
-    // 'P' key selects Papa
-    else if (e.key.toLowerCase() === 'p') {
-      console.log("P key pressed - selecting Papa");
-      handleSelectParent('Papa');
-    }
-  };
-  
-  // Add the listener immediately - no delay
-  window.addEventListener('keydown', handleKeyPress);
-  keyboardInitialized.current = true;
-  
-  // Cleanup function
-  return () => {
-    window.removeEventListener('keydown', handleKeyPress);
-    keyboardInitialized.current = false;
-  };
-}, [currentQuestionIndex, viewingQuestionList, isProcessing]); // Remove handleSelectParent from dependencies
-  
-  // Add the listener immediately
-  window.addEventListener('keydown', handleKeyPress);
-  keyboardInitialized.current = true;
-  
-  // Cleanup function
-  return () => {
-    window.removeEventListener('keydown', handleKeyPress);
-    keyboardInitialized.current = false;
-  };
-}, [currentQuestionIndex, viewingQuestionList, isProcessing]); // Removed handleSelectParent
 
   // Redirect if no user is selected
   useEffect(() => {
@@ -297,16 +184,13 @@ useEffect(() => {
     }
   }, [selectedUser, navigate]);
   
-  // Reset survey when component mounts - only once!
+  // Reset survey when component mounts
   useEffect(() => {
     resetSurvey();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []); 
-  
 
-
-
-  // Cleanup function to run when component unmounts
+  // Cleanup function when component unmounts
   useEffect(() => {
     return () => {
       // Clear any pending timers
@@ -320,174 +204,123 @@ useEffect(() => {
       for (let i = setTimeout(() => {}, 0); i > 0; i--) {
         clearTimeout(i);
       }
-      
-      console.log("Kid survey component unmounted, all timers cleared");
     };
   }, []);
   
-  
-// Add this new useEffect right after the other useEffects (around line 545-550)
-// Add this after your survey data loading useEffect
-useEffect(() => {
-  // Only run this if we have a user and loaded questions
-  if (selectedUser && questions.length > 0 && currentSurveyResponses) {
-    console.log("Checking for previously saved progress...");
+  // Set up questions for kids based on survey type
+  useEffect(() => {
+    if (!fullQuestionSet || fullQuestionSet.length === 0) return;
     
-    // Find the last answered question index
-    let lastAnsweredIndex = -1;
+    let questionSet;
     
-    // Loop through questions to find the highest index that has an answer
-    questions.forEach((question, index) => {
-      if (currentSurveyResponses[question.id]) {
-        lastAnsweredIndex = Math.max(lastAnsweredIndex, index);
-      }
-    });
-    
-    // If we found saved answers, jump to the next unanswered question
-    if (lastAnsweredIndex >= 0) {
-      console.log(`Found progress! Last answered question: ${lastAnsweredIndex}`);
-      setCurrentQuestionIndex(lastAnsweredIndex + 1);
-      
-      // Also load previous answers into local state
-      setUserResponses(currentSurveyResponses);
+    // Determine which questions to use based on the survey type
+    if (surveyType === "weekly") {
+      console.log(`Generating weekly questions for week ${currentWeek}`);
+      questionSet = generateWeeklyQuestions(currentWeek);
+      console.log(`Generated ${questionSet.length} weekly questions`);
+    } else {
+      console.log(`Using full question set with ${fullQuestionSet.length} questions`);
+      questionSet = fullQuestionSet;
     }
-  }
-}, [selectedUser, questions, currentSurveyResponses]);
-  
-  // Set up questions for kids based on survey type
-  // Set up questions for kids based on survey type
-useEffect(() => {
-  if (!fullQuestionSet || fullQuestionSet.length === 0) return;
-  
-  let questionSet;
-  
-  // Determine which questions to use based on the survey type
-  if (surveyType === "weekly") {
-    console.log(`Generating weekly questions for week ${currentWeek}`);
-    questionSet = generateWeeklyQuestions(currentWeek);
-    console.log(`Generated ${questionSet.length} weekly questions`);
-  } else {
-    console.log(`Using full question set with ${fullQuestionSet.length} questions`);
-    questionSet = fullQuestionSet;
-  }
-  
-  let filteredList = questionSet;
-  console.log(`Initial filtered list has ${filteredList.length} questions before age/type filtering`);
-  
-  // Rest of the function...
+    
+    let filteredList = questionSet;
     
     // For weekly survey, use exactly 20 questions for any child
-if (surveyType === "weekly" && selectedUser && selectedUser.role === 'child') {
-  const categories = [
-    "Visible Household Tasks",
-    "Invisible Household Tasks",
-    "Visible Parental Tasks",
-    "Invisible Parental Tasks"
-  ];
-  
-  const weeklyKidQuestions = [];
-  categories.forEach(category => {
-    const categoryQuestions = questionSet.filter(q => q.category === category);
-    // Pick 5 questions per category (20 total)
-    for (let i = 0; i < 5; i++) {
-      const index = (i < categoryQuestions.length) ? i : i % categoryQuestions.length;
-      weeklyKidQuestions.push(categoryQuestions[index]);
+    if (surveyType === "weekly" && selectedUser && selectedUser.role === 'child') {
+      const categories = [
+        "Visible Household Tasks",
+        "Invisible Household Tasks",
+        "Visible Parental Tasks",
+        "Invisible Parental Tasks"
+      ];
+      
+      const weeklyKidQuestions = [];
+      categories.forEach(category => {
+        const categoryQuestions = questionSet.filter(q => q.category === category);
+        // Pick 5 questions per category (20 total)
+        for (let i = 0; i < 5; i++) {
+          const index = (i < categoryQuestions.length) ? i : i % categoryQuestions.length;
+          weeklyKidQuestions.push(categoryQuestions[index]);
+        }
+      });
+      
+      filteredList = weeklyKidQuestions;
+    } 
+    // For initial survey, filter based on age
+    else if (selectedUser && selectedUser.role === 'child' && selectedUser.age < 8) {
+      // Pick simpler questions - 10 from each category
+      const categories = [
+        "Visible Household Tasks",
+        "Invisible Household Tasks",
+        "Visible Parental Tasks",
+        "Invisible Parental Tasks"
+      ];
+      
+      const simpleQuestions = [];
+      categories.forEach(category => {
+        const categoryQuestions = questionSet.filter(q => q.category === category);
+        // Pick 10 questions from each category (40 total)
+        for (let i = 0; i < 10; i++) {
+          const index = (i < categoryQuestions.length) ? i : i % categoryQuestions.length;
+          simpleQuestions.push(categoryQuestions[index]);
+        }
+      });
+      
+      filteredList = simpleQuestions;
+    } else if (selectedUser && selectedUser.role === 'child' && selectedUser.age < 18) {
+      // For older children, use more questions (60 total)
+      const categories = [
+        "Visible Household Tasks",
+        "Invisible Household Tasks",
+        "Visible Parental Tasks",
+        "Invisible Parental Tasks"
+      ];
+      
+      const mediumQuestions = [];
+      categories.forEach(category => {
+        const categoryQuestions = questionSet.filter(q => q.category === category);
+        // Pick 15 questions per category (60 total)
+        for (let i = 0; i < 15; i++) {
+          const index = (i < categoryQuestions.length) ? i : i % categoryQuestions.length;
+          mediumQuestions.push(categoryQuestions[index]);
+        }
+      });
+      
+      filteredList = mediumQuestions;
     }
-  });
-  
-  filteredList = weeklyKidQuestions;
-  setFilterQuestions(true);
-} 
-// For initial survey, filter based on age
-else if (selectedUser && selectedUser.role === 'child' && selectedUser.age < 8) {
-  // Pick simpler questions - 10 from each category
-  const categories = [
-    "Visible Household Tasks",
-    "Invisible Household Tasks",
-    "Visible Parental Tasks",
-    "Invisible Parental Tasks"
-  ];
-  
-  const simpleQuestions = [];
-  categories.forEach(category => {
-    const categoryQuestions = questionSet.filter(q => q.category === category);
-    // Pick 10 questions from each category (40 total)
-    for (let i = 0; i < 10; i++) {
-      const index = (i < categoryQuestions.length) ? i : i % categoryQuestions.length;
-      simpleQuestions.push(categoryQuestions[index]);
-    }
-  });
-  
-  filteredList = simpleQuestions;
-  setFilterQuestions(true);
-} else if (selectedUser && selectedUser.role === 'child' && selectedUser.age < 18) {
-  // For older children, use more questions (60 total)
-  const categories = [
-    "Visible Household Tasks",
-    "Invisible Household Tasks",
-    "Visible Parental Tasks",
-    "Invisible Parental Tasks"
-  ];
-  
-  const mediumQuestions = [];
-  categories.forEach(category => {
-    const categoryQuestions = questionSet.filter(q => q.category === category);
-    // Pick 15 questions per category (60 total)
-    for (let i = 0; i < 15; i++) {
-      const index = (i < categoryQuestions.length) ? i : i % categoryQuestions.length;
-      mediumQuestions.push(categoryQuestions[index]);
-    }
-  });
-  
-  filteredList = mediumQuestions;
-  setFilterQuestions(true);
-}
-
-  // Add after other functions, before return statement
-
-  
-  const mediumQuestions = [];
-  const categories = [
-    "Visible Household Tasks",
-    "Invisible Household Tasks",
-    "Visible Parental Tasks",
-    "Invisible Parental Tasks"
-  ];
-  categories.forEach(category => {
-    const categoryQuestions = questionSet.filter(q => q.category === category);
-    // Pick 15 questions per category (60 total)
-    for (let i = 0; i < 15; i++) {
-      const index = (i < categoryQuestions.length) ? i : i % categoryQuestions.length;
-      mediumQuestions.push(categoryQuestions[index]);
-    }
-  });
-  
     
-  setQuestions(filteredList || []);    
+    setQuestions(filteredList || []);    
   }, [fullQuestionSet, selectedUser, surveyType, currentWeek, generateWeeklyQuestions]);
   
-  
-  // Find Mama and Papa users from family members
-  const mamaUser = familyMembers.find(m => m.roleType === 'Mama' || m.name === 'Mama');
-  const papaUser = familyMembers.find(m => m.roleType === 'Papa' || m.name === 'Papa');
-  
-  // Parent data with fallbacks
-  const parents = {
-    mama: {
-      name: mamaUser?.name || 'Mama',
-      image: mamaUser?.profilePicture || 'data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAyNTYgMjU2Ij48Y2lyY2xlIGN4PSIxMjgiIGN5PSIxMjgiIHI9IjEyOCIgZmlsbD0iI2U5YjFkYSIvPjxjaXJjbGUgY3g9IjEyOCIgY3k9IjkwIiByPSI0MCIgZmlsbD0iI2ZmZiIvPjxwYXRoIGQ9Ik0yMTUsMTcyLjVjMCwzNS05NSwzNS05NSwzNXMtOTUsMC05NS0zNWMwLTIzLjMsOTUtMTAsOTUtMTBTMjE1LDE0OS4yLDIxNSwxNzIuNVoiIGZpbGw9IiNmZmYiLz48L3N2Zz4='
-    },
-    papa: {
-      name: papaUser?.name || 'Papa',
-      image: papaUser?.profilePicture || 'data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAyNTYgMjU2Ij48Y2lyY2xlIGN4PSIxMjgiIGN5PSIxMjgiIHI9IjEyOCIgZmlsbD0iIzg0YzRlMiIvPjxjaXJjbGUgY3g9IjEyOCIgY3k9IjkwIiByPSI0MCIgZmlsbD0iI2ZmZiIvPjxwYXRoIGQ9Ik0yMTUsMTcyLjVjMCwzNS05NSwzNS05NSwzNXMtOTUsMC05NS0zNWMwLTIzLjMsOTUtMTAsOTUtMTBTMjE1LDE0OS4yLDIxNSwxNzIuNVoiIGZpbGw9IiNmZmYiLz48L3N2Zz4='
+  // Check for previously saved progress
+  useEffect(() => {
+    // Only run this if we have a user and loaded questions
+    if (selectedUser && questions.length > 0 && currentSurveyResponses) {
+      console.log("Checking for previously saved progress...");
+      
+      // Find the last answered question index
+      let lastAnsweredIndex = -1;
+      
+      // Loop through questions to find the highest index that has an answer
+      questions.forEach((question, index) => {
+        if (currentSurveyResponses[question.id]) {
+          lastAnsweredIndex = Math.max(lastAnsweredIndex, index);
+        }
+      });
+      
+      // If we found saved answers, jump to the next unanswered question
+      if (lastAnsweredIndex >= 0) {
+        console.log(`Found progress! Last answered question: ${lastAnsweredIndex}`);
+        setCurrentQuestionIndex(lastAnsweredIndex + 1);
+        
+        // Also load previous answers into local state
+        setUserResponses(currentSurveyResponses);
+      }
     }
-  };
+  }, [selectedUser, questions, currentSurveyResponses]);
   
-  // Current question
-  const currentQuestion = questions.length > 0 ? questions[currentQuestionIndex] : null;
-  
-  // Set up keyboard shortcuts
-  const handleSelectParent = (parent) => {
+  // Set up keyboard shortcuts using useCallback to avoid dependency issues
+  const handleSelectParent = useCallback((parent) => {
     if (isProcessing) return; // Prevent multiple selections while processing
     setIsProcessing(true);
     
@@ -498,6 +331,9 @@ else if (selectedUser && selectedUser.role === 'child' && selectedUser.age < 8) 
     }
     
     setSelectedParent(parent);
+    
+    // Get current question safely
+    const currentQuestion = questions[currentQuestionIndex];
     
     // Save response
     if (currentQuestion) {
@@ -559,199 +395,300 @@ else if (selectedUser && selectedUser.role === 'child' && selectedUser.age < 8) 
         }
       }, 500);
     }
+  }, [currentQuestionIndex, isProcessing, questions, updateSurveyResponse, userResponses]);
+
+  // Set up keyboard shortcuts
+  useEffect(() => {
+    // Function to handle key press
+    const handleKeyPress = (e) => {
+      // Guard against processing state or viewing question list
+      if (isProcessing || viewingQuestionList) return;
+      
+      // 'M' key selects Mama
+      if (e.key.toLowerCase() === 'm') {
+        handleSelectParent('Mama');
+      }
+      // 'P' key selects Papa
+      else if (e.key.toLowerCase() === 'p') {
+        handleSelectParent('Papa');
+      }
+    };
+    
+    // Add the listener immediately - no delay
+    window.addEventListener('keydown', handleKeyPress);
+    keyboardInitialized.current = true;
+    
+    // Cleanup function
+    return () => {
+      window.removeEventListener('keydown', handleKeyPress);
+      keyboardInitialized.current = false;
+    };
+  }, [isProcessing, viewingQuestionList, handleSelectParent]);
+  
+  // Find Mama and Papa users from family members
+  const mamaUser = familyMembers.find(m => m.roleType === 'Mama' || m.name === 'Mama');
+  const papaUser = familyMembers.find(m => m.roleType === 'Papa' || m.name === 'Papa');
+  
+  // Parent data with fallbacks
+  const parents = {
+    mama: {
+      name: mamaUser?.name || 'Mama',
+      image: mamaUser?.profilePicture || 'data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAyNTYgMjU2Ij48Y2lyY2xlIGN4PSIxMjgiIGN5PSIxMjgiIHI9IjEyOCIgZmlsbD0iI2U5YjFkYSIvPjxjaXJjbGUgY3g9IjEyOCIgY3k9IjkwIiByPSI0MCIgZmlsbD0iI2ZmZiIvPjxwYXRoIGQ9Ik0yMTUsMTcyLjVjMCwzNS05NSwzNS05NSwzNXMtOTUsMC05NS0zNWMwLTIzLjMsOTUtMTAsOTUtMTBTMjE1LDE0OS4yLDIxNSwxNzIuNVoiIGZpbGw9IiNmZmYiLz48L3N2Zz4='
+    },
+    papa: {
+      name: papaUser?.name || 'Papa',
+      image: papaUser?.profilePicture || 'data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAyNTYgMjU2Ij48Y2lyY2xlIGN4PSIxMjgiIGN5PSIxMjgiIHI9IjEyOCIgZmlsbD0iIzg0YzRlMiIvPjxjaXJjbGUgY3g9IjEyOCIgY3k9IjkwIiByPSI0MCIgZmlsbD0iI2ZmZiIvPjxwYXRoIGQ9Ik0yMTUsMTcyLjVjMCwzNS05NSwzNS05NSwzNXMtOTUsMC05NS0zNWMwLTIzLjMsOTUtMTAsOTUtMTBTMjE1LDE0OS4yLDIxNSwxNzIuNVoiIGZpbGw9IiNmZmYiLz48L3N2Zz4='
+    }
   };
   
   // Helper function to get illustration for a question
-// Replace the getIllustrationForQuestion function (around line 1020) with this:
-function getIllustrationForQuestion(question) {
-  if (!question) return 'default';
-  
-  // This function determines which illustration to show based on keywords in the question
-  const text = question.text.toLowerCase();
-  const id = question.id || '';
-  
-  // Create a simple hash from the question text or ID for consistent selection
-  const hashCode = (str) => {
-    let hash = 0;
-    for (let i = 0; i < str.length; i++) {
-      const char = str.charCodeAt(i);
-      hash = ((hash << 5) - hash) + char;
-      hash = hash & hash; // Convert to 32bit integer
-    }
-    return Math.abs(hash);
-  };
-  
-  const questionHash = hashCode(text + id);
-  
-  // More extensive keyword matching
-  // Cleaning related
-  if (text.includes('clean') || text.includes('dust') || text.includes('vacuum') || 
-      text.includes('mop') || text.includes('sweep') || text.includes('tidy') ||
-      text.includes('wash') || text.includes('dishes') || text.includes('laundry') ||
-      text.includes('clothes') || text.includes('fold')) {
-    return 'cleaning';
-  }
-  
-  // Cooking related
-  else if (text.includes('cook') || text.includes('meal') || text.includes('food') || 
-           text.includes('dinner') || text.includes('breakfast') || text.includes('lunch') ||
-           text.includes('kitchen') || text.includes('recipe') || text.includes('grocery') ||
-           text.includes('shopping')) {
-    return 'cooking';
-  }
-  
-  // Planning related
-  else if (text.includes('plan') || text.includes('remember') || text.includes('organize') ||
-           text.includes('arrange') || text.includes('prepare') || text.includes('manage') ||
-           text.includes('coordinate') || text.includes('oversee') || text.includes('supervise')) {
-    return 'planning';
-  }
-  
-  // Scheduling related
-  else if (text.includes('schedule') || text.includes('calendar') || text.includes('appointment') ||
-           text.includes('date') || text.includes('time') || text.includes('event') || 
-           text.includes('activity')) {
-    return 'scheduling';
-  }
-  
-  // Homework/school related
-  else if (text.includes('homework') || text.includes('school') || text.includes('study') ||
-           text.includes('learn') || text.includes('education') || text.includes('teacher') ||
-           text.includes('class') || text.includes('assignment') || text.includes('project')) {
-    return 'homework';
-  }
-  
-  // Driving/transportation related
-  else if (text.includes('drive') || text.includes('pick up') || text.includes('transport') ||
-           text.includes('car') || text.includes('vehicle') || text.includes('ride')) {
-    return 'driving';
-  }
-  
-  // Emotional support related
-  else if (text.includes('emotional') || text.includes('support') || text.includes('feel') ||
-           text.includes('comfort') || text.includes('care') || text.includes('listen') ||
-           text.includes('talk') || text.includes('discuss') || text.includes('help')) {
-    return 'emotional';
-  }
-  
-  // Child planning/scheduling related
-  else if ((text.includes('plan') || text.includes('schedule') || text.includes('organize')) && 
-           (text.includes('child') || text.includes('kid') || text.includes('son') || 
-            text.includes('daughter') || text.includes('children'))) {
-    return 'planning_kids';
-  }
-  
-  // Define categories to avoid undefined reference
-  const categoryList = [
-    "Visible Household Tasks",
-    "Invisible Household Tasks",
-    "Visible Parental Tasks",
-    "Invisible Parental Tasks"
-  ];
-  
-  // Default illustration based on category and question hash
-  if (question.category === categoryList[0]) {
-    // Use hash to consistently select between cleaning and cooking
-    return (questionHash % 2 === 0) ? 'cleaning' : 'cooking';
-  } else if (question.category === categoryList[1]) {
-    // Use hash to consistently select between planning and scheduling
-    return (questionHash % 2 === 0) ? 'planning' : 'scheduling';
-  } else if (question.category === categoryList[2]) {
-    // Use hash to consistently select between homework and driving
-    return (questionHash % 2 === 0) ? 'homework' : 'driving';
-  } else if (question.category === categoryList[3]) {
-    // Use hash to consistently select between emotional and planning_kids
-    return (questionHash % 2 === 0) ? 'emotional' : 'planning_kids';
-  }
-  
-  // Use hash-based selection as a last resort
-  const illustrations = ['cleaning', 'cooking', 'planning', 'scheduling', 'homework', 'driving', 'emotional', 'planning_kids'];
-  return illustrations[questionHash % illustrations.length];
-}  
-
-  
-  // Handle survey completion
-  // Handle survey completion
-// Replace the handleCompleteSurvey function (around line 850) with this improved version:
-const renderIllustration = () => {
-  if (!currentQuestion) return null;
-  
-  // Use our function to determine the illustration type
-  const illustrationType = getIllustrationForQuestion(currentQuestion);
-  
-  // Look up the component
-  const IllustrationComponent = TaskIllustrations[illustrationType] || TaskIllustrations.default;
-  
-  return <IllustrationComponent />;
-};
-
-
-const handleCompleteSurvey = async () => {
-  // Show a big celebration!
-  setShowReward(true);
-  
-  try {
-    console.log(`Attempting to save ${surveyType} survey data...`);
+  function getIllustrationForQuestion(question) {
+    if (!question) return 'default';
     
-    // Ensure we have the latest responses from state
-    const allResponses = {...currentSurveyResponses};
+    // This function determines which illustration to show based on keywords in the question
+    const text = question.text.toLowerCase();
+    const id = question.id || '';
     
-    // First try to save the data before any navigation
-    if (surveyType === "weekly") {
-      // Save weekly check-in
-      console.log("Completing weekly check-in with responses:", Object.keys(allResponses).length);
-      await completeWeeklyCheckIn(selectedUser.id, currentWeek, allResponses);
-      console.log("Weekly check-in saved successfully");
-    } else {
-      // Save initial survey
-      console.log("Completing initial survey with responses:", Object.keys(allResponses).length);
-      await completeInitialSurvey(selectedUser.id, allResponses);
-      console.log("Initial survey saved successfully");
-    }
-    
-    // Only navigate after confirmed save - with error handling
-    setTimeout(() => {
-      try {
-        console.log("Navigating to loading screen");
-        navigate('/loading');
-        
-        // Navigate to dashboard after delay with increased timeout
-        setTimeout(() => {
-          try {
-            console.log("Navigating to dashboard");
-            navigate('/dashboard', { replace: true }); // Use replace to prevent back navigation issues
-          } catch (navError) {
-            console.error("Navigation error:", navError);
-            window.location.href = '/dashboard'; // Fallback to direct URL change
-          }
-        }, 3000);
-      } catch (navError) {
-        console.error("Navigation error:", navError);
-        window.location.href = '/dashboard'; // Fallback
+    // Create a simple hash from the question text or ID for consistent selection
+    const hashCode = (str) => {
+      let hash = 0;
+      for (let i = 0; i < str.length; i++) {
+        const char = str.charCodeAt(i);
+        hash = ((hash << 5) - hash) + char;
+        hash = hash & hash; // Convert to 32bit integer
       }
-    }, 3000);
-  } catch (error) {
-    console.error(`Error completing ${surveyType} survey:`, error);
-    alert('There was an error saving your responses. Please try again.');
+      return Math.abs(hash);
+    };
     
-    // Don't navigate away on error
-    setShowReward(false);
-    setIsProcessing(false);
+    const questionHash = hashCode(text + id);
+    
+    // More extensive keyword matching
+    // Cleaning related
+    if (text.includes('clean') || text.includes('dust') || text.includes('vacuum') || 
+        text.includes('mop') || text.includes('sweep') || text.includes('tidy') ||
+        text.includes('wash') || text.includes('dishes') || text.includes('laundry') ||
+        text.includes('clothes') || text.includes('fold')) {
+      return 'cleaning';
+    }
+    
+    // Cooking related
+    else if (text.includes('cook') || text.includes('meal') || text.includes('food') || 
+             text.includes('dinner') || text.includes('breakfast') || text.includes('lunch') ||
+             text.includes('kitchen') || text.includes('recipe') || text.includes('grocery') ||
+             text.includes('shopping')) {
+      return 'cooking';
+    }
+    
+    // Planning related
+    else if (text.includes('plan') || text.includes('remember') || text.includes('organize') ||
+             text.includes('arrange') || text.includes('prepare') || text.includes('manage') ||
+             text.includes('coordinate') || text.includes('oversee') || text.includes('supervise')) {
+      return 'planning';
+    }
+    
+    // Scheduling related
+    else if (text.includes('schedule') || text.includes('calendar') || text.includes('appointment') ||
+             text.includes('date') || text.includes('time') || text.includes('event') || 
+             text.includes('activity')) {
+      return 'scheduling';
+    }
+    
+    // Homework/school related
+    else if (text.includes('homework') || text.includes('school') || text.includes('study') ||
+             text.includes('learn') || text.includes('education') || text.includes('teacher') ||
+             text.includes('class') || text.includes('assignment') || text.includes('project')) {
+      return 'homework';
+    }
+    
+    // Driving/transportation related
+    else if (text.includes('drive') || text.includes('pick up') || text.includes('transport') ||
+             text.includes('car') || text.includes('vehicle') || text.includes('ride')) {
+      return 'driving';
+    }
+    
+    // Emotional support related
+    else if (text.includes('emotional') || text.includes('support') || text.includes('feel') ||
+             text.includes('comfort') || text.includes('care') || text.includes('listen') ||
+             text.includes('talk') || text.includes('discuss') || text.includes('help')) {
+      return 'emotional';
+    }
+    
+    // Child planning/scheduling related
+    else if ((text.includes('plan') || text.includes('schedule') || text.includes('organize')) && 
+             (text.includes('child') || text.includes('kid') || text.includes('son') || 
+              text.includes('daughter') || text.includes('children'))) {
+      return 'planning_kids';
+    }
+    
+    // Define categories to avoid undefined reference
+    const categoryList = [
+      "Visible Household Tasks",
+      "Invisible Household Tasks",
+      "Visible Parental Tasks",
+      "Invisible Parental Tasks"
+    ];
+    
+    // Default illustration based on category and question hash
+    if (question.category === categoryList[0]) {
+      // Use hash to consistently select between cleaning and cooking
+      return (questionHash % 2 === 0) ? 'cleaning' : 'cooking';
+    } else if (question.category === categoryList[1]) {
+      // Use hash to consistently select between planning and scheduling
+      return (questionHash % 2 === 0) ? 'planning' : 'scheduling';
+    } else if (question.category === categoryList[2]) {
+      // Use hash to consistently select between homework and driving
+      return (questionHash % 2 === 0) ? 'homework' : 'driving';
+    } else if (question.category === categoryList[3]) {
+      // Use hash to consistently select between emotional and planning_kids
+      return (questionHash % 2 === 0) ? 'emotional' : 'planning_kids';
+    }
+    
+    // Use hash-based selection as a last resort
+    const illustrations = ['cleaning', 'cooking', 'planning', 'scheduling', 'homework', 'driving', 'emotional', 'planning_kids'];
+    return illustrations[questionHash % illustrations.length];
   }
-};
-  const progressPercentage = questions.length > 0 
-    ? ((currentQuestionIndex) / (questions.length - 1)) * 100 
-    : 0;
-  
+
+  // Handle pause function
+  const handlePauseSurvey = async () => {
+    if (isProcessing) return; // Prevent actions while processing
+    
+    setIsProcessing(true);
+    
+    try {
+      // Ensure we have the latest responses from state
+      const allResponses = {...currentSurveyResponses, ...userResponses};
+      
+      // Save the current progress without marking as completed
+      if (selectedUser && Object.keys(allResponses).length > 0) {
+        console.log("Saving survey progress before pausing...");
+        console.log("Responses to save:", allResponses);
+        if (surveyType === "weekly") {
+          await saveSurveyProgress(selectedUser.id, allResponses);
+        } else {
+          await saveSurveyProgress(selectedUser.id, allResponses);
+        }
+        console.log("Progress saved successfully");
+      }
+      
+      // Now navigate to dashboard
+      navigate('/dashboard');
+    } catch (error) {
+      console.error('Error saving survey progress:', error);
+      alert('There was an error saving your progress, but you can continue later.');
+      navigate('/dashboard');
+    } finally {
+      setIsProcessing(false);
+    }
+  };
+
+  // Handle switch user function
+  const handleSwitchUser = async () => {
+    if (isProcessing) return; // Prevent actions while processing
+    
+    setIsProcessing(true);
+    
+    try {
+      // Ensure we have the latest responses from state
+      const allResponses = {...currentSurveyResponses, ...userResponses};
+      
+      // Save the current progress without marking as completed
+      if (selectedUser && Object.keys(allResponses).length > 0) {
+        console.log("Saving survey progress before switching user...");
+        console.log("Responses to save:", allResponses);
+        if (surveyType === "weekly") {
+          await saveSurveyProgress(selectedUser.id, allResponses);
+        } else {
+          await saveSurveyProgress(selectedUser.id, allResponses);
+        }
+        console.log("Progress saved successfully");
+      }
+      
+      // Navigate to login screen
+      navigate('/login');
+    } catch (error) {
+      console.error('Error saving survey progress:', error);
+      alert('There was an error saving your progress, but you can still switch users.');
+      navigate('/login');
+    } finally {
+      setIsProcessing(false);
+    }
+  };
+
+  // Handle survey completion
+  const handleCompleteSurvey = async () => {
+    // Show a big celebration!
+    setShowReward(true);
+    
+    try {
+      console.log(`Attempting to save ${surveyType} survey data...`);
+      
+      // Ensure we have the latest responses from state
+      const allResponses = {...currentSurveyResponses, ...userResponses};
+      
+      // First try to save the data before any navigation
+      if (surveyType === "weekly") {
+        // Save weekly check-in
+        console.log("Completing weekly check-in with responses:", Object.keys(allResponses).length);
+        await completeWeeklyCheckIn(selectedUser.id, currentWeek, allResponses);
+        console.log("Weekly check-in saved successfully");
+      } else {
+        // Save initial survey
+        console.log("Completing initial survey with responses:", Object.keys(allResponses).length);
+        await completeInitialSurvey(selectedUser.id, allResponses);
+        console.log("Initial survey saved successfully");
+      }
+      
+      // Only navigate after confirmed save - with error handling
+      setTimeout(() => {
+        try {
+          console.log("Navigating to loading screen");
+          navigate('/loading');
+          
+          // Navigate to dashboard after delay with increased timeout
+          setTimeout(() => {
+            try {
+              console.log("Navigating to dashboard");
+              navigate('/dashboard', { replace: true }); // Use replace to prevent back navigation issues
+            } catch (navError) {
+              console.error("Navigation error:", navError);
+              window.location.href = '/dashboard'; // Fallback to direct URL change
+            }
+          }, 3000);
+        } catch (navError) {
+          console.error("Navigation error:", navError);
+          window.location.href = '/dashboard'; // Fallback
+        }
+      }, 3000);
+    } catch (error) {
+      console.error(`Error completing ${surveyType} survey:`, error);
+      alert('There was an error saving your responses. Please try again.');
+      
+      // Don't navigate away on error
+      setShowReward(false);
+      setIsProcessing(false);
+    }
+  };
+
   // Render the appropriate illustration
   const renderIllustration = () => {
-    if (!currentQuestion) return null;
+    if (!questions[currentQuestionIndex]) return null;
     
-    const illustrationKey = currentQuestion.illustration || 'default';
-    const IllustrationComponent = TaskIllustrations[illustrationKey] || TaskIllustrations.default;
+    // Use our function to determine the illustration type
+    const illustrationType = getIllustrationForQuestion(questions[currentQuestionIndex]);
+    
+    // Look up the component
+    const IllustrationComponent = TaskIllustrations[illustrationType] || TaskIllustrations.default;
     
     return <IllustrationComponent />;
   };
+
+  // Calculate progress percentage
+  const progressPercentage = questions.length > 0 
+    ? ((currentQuestionIndex) / (questions.length - 1)) * 100 
+    : 0;
+
+  // Current question
+  const currentQuestion = questions[currentQuestionIndex];
   
   // Only render when questions are loaded
   if (!currentQuestion) {
@@ -761,52 +698,52 @@ const handleCompleteSurvey = async () => {
   return (
     <div className="max-w-3xl mx-auto bg-gradient-to-b from-blue-50 to-purple-50 rounded-lg p-4 shadow-lg">
       {/* Header with user info */}
-<div className="flex items-center justify-between mb-4">
-  <div className="flex items-center">
-    <div className="w-12 h-12 rounded-full overflow-hidden mr-3 border-2 border-indigo-400 shadow-md">
-      <img 
-        src={selectedUser?.profilePicture} 
-        alt={selectedUser?.name}
-        className="w-full h-full object-cover"
-      />
-    </div>
-    <div>
-      <h2 className="font-bold text-indigo-800 text-xl font-roboto">
-        {selectedUser?.name}'s {surveyType === "weekly" ? "Weekly Adventure" : "Family Survey"}
-      </h2>
-      <div className="flex items-center">
-        {[...Array(totalStars)].map((_, i) => (
-          <Star key={i} size={16} className="text-amber-400 fill-amber-400" />
-        ))}
-        {totalStars > 0 && 
-          <span className="text-xs text-amber-600 ml-1 font-medium font-roboto">
-            {totalStars} {totalStars === 1 ? 'Star' : 'Stars'} earned!
-          </span>
-        }
+      <div className="flex items-center justify-between mb-4">
+        <div className="flex items-center">
+          <div className="w-12 h-12 rounded-full overflow-hidden mr-3 border-2 border-indigo-400 shadow-md">
+            <img 
+              src={selectedUser?.profilePicture} 
+              alt={selectedUser?.name}
+              className="w-full h-full object-cover"
+            />
+          </div>
+          <div>
+            <h2 className="font-bold text-indigo-800 text-xl font-roboto">
+              {selectedUser?.name}'s {surveyType === "weekly" ? "Weekly Adventure" : "Family Survey"}
+            </h2>
+            <div className="flex items-center">
+              {[...Array(totalStars)].map((_, i) => (
+                <Star key={i} size={16} className="text-amber-400 fill-amber-400" />
+              ))}
+              {totalStars > 0 && 
+                <span className="text-xs text-amber-600 ml-1 font-medium font-roboto">
+                  {totalStars} {totalStars === 1 ? 'Star' : 'Stars'} earned!
+                </span>
+              }
+            </div>
+          </div>
+        </div>
+        <div className="flex flex-col items-end">
+          <button 
+            onClick={handleSwitchUser}
+            className="text-xs bg-black text-white px-3 py-1.5 rounded mb-2 hover:bg-gray-800 transition font-roboto"
+            disabled={isProcessing}
+          >
+            Switch User
+          </button>
+          <div className="bg-indigo-100 px-3 py-1.5 rounded-lg shadow-sm border border-indigo-200">
+            <p className="text-sm font-medium text-indigo-800 font-roboto">
+              Question {currentQuestionIndex + 1} of {questions.length}
+            </p>
+            <div className="w-full bg-indigo-200 h-1.5 mt-1 rounded-full overflow-hidden">
+              <div 
+                className="h-full bg-indigo-500 rounded-full" 
+                style={{ width: `${progressPercentage}%` }}
+              ></div>
+            </div>
+          </div>
+        </div>
       </div>
-    </div>
-  </div>
-  <div className="flex flex-col items-end">
-    <button 
-      onClick={handleSwitchUser}
-      className="text-xs bg-black text-white px-3 py-1.5 rounded mb-2 hover:bg-gray-800 transition font-roboto"
-      disabled={isProcessing}
-    >
-      Switch User
-    </button>
-    <div className="bg-indigo-100 px-3 py-1.5 rounded-lg shadow-sm border border-indigo-200">
-      <p className="text-sm font-medium text-indigo-800 font-roboto">
-        Question {currentQuestionIndex + 1} of {questions.length}
-      </p>
-      <div className="w-full bg-indigo-200 h-1.5 mt-1 rounded-full overflow-hidden">
-        <div 
-          className="h-full bg-indigo-500 rounded-full" 
-          style={{ width: `${progressPercentage}%` }}
-        ></div>
-      </div>
-    </div>
-  </div>
-</div>
       
       {/* Game-like progress tracker */}
       <div className="mb-6 p-4 bg-gradient-to-r from-indigo-100 to-purple-100 rounded-lg">
@@ -994,78 +931,78 @@ const handleCompleteSurvey = async () => {
       
       {/* Navigation footer with fun design */}
       <div className="flex justify-between items-center bg-indigo-50 p-4 rounded-lg">
-  <button 
-    onClick={() => {
-      if (isProcessing) return;
-      
-      // Clear any pending timers
-      if (questionTimerRef.current) {
-        clearTimeout(questionTimerRef.current);
-        questionTimerRef.current = null;
-      }
-      
-      // Go to previous question
-      if (currentQuestionIndex > 0) {
-        setCurrentQuestionIndex(prevIndex => prevIndex - 1);
-        setSelectedParent(userResponses[questions[currentQuestionIndex - 1].id] || null);
-      }
-    }}
-    disabled={currentQuestionIndex === 0 || isProcessing}
-    className={`px-4 py-2 rounded-md flex items-center ${
-      currentQuestionIndex === 0 || isProcessing
-        ? 'bg-gray-100 text-gray-400 cursor-not-allowed' 
-        : 'bg-white text-indigo-700 hover:bg-indigo-100 border border-indigo-200'
-    }`}
-  >
-    <ArrowLeft size={16} className="mr-1" />
-    Back
-  </button>
-  
-  <button
-    onClick={handlePauseSurvey}
-    disabled={isProcessing}
-    className="px-4 py-2 rounded-md bg-white text-indigo-700 hover:bg-indigo-100 border border-indigo-200"
-  >
-    Pause Survey
-  </button>
-  
-  <div className="font-medium text-indigo-800 bg-white px-3 py-1 rounded-lg border border-indigo-200">
-    <div className="flex items-center">
-      {Math.floor(currentQuestionIndex / (questions.length / 20)) >= 1 && 
-        <Star size={14} className="text-amber-400 fill-amber-400 mr-1" />}
-      Question {currentQuestionIndex + 1} of {questions.length}
-    </div>
-  </div>
-  
-  <button 
-    onClick={() => {
-      if (isProcessing) return;
-      
-      // Clear any pending timers
-      if (questionTimerRef.current) {
-        clearTimeout(questionTimerRef.current);
-        questionTimerRef.current = null;
-      }
-      
-      // Skip to next question
-      if (currentQuestionIndex < questions.length - 1) {
-        setCurrentQuestionIndex(prevIndex => prevIndex + 1);
-        setSelectedParent(null);
-      } else {
-        handleCompleteSurvey();
-      }
-    }}
-    disabled={isProcessing}
-    className={`px-4 py-2 rounded-md ${
-      isProcessing 
-        ? 'bg-gray-100 text-gray-400 cursor-not-allowed'
-        : 'bg-indigo-100 text-indigo-700 hover:bg-indigo-200 border border-indigo-200 flex items-center'
-    }`}
-  >
-    Skip
-    <ArrowRight size={16} className="ml-1" />
-  </button>
-</div>
+        <button 
+          onClick={() => {
+            if (isProcessing) return;
+            
+            // Clear any pending timers
+            if (questionTimerRef.current) {
+              clearTimeout(questionTimerRef.current);
+              questionTimerRef.current = null;
+            }
+            
+            // Go to previous question
+            if (currentQuestionIndex > 0) {
+              setCurrentQuestionIndex(prevIndex => prevIndex - 1);
+              setSelectedParent(userResponses[questions[currentQuestionIndex - 1]?.id] || null);
+            }
+          }}
+          disabled={currentQuestionIndex === 0 || isProcessing}
+          className={`px-4 py-2 rounded-md flex items-center ${
+            currentQuestionIndex === 0 || isProcessing
+              ? 'bg-gray-100 text-gray-400 cursor-not-allowed' 
+              : 'bg-white text-indigo-700 hover:bg-indigo-100 border border-indigo-200'
+          }`}
+        >
+          <ArrowLeft size={16} className="mr-1" />
+          Back
+        </button>
+        
+        <button
+          onClick={handlePauseSurvey}
+          disabled={isProcessing}
+          className="px-4 py-2 rounded-md bg-white text-indigo-700 hover:bg-indigo-100 border border-indigo-200"
+        >
+          Pause Survey
+        </button>
+        
+        <div className="font-medium text-indigo-800 bg-white px-3 py-1 rounded-lg border border-indigo-200">
+          <div className="flex items-center">
+            {Math.floor(currentQuestionIndex / (questions.length / 20)) >= 1 && 
+              <Star size={14} className="text-amber-400 fill-amber-400 mr-1" />}
+            Question {currentQuestionIndex + 1} of {questions.length}
+          </div>
+        </div>
+        
+        <button 
+          onClick={() => {
+            if (isProcessing) return;
+            
+            // Clear any pending timers
+            if (questionTimerRef.current) {
+              clearTimeout(questionTimerRef.current);
+              questionTimerRef.current = null;
+            }
+            
+            // Skip to next question
+            if (currentQuestionIndex < questions.length - 1) {
+              setCurrentQuestionIndex(prevIndex => prevIndex + 1);
+              setSelectedParent(null);
+            } else {
+              handleCompleteSurvey();
+            }
+          }}
+          disabled={isProcessing}
+          className={`px-4 py-2 rounded-md ${
+            isProcessing 
+              ? 'bg-gray-100 text-gray-400 cursor-not-allowed'
+              : 'bg-indigo-100 text-indigo-700 hover:bg-indigo-200 border border-indigo-200 flex items-center'
+          }`}
+        >
+          Skip
+          <ArrowRight size={16} className="ml-1" />
+        </button>
+      </div>
       
       {/* Celebration overlay - shown when earning stars */}
       {showReward && (
