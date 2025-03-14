@@ -6,12 +6,29 @@ import {
   RadarChart, PolarGrid, PolarAngleAxis, PolarRadiusAxis, 
   Radar, Legend, ResponsiveContainer 
 } from 'recharts';
+import { useFamily } from '../../hooks/useFamily';
+import { useSurvey } from '../../hooks/useSurvey';
 
 const MiniResultsScreen = () => {
   const navigate = useNavigate();
   const location = useLocation();
   const [surveyData, setSurveyData] = useState({});
   const [pendingFamilyData, setPendingFamilyData] = useState(null);
+  
+  // Get family data using the new hook
+  const { 
+    familyData,
+    familyMembers,
+    loading: familyLoading,
+    error: familyError
+  } = useFamily();
+  
+  // Get survey capabilities using the survey hook
+  const {
+    calculateBalance,
+    loading: surveyLoading,
+    error: surveyError
+  } = useSurvey();
   
   // Effect to load pending family data
   useEffect(() => {
@@ -36,7 +53,16 @@ const MiniResultsScreen = () => {
     // Load survey responses
     const responses = JSON.parse(localStorage.getItem('miniSurveyResponses') || '{}');
     setSurveyData(responses);
-  }, []);
+    
+    // If we get errors from our hooks, log them
+    if (familyError) {
+      console.error("Family data error:", familyError);
+    }
+    
+    if (surveyError) {
+      console.error("Survey data error:", surveyError);
+    }
+  }, [familyError, surveyError]);
   
   // Calculate percentages for each category based on responses
   const calculateCategoryData = () => {
@@ -121,6 +147,18 @@ const MiniResultsScreen = () => {
   
   const MAMA_COLOR = '#8884d8';
   const PAPA_COLOR = '#82ca9d';
+  
+  // Show loading state
+  if (familyLoading || surveyLoading) {
+    return (
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+        <div className="text-center p-8">
+          <div className="w-16 h-16 mx-auto mb-4 border-t-4 border-blue-500 border-solid rounded-full animate-spin"></div>
+          <p className="text-gray-600">Loading your results...</p>
+        </div>
+      </div>
+    );
+  }
   
   return (
     <div className="min-h-screen bg-gray-50 pb-8">
@@ -256,7 +294,7 @@ const MiniResultsScreen = () => {
                         {category.mama > category.papa 
                           ? `Mama is handling ${category.mama}% of ${category.category.toLowerCase()}.` 
                           : `Papa is handling ${category.papa}% of ${category.category.toLowerCase()}.`}
-                        This is a ${imbalance}% imbalance.
+                        This is a {imbalance}% imbalance.
                       </p>
                     </div>
                   );
