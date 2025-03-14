@@ -1,94 +1,109 @@
 // src/utils/errorHandling.js
 
 /**
- * Central error handling utility for Allie
+ * Standard error codes and messages for the application
  */
-
-// Log error to console and optionally to a monitoring service
-export const logError = (error, context = {}) => {
-    console.error(`Error in ${context.location || 'application'}:`, error, context);
+export const ErrorCodes = {
+    // Authentication errors
+    AUTH_EMAIL_ALREADY_IN_USE: 'auth/email-already-in-use',
+    AUTH_INVALID_EMAIL: 'auth/invalid-email',
+    AUTH_USER_DISABLED: 'auth/user-disabled',
+    AUTH_USER_NOT_FOUND: 'auth/user-not-found',
+    AUTH_WRONG_PASSWORD: 'auth/wrong-password',
+    AUTH_WEAK_PASSWORD: 'auth/weak-password',
     
-    // Here you could add additional logging to a service like Sentry or Bugsnag
-    // if (window.Sentry) {
-    //   window.Sentry.captureException(error, { extra: context });
-    // }
+    // Family errors
+    FAMILY_NOT_FOUND: 'family/not-found',
+    FAMILY_ALREADY_EXISTS: 'family/already-exists',
+    FAMILY_INVALID_DATA: 'family/invalid-data',
     
-    return error;
+    // Data errors
+    DATA_NOT_FOUND: 'data/not-found',
+    DATA_INVALID: 'data/invalid',
+    
+    // Network errors
+    NETWORK_OFFLINE: 'network/offline',
+    NETWORK_TIMEOUT: 'network/timeout',
+    
+    // General errors
+    UNKNOWN_ERROR: 'unknown/error'
   };
   
-  // Get a user-friendly error message
-  export const getUserFriendlyErrorMessage = (error) => {
-    // Default error message
-    let message = "Something went wrong. Please try again.";
+  /**
+   * User-friendly error messages for different error codes
+   */
+  const errorMessages = {
+    [ErrorCodes.AUTH_EMAIL_ALREADY_IN_USE]: 'This email is already in use. Please try a different email or log in.',
+    [ErrorCodes.AUTH_INVALID_EMAIL]: 'The email address is not valid.',
+    [ErrorCodes.AUTH_USER_DISABLED]: 'This account has been disabled. Please contact support.',
+    [ErrorCodes.AUTH_USER_NOT_FOUND]: 'No account found with this email. Please check your email or sign up.',
+    [ErrorCodes.AUTH_WRONG_PASSWORD]: 'Incorrect password. Please try again.',
+    [ErrorCodes.AUTH_WEAK_PASSWORD]: 'Password is too weak. Please use at least 6 characters.',
     
-    // Handle specific error types
+    [ErrorCodes.FAMILY_NOT_FOUND]: 'Family not found. It may have been deleted.',
+    [ErrorCodes.FAMILY_ALREADY_EXISTS]: 'A family with this name already exists.',
+    [ErrorCodes.FAMILY_INVALID_DATA]: 'The family data provided is not valid.',
+    
+    [ErrorCodes.DATA_NOT_FOUND]: 'The requested data could not be found.',
+    [ErrorCodes.DATA_INVALID]: 'The data provided is not valid.',
+    
+    [ErrorCodes.NETWORK_OFFLINE]: 'You appear to be offline. Please check your internet connection.',
+    [ErrorCodes.NETWORK_TIMEOUT]: 'The request timed out. Please try again.',
+    
+    [ErrorCodes.UNKNOWN_ERROR]: 'An unknown error occurred. Please try again.'
+  };
+  
+  /**
+   * Parse Firebase error code from error object
+   * @param {Error} error The error object
+   * @returns {string} Error code
+   */
+  export function parseErrorCode(error) {
     if (error.code) {
-      // Firebase errors
-      switch (error.code) {
-        case 'auth/user-not-found':
-        case 'auth/wrong-password':
-          message = "Invalid email or password. Please try again.";
-          break;
-        case 'auth/email-already-in-use':
-          message = "This email is already in use. Please try another email.";
-          break;
-        case 'auth/weak-password':
-          message = "Password is too weak. Please choose a stronger password.";
-          break;
-        case 'auth/network-request-failed':
-          message = "Network error. Please check your internet connection.";
-          break;
-        case 'auth/too-many-requests':
-          message = "Too many attempts. Please try again later.";
-          break;
-        case 'storage/unauthorized':
-          message = "You don't have permission to upload files.";
-          break;
-        case 'storage/canceled':
-          message = "Upload was canceled.";
-          break;
-        case 'storage/unknown':
-          message = "An unknown error occurred during upload.";
-          break;
-        default:
-          if (error.message) {
-            message = error.message;
-          }
-      }
-    } else if (error.message) {
-      message = error.message;
+      return error.code;
     }
     
-    return message;
-  };
-  
-  // Display error to user
-  export const displayError = (error, context = {}) => {
-    // Log the error
-    logError(error, context);
-    
-    // Get user-friendly message
-    const message = getUserFriendlyErrorMessage(error);
-    
-    // Display to user - using alert for simplicity, but could be replaced with a toast or modal
-    alert(message);
-    
-    return message;
-  };
-  
-  // Helper to safely handle async operations
-  export const safeAsync = async (asyncFn, errorContext = {}) => {
-    try {
-      return await asyncFn();
-    } catch (error) {
-      displayError(error, errorContext);
-      throw error; // Re-throw for caller to handle if needed
+    if (error.message && error.message.includes('auth/')) {
+      return error.message.split('auth/')[1].split(')')[0];
     }
-  };
+    
+    return ErrorCodes.UNKNOWN_ERROR;
+  }
   
-  export default {
-    logError,
-    getUserFriendlyErrorMessage,
-    displayError,
-    safeAsync
-  };
+  /**
+   * Get user-friendly error message for an error
+   * @param {Error|string} error Error object or error code
+   * @returns {string} User-friendly error message
+   */
+  export function getUserFriendlyError(error) {
+    const errorCode = typeof error === 'string' ? error : parseErrorCode(error);
+    return errorMessages[errorCode] || 'An error occurred. Please try again.';
+  }
+  
+  /**
+   * Log error to console and potentially to a monitoring service
+   * @param {string} context Where the error occurred
+   * @param {Error} error The error object
+   */
+  export function logError(context, error) {
+    console.error(`Error in ${context}:`, error);
+    
+    // Here you could add integration with monitoring services like Sentry
+    // if (window.Sentry) {
+    //   window.Sentry.captureException(error, { tags: { context } });
+    // }
+  }
+  
+  /**
+   * Create a standardized error object
+   * @param {string} code Error code
+   * @param {string} message Error message
+   * @param {object} details Additional error details
+   * @returns {Error} Standardized error object
+   */
+  export function createError(code, message, details = {}) {
+    const error = new Error(message || errorMessages[code] || 'An error occurred');
+    error.code = code;
+    error.details = details;
+    return error;
+  }

@@ -1,10 +1,7 @@
 // src/contexts/AuthContext.js
 import React, { createContext, useContext, useState, useEffect } from 'react';
-import { auth } from '../services/firebase';
-import { onAuthStateChanged } from 'firebase/auth';
-import { db } from '../services/firebase';
-import DatabaseService from '../services/DatabaseService';
-import { doc, getDoc, query, collection, where, getDocs } from 'firebase/firestore';
+import * as authService from '../services/authService';
+import * as familyService from '../services/familyService';
 
 // Create the authentication context
 const AuthContext = createContext();
@@ -14,7 +11,7 @@ export function useAuth() {
   return useContext(AuthContext);
 }
 
-// Provider component that wraps the app and makes auth object available to any child component that calls useAuth()
+// Provider component that wraps the app and makes auth object available
 export function AuthProvider({ children }) {
   const [currentUser, setCurrentUser] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -23,121 +20,54 @@ export function AuthProvider({ children }) {
 
   // Sign up function
   async function signup(email, password) {
-    return DatabaseService.createUser(email, password);
+    return authService.createUser(email, password);
   }
 
   // Login function
   async function login(email, password) {
-    return DatabaseService.signIn(email, password);
+    return authService.signIn(email, password);
   }
 
-// Added helper function to ensure families are loaded
-async function ensureFamiliesLoaded(userId) {
-  try {
-    console.log("Ensuring families are loaded for user:", userId);
-    
-    // First load all families
-    const families = await loadAllFamilies(userId);
-    console.log("Found families:", families.length);
-    
-    // Then if there are families, load the primary family
-    if (families && families.length > 0) {
-      await loadFamilyData(userId);
-    }
-    
-    return families;
-  } catch (error) {
-    console.error("Error ensuring families are loaded:", error);
-    throw error;
-  }
-}
-
-
-
-  
   // Logout function
   async function logout() {
-    return DatabaseService.signOut();
+    setFamilyData(null);
+    setAvailableFamilies([]);
+    return authService.signOut();
   }
 
   // Create a new family
   async function createFamily(familyData) {
-    return DatabaseService.createFamily(familyData);
+    return familyService.createFamily(familyData);
   }
 
   // Load family data
-  async function loadFamilyData(idParam) {
+  async function loadFamilyData(familyId) {
     try {
-      console.log("Loading family data for:", idParam);
+      // If no family ID is provided, try to load by user ID
       let data;
-      
-      // Check if this is a direct family ID
-      if (typeof idParam === 'string' && idParam.length > 0) {
-        console.log("Attempting to load family directly");
-        
-        try {
-          // Try to load the family directly from Firestore
-          const docRef = doc(db, "families", idParam);
-          const docSnap = await getDoc(docRef);
-          
-          if (docSnap.exists()) {
-            // Load survey responses for this family
-            const surveyResponsesQuery = query(
-              collection(db, "surveyResponses"), 
-              where("familyId", "==", idParam)
-            );
-            const surveyResponsesSnapshot = await getDocs(surveyResponsesQuery);
-            
-            // Process survey responses
-            const surveyResponses = {};
-            surveyResponsesSnapshot.forEach((doc) => {
-              const data = doc.data();
-              if (data.responses) {
-                // Merge all responses together
-                Object.assign(surveyResponses, data.responses);
-              }
-            });
-            
-            data = { 
-              ...docSnap.data(), 
-              familyId: idParam,
-              surveyResponses: surveyResponses
-            };
-            console.log("Successfully loaded family directly:", data);
-          } else {
-            console.log("No family found with ID:", idParam);
-            throw new Error("Family not found");
-          }
-        } catch (error) {
-          console.error("Error loading family by ID:", error);
-          throw error;
-        }
+      if (familyId && typeof familyId === 'string') {
+        data = await familyService.loadFamilyById(familyId);
+      } else if (currentUser) {
+        data = await familyService.loadFamilyByUserId(currentUser.uid);
       } else {
-        // Assume it's a user ID
-        data = await DatabaseService.loadFamilyByUserId(idParam);
-        console.log("Loaded family by user ID:", data);
+        throw new Error("No family ID or user ID available");
       }
       
-      if (!data || !data.familyId) {
-        console.error("Invalid family data:", data);
-        throw new Error("Invalid family data");
+      if (data) {
+        setFamilyData(data);
       }
       
-      console.log("Setting family data in state:", data.familyId);
-      setFamilyData(data);
-      
-      // Important: Return the data for chaining
       return data;
     } catch (error) {
       console.error("Error loading family data:", error);
       throw error;
     }
-  }  // Load all families for a user
+  }
+
+  // Load all families for a user
   async function loadAllFamilies(userId) {
     try {
-      console.log("Loading all families for user:", userId);
-      const families = await DatabaseService.getAllFamiliesByUserId(userId);
-      console.log("Found families:", families.length);
+      const families = await familyService.getAllFamiliesByUserId(userId || currentUser?.uid);
       setAvailableFamilies(families);
       return families;
     } catch (error) {
@@ -146,11 +76,26 @@ async function ensureFamiliesLoaded(userId) {
     }
   }
 
+  // Ensure families are loaded
+  async function ensureFamiliesLoaded(userId) {
+    try {
+      // First load all families
+      const families = await loadAllFamilies(userId);
+      
+      // Then if there are families, load the primary family
+      if (families && families.length > 0) {
+        await loadFamilyData(families[0].familyId);
+      }
+      
+      return families;
+    } catch (error) {
+      console.error("Error ensuring families are loaded:", error);
+      throw error;
+    }
+  }
+
   useEffect(() => {
-    let isMounted = true;
-    
-    const unsubscribe = onAuthStateChanged(auth, async (user) => {
-      if (!isMounted) return;
+    const unsubscribe = authService.observeAuthState(async (user) => {
       setCurrentUser(user);
       
       if (user) {
@@ -158,7 +103,7 @@ async function ensureFamiliesLoaded(userId) {
           // Load all families first
           await loadAllFamilies(user.uid);
           
-          // Then load the primary family data
+          // Then load the primary family data if available
           await loadFamilyData(user.uid);
         } catch (error) {
           console.error("Error loading family data on auth change:", error);
@@ -174,14 +119,11 @@ async function ensureFamiliesLoaded(userId) {
   
     // Add a timeout to prevent hanging indefinitely
     const timeout = setTimeout(() => {
-      if (isMounted) {
-        console.log("Auth loading timeout - forcing render");
-        setLoading(false);
-      }
+      console.log("Auth loading timeout - forcing render");
+      setLoading(false);
     }, 5000); // 5 seconds timeout
     
     return () => {
-      isMounted = false;
       clearTimeout(timeout);
       unsubscribe();
     };
@@ -198,7 +140,7 @@ async function ensureFamiliesLoaded(userId) {
     createFamily,
     loadFamilyData,
     loadAllFamilies,
-    ensureFamiliesLoaded, // Add the new function here
+    ensureFamiliesLoaded,
     reload: () => loadFamilyData(currentUser?.uid)
   };
 
