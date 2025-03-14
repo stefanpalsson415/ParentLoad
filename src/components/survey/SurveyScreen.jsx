@@ -1,25 +1,34 @@
+// src/components/survey/SurveyScreen.jsx
 import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { LogOut, Info, HelpCircle, Scale, Brain, Heart, Clock } from 'lucide-react';
-import { useFamily } from '../../contexts/FamilyContext';
-import { useSurvey } from '../../contexts/SurveyContext';
+import { useFamily } from '../../hooks/useFamily';
+import { useSurvey } from '../../hooks/useSurvey';
 
 const SurveyScreen = () => {
   const navigate = useNavigate();
   const { 
-    selectedUser,
+    familyData,
     familyMembers,
-    completeInitialSurvey,
-    saveSurveyProgress, // Add this line
-    familyPriorities
+    selectedMember,
+    loading: familyLoading,
+    error: familyError,
+    clearError: clearFamilyError
   } = useFamily();
   
-  const { 
-    fullQuestionSet,
-    currentSurveyResponses,
+  const {
+    surveyQuestions,
+    surveyResponses,
+    completedQuestions,
+    loading: surveyLoading,
+    error: surveyError,
+    generateQuestions,
+    loadSurveyResponses,
+    saveSurveyResponses,
     updateSurveyResponse,
     resetSurvey,
-    getSurveyProgress
+    getSurveyProgress,
+    clearError: clearSurveyError
   } = useSurvey();
   
   const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0);
@@ -31,20 +40,63 @@ const SurveyScreen = () => {
   const [showWeightMetrics, setShowWeightMetrics] = useState(false);
   const [isProcessing, setIsProcessing] = useState(false);
 
-
-  
   // Redirect if no user is selected
   useEffect(() => {
-    if (!selectedUser) {
+    if (!selectedMember) {
       navigate('/');
     }
-  }, [selectedUser, navigate]);
+  }, [selectedMember, navigate]);
   
-  // Reset survey when component mounts - only once!
+  // Initialize survey data
   useEffect(() => {
+    // Generate questions for initial survey
+    const questions = generateQuestions('initial');
+    
+    // If there's a selected member and family data, try to load their previous responses
+    if (familyData?.familyId && selectedMember?.id) {
+      loadSurveyResponses(familyData.familyId, selectedMember.id, 'initial');
+    }
+    
+    // Reset survey when component mounts - only once
     resetSurvey();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []); 
+  }, [familyData, selectedMember, generateQuestions, loadSurveyResponses, resetSurvey]);
+  
+  // Set up keyboard shortcuts
+  useEffect(() => {
+    // Function to handle key press
+    const handleKeyPress = (e) => {
+      if (viewingQuestionList || isProcessing) return;
+        
+      // 'M' key selects Mama
+      if (e.key.toLowerCase() === 'm') {
+        handleSelectParent('Mama');
+      }
+      // 'P' key selects Papa
+      else if (e.key.toLowerCase() === 'p') {
+        handleSelectParent('Papa');
+      }
+    };
+      
+    // Set a small timeout to ensure component is fully rendered
+    const timer = setTimeout(() => {
+      // Clean up previous listeners if they exist
+      if (keyboardInitialized.current) {
+        window.removeEventListener('keydown', handleKeyPress);
+      }
+      
+      // Add new listener
+      window.addEventListener('keydown', handleKeyPress);
+      keyboardInitialized.current = true;
+    }, 200);
+      
+    // Cleanup function
+    return () => {
+      clearTimeout(timer);
+      if (keyboardInitialized.current) {
+        window.removeEventListener('keydown', handleKeyPress);
+      }
+    };
+  }, [currentQuestionIndex, viewingQuestionList, isProcessing]);
   
   // Find Mama and Papa users from family members
   const mamaUser = familyMembers.find(m => m.roleType === 'Mama' || m.name === 'Mama');
@@ -62,86 +114,50 @@ const SurveyScreen = () => {
     }
   };
   
-  // Set up keyboard shortcuts
-useEffect(() => {
-  // Function to handle key press
-  const handleKeyPress = (e) => {
-    if (viewingQuestionList || isProcessing) return;
-      
-    // 'M' key selects Mama
-    if (e.key.toLowerCase() === 'm') {
-      handleSelectParent('Mama');
-    }
-    // 'P' key selects Papa
-    else if (e.key.toLowerCase() === 'p') {
-      handleSelectParent('Papa');
-    }
-  };
-    
-  // Set a small timeout to ensure component is fully rendered
-  const timer = setTimeout(() => {
-    // Clean up previous listeners if they exist
-    if (keyboardInitialized.current) {
-      window.removeEventListener('keydown', handleKeyPress);
-    }
-    
-    // Add new listener
-    window.addEventListener('keydown', handleKeyPress);
-    keyboardInitialized.current = true;
-  }, 200);
-    
-  // Cleanup function
-  return () => {
-    clearTimeout(timer);
-    if (keyboardInitialized.current) {
-      window.removeEventListener('keydown', handleKeyPress);
-    }
-  };
-}, [currentQuestionIndex, viewingQuestionList, isProcessing]);
-  
-  // Get current question
-  const currentQuestion = fullQuestionSet[currentQuestionIndex];
-  
-
-  
   // Handle parent selection
-const handleSelectParent = (parent) => {
-  if (isProcessing) return; // Prevent multiple selections while processing
-  setIsProcessing(true);
-  
-  setSelectedParent(parent);
-  
-  // Save response
-  if (currentQuestion) {
-    updateSurveyResponse(currentQuestion.id, parent);
-  
-    // Wait a moment to show selection before moving to next question
-    setTimeout(() => {
-      if (currentQuestionIndex < fullQuestionSet.length - 1) {
-        // Use functional state update to ensure we're using the latest value
-        setCurrentQuestionIndex(prevIndex => prevIndex + 1);
-        setSelectedParent(null);
-        setShowWeightInfo(false);
-        setShowExplanation(false);
-        setShowWeightMetrics(false);
-        setIsProcessing(false); // Reset processing state
-      } else {
-        // Survey completed, save responses
-        handleCompleteSurvey();
-      }
-    }, 500);
-  }
-};
+  const handleSelectParent = (parent) => {
+    if (isProcessing) return; // Prevent multiple selections while processing
+    setIsProcessing(true);
+    
+    setSelectedParent(parent);
+    
+    // Save response
+    if (currentQuestion) {
+      updateSurveyResponse(currentQuestion.id, parent);
+    
+      // Wait a moment to show selection before moving to next question
+      setTimeout(() => {
+        if (currentQuestionIndex < surveyQuestions.length - 1) {
+          // Use functional state update to ensure we're using the latest value
+          setCurrentQuestionIndex(prevIndex => prevIndex + 1);
+          setSelectedParent(null);
+          setShowWeightInfo(false);
+          setShowExplanation(false);
+          setShowWeightMetrics(false);
+          setIsProcessing(false); // Reset processing state
+        } else {
+          // Survey completed, save responses
+          handleCompleteSurvey();
+        }
+      }, 500);
+    }
+  };
   
   const handleCompleteSurvey = async () => {
     if (isProcessing) return; // Prevent multiple submissions
     
-    setIsProcessing(true); // Add this processing state
-    
     try {
       // First try to save data before any navigation
       console.log("Saving survey responses...");
-      const result = await completeInitialSurvey(selectedUser.id, currentSurveyResponses);
+      
+      // Use the new saveSurveyResponses function
+      const result = await saveSurveyResponses(
+        familyData.familyId,
+        selectedMember.id,
+        'initial',
+        surveyResponses,
+        true // Mark as completed
+      );
       
       if (!result) {
         throw new Error("Survey completion failed");
@@ -159,8 +175,7 @@ const handleSelectParent = (parent) => {
     } catch (error) {
       console.error('Error completing survey:', error);
       alert('There was an error saving your survey. Please try again.');
-      setIsProcessing(false); // Reset processing state
-      // Don't navigate away on error, stay on the current page
+      setIsProcessing(false);
     }
   };
   
@@ -168,7 +183,7 @@ const handleSelectParent = (parent) => {
   const handlePrevious = () => {
     if (currentQuestionIndex > 0) {
       setCurrentQuestionIndex(prevIndex => prevIndex - 1);
-      setSelectedParent(currentSurveyResponses[fullQuestionSet[currentQuestionIndex - 1].id] || null);
+      setSelectedParent(surveyResponses[surveyQuestions[currentQuestionIndex - 1].id] || null);
       setShowWeightInfo(false);
       setShowExplanation(false);
       setShowWeightMetrics(false);
@@ -178,42 +193,49 @@ const handleSelectParent = (parent) => {
   // Jump to specific question
   const jumpToQuestion = (index) => {
     setCurrentQuestionIndex(index);
-    setSelectedParent(currentSurveyResponses[fullQuestionSet[index].id] || null);
+    setSelectedParent(surveyResponses[surveyQuestions[index].id] || null);
     setViewingQuestionList(false);
     setShowWeightInfo(false);
     setShowExplanation(false);
     setShowWeightMetrics(false);
   };
   
-  // Handle pause
   // Handle pause/exit
-const handlePause = async () => {
-  if (isProcessing) return; // Prevent multiple actions while processing
-  
-  setIsProcessing(true);
-  
-  try {
-    // Save the current progress without marking as completed
-    if (selectedUser && Object.keys(currentSurveyResponses).length > 0) {
-      console.log("Saving survey progress before pausing...");
-      await saveSurveyProgress(selectedUser.id, currentSurveyResponses);
-      console.log("Progress saved successfully");
-    }
+  const handlePause = async () => {
+    if (isProcessing) return; // Prevent multiple actions while processing
     
-    // Now navigate to dashboard
-    navigate('/dashboard');
-  } catch (error) {
-    console.error('Error saving survey progress:', error);
-    alert('There was an error saving your progress, but you can continue later.');
-    navigate('/dashboard');
-  } finally {
-    setIsProcessing(false);
-  }
-};
+    setIsProcessing(true);
+    
+    try {
+      // Save the current progress without marking as completed
+      if (selectedMember && Object.keys(surveyResponses).length > 0) {
+        console.log("Saving survey progress before pausing...");
+        
+        await saveSurveyResponses(
+          familyData.familyId,
+          selectedMember.id,
+          'initial',
+          surveyResponses,
+          false // Not marking as completed
+        );
+        
+        console.log("Progress saved successfully");
+      }
+      
+      // Now navigate to dashboard
+      navigate('/dashboard');
+    } catch (error) {
+      console.error('Error saving survey progress:', error);
+      alert('There was an error saving your progress, but you can continue later.');
+      navigate('/dashboard');
+    } finally {
+      setIsProcessing(false);
+    }
+  };
   
   // Skip question
   const handleSkip = () => {
-    if (currentQuestionIndex < fullQuestionSet.length - 1) {
+    if (currentQuestionIndex < surveyQuestions.length - 1) {
       setCurrentQuestionIndex(prevIndex => prevIndex + 1);
       setSelectedParent(null);
       setShowWeightInfo(false);
@@ -236,7 +258,7 @@ const handlePause = async () => {
   };
   
   // Calculate progress
-  const progress = getSurveyProgress(fullQuestionSet.length);
+  const progress = getSurveyProgress();
   
   // Get weight impact color
   const getWeightImpactColor = (weight) => {
@@ -270,8 +292,11 @@ const handlePause = async () => {
     }
   };
   
+  // Get current question
+  const currentQuestion = surveyQuestions[currentQuestionIndex];
+  
   // If no selected user or no current question, return loading
-  if (!selectedUser || !currentQuestion) {
+  if (!selectedMember || !currentQuestion) {
     return <div className="flex items-center justify-center h-screen">Loading...</div>;
   }
   
@@ -283,12 +308,12 @@ const handlePause = async () => {
           <div className="flex items-center">
             <div className="w-8 h-8 rounded-full overflow-hidden mr-2">
               <img 
-                src={selectedUser.profilePicture} 
-                alt={selectedUser.name}
+                src={selectedMember.profilePicture} 
+                alt={selectedMember.name}
                 className="w-full h-full object-cover"
               />
             </div>
-            <span>{selectedUser.name}</span>
+            <span>{selectedMember.name}</span>
           </div>
           <button 
             onClick={handleLogout}
@@ -306,7 +331,7 @@ const handlePause = async () => {
           <div className="max-w-3xl mx-auto">
             <div className="bg-white rounded-lg shadow p-4 mb-4">
               <div className="flex justify-between items-center mb-4">
-                <h2 className="text-lg font-semibold">All Questions ({fullQuestionSet.length})</h2>
+                <h2 className="text-lg font-semibold">All Questions ({surveyQuestions.length})</h2>
                 <button 
                   onClick={toggleQuestionList}
                   className="text-blue-600 text-sm"
@@ -316,8 +341,8 @@ const handlePause = async () => {
               </div>
                 
               <div className="space-y-1 max-h-[70vh] overflow-y-auto">
-                {fullQuestionSet.map((q, index) => {
-                  const answered = currentSurveyResponses[q.id] !== undefined;
+                {surveyQuestions.map((q, index) => {
+                  const answered = surveyResponses[q.id] !== undefined;
                   return (
                     <div 
                       key={q.id} 
@@ -347,11 +372,11 @@ const handlePause = async () => {
                         {answered && (
                           <div className="flex-shrink-0 ml-2">
                             <span className={`px-2 py-1 text-xs rounded ${
-                              currentSurveyResponses[q.id] === 'Mama' 
+                              surveyResponses[q.id] === 'Mama' 
                                 ? 'bg-purple-100 text-purple-800' 
                                 : 'bg-blue-100 text-blue-800'
                             }`}>
-                              {currentSurveyResponses[q.id]}
+                              {surveyResponses[q.id]}
                             </span>
                           </div>
                         )}
@@ -414,7 +439,7 @@ const handlePause = async () => {
                       <div className="w-full bg-gray-200 h-1.5 mt-1 rounded-full overflow-hidden">
                         <div 
                           className="bg-blue-500 h-full rounded-full" 
-                          style={{ width: `${(currentQuestion.baseWeight / 5) * 100}%` }}
+                          style={{ width: `${(currentQuestion.baseWeight / a5) * 100}%` }}
                         ></div>
                       </div>
                     </div>
@@ -616,7 +641,7 @@ const handlePause = async () => {
             {/* Progress */}
             <div className="text-center">
               <p className="font-medium mb-2">
-                Question {currentQuestionIndex + 1} of {fullQuestionSet.length}
+                Question {currentQuestionIndex + 1} of {surveyQuestions.length}
               </p>
               <div className="h-2 bg-gray-200 rounded-full overflow-hidden">
                 <div 

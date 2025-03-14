@@ -1,8 +1,8 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { HelpCircle, Volume2, ArrowRight, ArrowLeft, Star, Medal, Info, ChevronDown, ChevronUp } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
-import { useFamily } from '../../contexts/FamilyContext';
-import { useSurvey } from '../../contexts/SurveyContext';
+import { useFamily } from '../../hooks/useFamily';
+import { useSurvey } from '../../hooks/useSurvey';
 
 // Task illustrations as SVG components
 const TaskIllustrations = {
@@ -137,23 +137,28 @@ const TaskIllustrations = {
 
 const KidFriendlySurvey = ({ surveyType = "initial" }) => {
   const navigate = useNavigate();
-  const { 
-    fullQuestionSet, 
-    updateSurveyResponse, 
-    resetSurvey, 
-    getSurveyProgress,
-    generateWeeklyQuestions,
-    currentSurveyResponses
-  } = useSurvey();
   
+  // Updated to use new hooks
   const { 
-    selectedUser, 
-    familyMembers, 
-    completeInitialSurvey,
-    completeWeeklyCheckIn,
-    saveSurveyProgress,
-    currentWeek 
+    familyData,
+    familyMembers,
+    selectedMember,
+    loading: familyLoading,
+    error: familyError
   } = useFamily();
+  
+  const {
+    surveyQuestions,
+    surveyResponses,
+    loading: surveyLoading,
+    error: surveyError,
+    generateQuestions,
+    loadSurveyResponses,
+    saveSurveyResponses,
+    updateSurveyResponse,
+    resetSurvey,
+    getSurveyProgress
+  } = useSurvey();
   
   // State
   const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0);
@@ -173,27 +178,37 @@ const KidFriendlySurvey = ({ surveyType = "initial" }) => {
   const [animation, setAnimation] = useState(null);
   const [isProcessing, setIsProcessing] = useState(false);
   
-  
   // Refs
   const keyboardInitialized = useRef(false);
-
   const questionTimerRef = useRef(null);
-  const keyBlockerRef = useRef(false); // Add this line
-
+  const keyBlockerRef = useRef(false);
 
   // Redirect if no user is selected
   useEffect(() => {
-    if (!selectedUser) {
+    if (!selectedMember) {
       navigate('/');
     }
-  }, [selectedUser, navigate]);
+  }, [selectedMember, navigate]);
   
-  // Reset survey when component mounts
+  // Initialize survey with new hooks architecture
   useEffect(() => {
     resetSurvey();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []); 
-
+    
+    // Generate appropriate questions based on survey type
+    if (surveyType === "weekly" && familyData?.currentWeek) {
+      const weeklyQuestions = generateQuestions('weekly', familyData.currentWeek);
+      console.log(`Generated ${weeklyQuestions.length} weekly questions for week ${familyData.currentWeek}`);
+    } else {
+      const initialQuestions = generateQuestions('initial');
+      console.log(`Generated ${initialQuestions.length} initial survey questions`);
+    }
+    
+    // Load saved survey responses if available
+    if (familyData?.familyId && selectedMember?.id) {
+      loadSurveyResponses(familyData.familyId, selectedMember.id, surveyType);
+    }
+  }, [familyData, selectedMember, surveyType, generateQuestions, loadSurveyResponses, resetSurvey]);
+  
   // Cleanup function when component unmounts
   useEffect(() => {
     return () => {
@@ -213,24 +228,13 @@ const KidFriendlySurvey = ({ surveyType = "initial" }) => {
   
   // Set up questions for kids based on survey type
   useEffect(() => {
-    if (!fullQuestionSet || fullQuestionSet.length === 0) return;
+    if (!surveyQuestions || surveyQuestions.length === 0) return;
     
-    let questionSet;
-    
-    // Determine which questions to use based on the survey type
-    if (surveyType === "weekly") {
-      console.log(`Generating weekly questions for week ${currentWeek}`);
-      questionSet = generateWeeklyQuestions(currentWeek);
-      console.log(`Generated ${questionSet.length} weekly questions`);
-    } else {
-      console.log(`Using full question set with ${fullQuestionSet.length} questions`);
-      questionSet = fullQuestionSet;
-    }
-    
+    let questionSet = surveyQuestions;
     let filteredList = questionSet;
     
     // For weekly survey, use exactly 20 questions for any child
-    if (surveyType === "weekly" && selectedUser && selectedUser.role === 'child') {
+    if (surveyType === "weekly" && selectedMember && selectedMember.role === 'child') {
       const categories = [
         "Visible Household Tasks",
         "Invisible Household Tasks",
@@ -251,7 +255,7 @@ const KidFriendlySurvey = ({ surveyType = "initial" }) => {
       filteredList = weeklyKidQuestions;
     } 
     // For initial survey, filter based on age
-    else if (selectedUser && selectedUser.role === 'child' && selectedUser.age < 8) {
+    else if (selectedMember && selectedMember.role === 'child' && selectedMember.age < 8) {
       // Pick simpler questions - 10 from each category
       const categories = [
         "Visible Household Tasks",
@@ -271,7 +275,7 @@ const KidFriendlySurvey = ({ surveyType = "initial" }) => {
       });
       
       filteredList = simpleQuestions;
-    } else if (selectedUser && selectedUser.role === 'child' && selectedUser.age < 18) {
+    } else if (selectedMember && selectedMember.role === 'child' && selectedMember.age < 18) {
       // For older children, use more questions (60 total)
       const categories = [
         "Visible Household Tasks",
@@ -294,13 +298,13 @@ const KidFriendlySurvey = ({ surveyType = "initial" }) => {
     }
     
     setQuestions(filteredList || []);    
-  }, [fullQuestionSet, selectedUser, surveyType, currentWeek, generateWeeklyQuestions]);
+  }, [surveyQuestions, selectedMember, surveyType]);
   
-  // FIXED: Enhanced useEffect to properly restore survey progress
+  // Restore survey progress
   useEffect(() => {
     // Only run this if we have a user and loaded questions
-    if (selectedUser && questions.length > 0 && currentSurveyResponses && Object.keys(currentSurveyResponses).length > 0) {
-      console.log("Checking for previously saved progress...", currentSurveyResponses);
+    if (selectedMember && questions.length > 0 && surveyResponses && Object.keys(surveyResponses).length > 0) {
+      console.log("Checking for previously saved progress...", surveyResponses);
       
       // Find the last answered question index
       let lastAnsweredIndex = -1;
@@ -308,8 +312,8 @@ const KidFriendlySurvey = ({ surveyType = "initial" }) => {
       
       // First, extract all responses that match our question IDs
       questions.forEach((question, index) => {
-        if (currentSurveyResponses[question.id]) {
-          questionResponses[question.id] = currentSurveyResponses[question.id];
+        if (surveyResponses[question.id]) {
+          questionResponses[question.id] = surveyResponses[question.id];
           lastAnsweredIndex = Math.max(lastAnsweredIndex, index);
         }
       });
@@ -342,96 +346,97 @@ const KidFriendlySurvey = ({ surveyType = "initial" }) => {
         console.log(`Restored to question ${nextIndex + 1} with ${Object.keys(questionResponses).length} saved answers`);
       }
     }
-  }, [selectedUser, questions, currentSurveyResponses]);
+  }, [selectedMember, questions, surveyResponses]);
   
-// Simple function without useCallback
-const handleSelectParent = (parent) => {
-  // Prevent multiple calls while processing
-  if (isProcessing) {
-    console.log("Ignoring selection - already processing");
-    return;
-  }
-  
-  // Set processing state immediately
-  setIsProcessing(true);
-  console.log(`Selected ${parent} for question ${currentQuestionIndex + 1}`);
-  
-  // Cancel any existing timers
-  if (questionTimerRef.current) {
-    clearTimeout(questionTimerRef.current);
-    questionTimerRef.current = null;
-  }
-  
-  // Set the selected parent for UI feedback
-  setSelectedParent(parent);
-  
-  // Get current question
-  const currentQuestion = questions[currentQuestionIndex];
-  if (!currentQuestion) {
-    console.error("No current question found");
-    setIsProcessing(false);
-    return;
-  }
-  
-  // Record response
-  const updatedResponses = {
-    ...userResponses,
-    [currentQuestion.id]: parent
-  };
-  setUserResponses(updatedResponses);
-  
-  // Update parent context
-  updateSurveyResponse(currentQuestion.id, parent);
-  
-  // Show selection animation
-  setAnimation(`selected-${parent.toLowerCase()}`);
-  
-  // Store current index in a local variable to avoid closure issues
-  const currentIdx = currentQuestionIndex;
-  
-  // Wait for a moment to show the selection
-  questionTimerRef.current = setTimeout(() => {
-    // Clear animation
-    setAnimation(null);
+  // Handle parent selection
+  const handleSelectParent = (parent) => {
+    // Prevent multiple calls while processing
+    if (isProcessing) {
+      console.log("Ignoring selection - already processing");
+      return;
+    }
     
-    // Then decide whether to go to next question or complete survey
+    // Set processing state immediately
+    setIsProcessing(true);
+    console.log(`Selected ${parent} for question ${currentQuestionIndex + 1}`);
+    
+    // Cancel any existing timers
+    if (questionTimerRef.current) {
+      clearTimeout(questionTimerRef.current);
+      questionTimerRef.current = null;
+    }
+    
+    // Set the selected parent for UI feedback
+    setSelectedParent(parent);
+    
+    // Get current question
+    const currentQuestion = questions[currentQuestionIndex];
+    if (!currentQuestion) {
+      console.error("No current question found");
+      setIsProcessing(false);
+      return;
+    }
+    
+    // Record response
+    const updatedResponses = {
+      ...userResponses,
+      [currentQuestion.id]: parent
+    };
+    setUserResponses(updatedResponses);
+    
+    // Update parent context
+    updateSurveyResponse(currentQuestion.id, parent);
+    
+    // Show selection animation
+    setAnimation(`selected-${parent.toLowerCase()}`);
+    
+    // Store current index in a local variable to avoid closure issues
+    const currentIdx = currentQuestionIndex;
+    
+    // Wait for a moment to show the selection
     questionTimerRef.current = setTimeout(() => {
-      if (currentIdx < questions.length - 1) {
-        // Move to next question - use exact index instead of functional update
-        const nextIndex = currentIdx + 1;
-        console.log(`Moving to question ${nextIndex + 1} (from ${currentIdx + 1})`);
-        setCurrentQuestionIndex(nextIndex);
-        
-        // Update game state based on answer - use currentIdx instead of currentQuestionIndex
-        setGameStatus(prev => ({
-          ...prev,
-          mamaPosition: parent === 'Mama' ? currentIdx + 1 : prev.mamaPosition,
-          papaPosition: parent === 'Papa' ? currentIdx + 1 : prev.papaPosition,
-          stars: (currentIdx + 1) % 20 === 0 ? prev.stars + 1 : prev.stars
-        }));
-        
-        // Show reward if appropriate
-        if ((currentIdx + 1) % 20 === 0) {
-          setShowReward(true);
-          setTotalStars(prev => prev + 1);
+      // Clear animation
+      setAnimation(null);
+      
+      // Then decide whether to go to next question or complete survey
+      questionTimerRef.current = setTimeout(() => {
+        if (currentIdx < questions.length - 1) {
+          // Move to next question - use exact index instead of functional update
+          const nextIndex = currentIdx + 1;
+          console.log(`Moving to question ${nextIndex + 1} (from ${currentIdx + 1})`);
+          setCurrentQuestionIndex(nextIndex);
           
-          // Hide reward after delay
-          setTimeout(() => {
-            setShowReward(false);
-          }, 3000);
+          // Update game state based on answer - use currentIdx instead of currentQuestionIndex
+          setGameStatus(prev => ({
+            ...prev,
+            mamaPosition: parent === 'Mama' ? currentIdx + 1 : prev.mamaPosition,
+            papaPosition: parent === 'Papa' ? currentIdx + 1 : prev.papaPosition,
+            stars: (currentIdx + 1) % 20 === 0 ? prev.stars + 1 : prev.stars
+          }));
+          
+          // Show reward if appropriate
+          if ((currentIdx + 1) % 20 === 0) {
+            setShowReward(true);
+            setTotalStars(prev => prev + 1);
+            
+            // Hide reward after delay
+            setTimeout(() => {
+              setShowReward(false);
+            }, 3000);
+          }
+          
+          // Reset selection state
+          setSelectedParent(null);
+          setIsProcessing(false);
+        } else {
+          // Complete the survey
+          handleCompleteSurvey();
         }
-        
-        // Reset selection state
-        setSelectedParent(null);
-        setIsProcessing(false);
-      } else {
-        // Complete the survey
-        handleCompleteSurvey();
-      }
+      }, 500);
     }, 500);
-  }, 500);
-};
-  // FIXED: Set up keyboard shortcuts with better debouncing protection
+  };
+  
+  // Set up keyboard shortcuts
   useEffect(() => {
     // Create a ref to track processing state that persists between renders
     let keyBlocked = false;
@@ -464,8 +469,6 @@ const handleSelectParent = (parent) => {
       }, 1500);
     };
     
-
-
     // Add the listener - use capture phase to get the event first
     window.addEventListener('keydown', handleKeyPress, { capture: true });
     keyboardInitialized.current = true;
@@ -475,7 +478,7 @@ const handleSelectParent = (parent) => {
       window.removeEventListener('keydown', handleKeyPress, { capture: true });
       keyboardInitialized.current = false;
     };
-  }, [isProcessing, viewingQuestionList, handleSelectParent]);
+  }, [isProcessing, viewingQuestionList]);
   
   // Find Mama and Papa users from family members
   const mamaUser = familyMembers.find(m => m.roleType === 'Mama' || m.name === 'Mama');
@@ -600,7 +603,7 @@ const handleSelectParent = (parent) => {
     return illustrations[questionHash % illustrations.length];
   }
 
-  // Handle pause function
+  // Updated handle pause function
   const handlePauseSurvey = async () => {
     if (isProcessing) return; // Prevent actions while processing
     
@@ -608,17 +611,22 @@ const handleSelectParent = (parent) => {
     
     try {
       // Ensure we have the latest responses from state
-      const allResponses = {...currentSurveyResponses, ...userResponses};
+      const allResponses = {...surveyResponses, ...userResponses};
       
       // Save the current progress without marking as completed
-      if (selectedUser && Object.keys(allResponses).length > 0) {
+      if (selectedMember && Object.keys(allResponses).length > 0 && familyData?.familyId) {
         console.log("Saving survey progress before pausing...");
         console.log("Responses to save:", allResponses);
-        if (surveyType === "weekly") {
-          await saveSurveyProgress(selectedUser.id, allResponses);
-        } else {
-          await saveSurveyProgress(selectedUser.id, allResponses);
-        }
+        
+        // Save responses without marking as completed
+        await saveSurveyResponses(
+          familyData.familyId,
+          selectedMember.id,
+          surveyType,
+          allResponses,
+          false // Not marking as completed
+        );
+        
         console.log("Progress saved successfully");
       }
       
@@ -633,7 +641,7 @@ const handleSelectParent = (parent) => {
     }
   };
 
-  // Handle switch user function
+  // Updated handle switch user function
   const handleSwitchUser = async () => {
     if (isProcessing) return; // Prevent actions while processing
     
@@ -641,17 +649,22 @@ const handleSelectParent = (parent) => {
     
     try {
       // Ensure we have the latest responses from state
-      const allResponses = {...currentSurveyResponses, ...userResponses};
+      const allResponses = {...surveyResponses, ...userResponses};
       
       // Save the current progress without marking as completed
-      if (selectedUser && Object.keys(allResponses).length > 0) {
+      if (selectedMember && Object.keys(allResponses).length > 0 && familyData?.familyId) {
         console.log("Saving survey progress before switching user...");
         console.log("Responses to save:", allResponses);
-        if (surveyType === "weekly") {
-          await saveSurveyProgress(selectedUser.id, allResponses);
-        } else {
-          await saveSurveyProgress(selectedUser.id, allResponses);
-        }
+        
+        // Save responses without marking as completed
+        await saveSurveyResponses(
+          familyData.familyId,
+          selectedMember.id,
+          surveyType,
+          allResponses,
+          false // Not marking as completed
+        );
+        
         console.log("Progress saved successfully");
       }
       
@@ -666,7 +679,7 @@ const handleSelectParent = (parent) => {
     }
   };
 
-  // Handle survey completion
+  // Updated handle survey completion function
   const handleCompleteSurvey = async () => {
     // Show a big celebration!
     setShowReward(true);
@@ -675,20 +688,25 @@ const handleSelectParent = (parent) => {
       console.log(`Attempting to save ${surveyType} survey data...`);
       
       // Ensure we have the latest responses from state
-      const allResponses = {...currentSurveyResponses, ...userResponses};
+      const allResponses = {...surveyResponses, ...userResponses};
+      
+      if (!familyData?.familyId || !selectedMember?.id) {
+        throw new Error("Missing family or member information");
+      }
       
       // First try to save the data before any navigation
-      if (surveyType === "weekly") {
-        // Save weekly check-in
-        console.log("Completing weekly check-in with responses:", Object.keys(allResponses).length);
-        await completeWeeklyCheckIn(selectedUser.id, currentWeek, allResponses);
-        console.log("Weekly check-in saved successfully");
-      } else {
-        // Save initial survey
-        console.log("Completing initial survey with responses:", Object.keys(allResponses).length);
-        await completeInitialSurvey(selectedUser.id, allResponses);
-        console.log("Initial survey saved successfully");
-      }
+      console.log("Completing survey with responses:", Object.keys(allResponses).length);
+      
+      // Use the new saveSurveyResponses function with isCompleted = true
+      await saveSurveyResponses(
+        familyData.familyId,
+        selectedMember.id,
+        surveyType,
+        allResponses,
+        true // Mark as completed
+      );
+      
+      console.log("Survey saved successfully");
       
       // Only navigate after confirmed save - with error handling
       setTimeout(() => {
@@ -742,6 +760,26 @@ const handleSelectParent = (parent) => {
   // Current question
   const currentQuestion = questions[currentQuestionIndex];
   
+  // Show loading state
+  if (familyLoading || surveyLoading) {
+    return <div className="flex items-center justify-center h-64">Loading fun questions...</div>;
+  }
+  
+  // Show error state if there's an error
+  if (familyError || surveyError) {
+    return (
+      <div className="flex flex-col items-center justify-center h-64">
+        <p className="text-red-500 mb-4">Something went wrong: {familyError || surveyError}</p>
+        <button 
+          onClick={() => navigate('/dashboard')}
+          className="px-4 py-2 bg-blue-500 text-white rounded"
+        >
+          Go back to dashboard
+        </button>
+      </div>
+    );
+  }
+  
   // Only render when questions are loaded
   if (!currentQuestion) {
     return <div className="flex items-center justify-center h-64">Loading fun questions...</div>;
@@ -754,14 +792,14 @@ const handleSelectParent = (parent) => {
         <div className="flex items-center">
           <div className="w-12 h-12 rounded-full overflow-hidden mr-3 border-2 border-indigo-400 shadow-md">
             <img 
-              src={selectedUser?.profilePicture} 
-              alt={selectedUser?.name}
+              src={selectedMember?.profilePicture} 
+              alt={selectedMember?.name}
               className="w-full h-full object-cover"
             />
           </div>
           <div>
             <h2 className="font-bold text-indigo-800 text-xl font-roboto">
-              {selectedUser?.name}'s {surveyType === "weekly" ? "Weekly Adventure" : "Family Survey"}
+              {selectedMember?.name}'s {surveyType === "weekly" ? "Weekly Adventure" : "Family Survey"}
             </h2>
             <div className="flex items-center">
               {[...Array(totalStars)].map((_, i) => (

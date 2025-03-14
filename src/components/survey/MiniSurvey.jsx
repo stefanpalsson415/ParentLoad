@@ -2,15 +2,20 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { Brain } from 'lucide-react';
-
-
-
+import { useSurvey } from '../../hooks/useSurvey';
 
 const MiniSurvey = () => {
   const [currentQuestion, setCurrentQuestion] = useState(0);
   const [responses, setResponses] = useState({});
   const navigate = useNavigate();
+  const location = useLocation();
+  const [pendingFamilyData, setPendingFamilyData] = useState(null);
+  const [isProcessing, setIsProcessing] = useState(false);
   
+  const {
+    error: surveyError,
+    clearError: clearSurveyError
+  } = useSurvey();
   
   // Sample 20 questions covering the different categories
   const questions = [
@@ -42,13 +47,6 @@ const MiniSurvey = () => {
     { id: "q19", text: "Who monitors academic progress?", category: "Invisible Parental Tasks" },
     { id: "q20", text: "Who handles cultural and moral education?", category: "Invisible Parental Tasks" }
   ];
- 
-  const location = useLocation();
-  const [pendingFamilyData, setPendingFamilyData] = useState(null);
-    
-// Add this import at the top if it doesn't exist
-// import { useNavigate, useLocation } from 'react-router-dom';
-
   
   // Effect to load pending family data
   useEffect(() => {
@@ -71,35 +69,42 @@ const MiniSurvey = () => {
   
   // Handle parent selection
   const handleSelectParent = (parent) => {
+    // Prevent multiple submissions while processing
+    if (isProcessing) return;
+    setIsProcessing(true);
+    
     // Save response
     const updatedResponses = {...responses};
     updatedResponses[questions[currentQuestion].id] = parent;
     setResponses(updatedResponses);
     
-    // Move to next question or complete survey
-    if (currentQuestion < questions.length - 1) {
-      setCurrentQuestion(currentQuestion + 1);
-    } else {
-      // Save responses and navigate to results
-      localStorage.setItem('miniSurveyResponses', JSON.stringify(updatedResponses));
-      
-      // Pass along the pending family data if it exists
-      navigate('/mini-results', pendingFamilyData ? {
-        state: {
-          fromMiniSurvey: true,
-          familyData: pendingFamilyData
-        }
-      } : undefined);
-    }
+    // Move to next question or complete survey with a slight delay
+    setTimeout(() => {
+      if (currentQuestion < questions.length - 1) {
+        setCurrentQuestion(currentQuestion + 1);
+        setIsProcessing(false);
+      } else {
+        // Save responses and navigate to results
+        localStorage.setItem('miniSurveyResponses', JSON.stringify(updatedResponses));
+        
+        // Pass along the pending family data if it exists
+        navigate('/mini-results', pendingFamilyData ? {
+          state: {
+            fromMiniSurvey: true,
+            familyData: pendingFamilyData
+          }
+        } : undefined);
+      }
+    }, 300);
   };
   
   const currentQ = questions[currentQuestion];
   
   return (
     <div className="min-h-screen bg-gray-50 py-8">
-  <div className="max-w-2xl mx-auto bg-white rounded-lg shadow p-6">
-    <h1 className="text-2xl font-bold mb-6 text-center font-roboto">Family Balance Mini-Assessment</h1>
-        
+      <div className="max-w-2xl mx-auto bg-white rounded-lg shadow p-6">
+        <h1 className="text-2xl font-bold mb-6 text-center font-roboto">Family Balance Mini-Assessment</h1>
+          
         {/* Progress indicator */}
         <div className="mb-6">
           <div className="flex justify-between text-sm mb-1">
@@ -107,51 +112,53 @@ const MiniSurvey = () => {
             <span>{Math.round(((currentQuestion + 1) / questions.length) * 100)}% complete</span>
           </div>
           <div className="h-2 bg-gray-200 rounded-full">
-  <div 
-    className="h-full bg-black rounded-full transition-all"
-    style={{ width: `${((currentQuestion + 1) / questions.length) * 100}%` }}
-  ></div>
-</div>
+            <div 
+              className="h-full bg-black rounded-full transition-all"
+              style={{ width: `${((currentQuestion + 1) / questions.length) * 100}%` }}
+            ></div>
+          </div>
         </div>
         
         {/* Question */}
-<div className="mb-8">
-  <h2 className="text-xl mb-2 font-roboto">{currentQ.text}</h2>
-  <p className="text-sm text-gray-500 font-roboto">{currentQ.category}</p>
-  
-  {/* Add a simplified AI explanation */}
-  <div className="mt-3 p-3 bg-purple-50 border border-purple-200 rounded">
-    <div className="flex items-start">
-      <Brain size={16} className="text-purple-600 mr-2 mt-0.5 flex-shrink-0" />
-      <div>
-        <p className="text-purple-800 font-medium text-sm mb-1">Why This Question Matters:</p>
-        <p className="text-purple-800 font-roboto text-sm">
-          This question helps identify who handles key {currentQ.category.toLowerCase()} in your family. 
-          Balancing these responsibilities leads to healthier family dynamics and relationships.
-        </p>
-      </div>
-    </div>
-  </div>
-</div>
+        <div className="mb-8">
+          <h2 className="text-xl mb-2 font-roboto">{currentQ.text}</h2>
+          <p className="text-sm text-gray-500 font-roboto">{currentQ.category}</p>
+          
+          {/* Add a simplified AI explanation */}
+          <div className="mt-3 p-3 bg-purple-50 border border-purple-200 rounded">
+            <div className="flex items-start">
+              <Brain size={16} className="text-purple-600 mr-2 mt-0.5 flex-shrink-0" />
+              <div>
+                <p className="text-purple-800 font-medium text-sm mb-1">Why This Question Matters:</p>
+                <p className="text-purple-800 font-roboto text-sm">
+                  This question helps identify who handles key {currentQ.category.toLowerCase()} in your family. 
+                  Balancing these responsibilities leads to healthier family dynamics and relationships.
+                </p>
+              </div>
+            </div>
+          </div>
+        </div>
         
         {/* Answer options */}
-<div className="grid grid-cols-2 gap-4 mb-8">
-  <button 
-    onClick={() => handleSelectParent('Mama')}
-    className="p-4 bg-purple-100 hover:bg-purple-200 rounded-lg text-center transition-all"
-  >
-    <span className="block font-bold text-lg text-purple-800 mb-1 font-roboto">Mama</span>
-    <span className="text-sm text-purple-600 font-roboto">Click to select</span>
-  </button>
-  
-  <button 
-    onClick={() => handleSelectParent('Papa')}
-    className="p-4 bg-blue-100 hover:bg-blue-200 rounded-lg text-center transition-all"
-  >
-    <span className="block font-bold text-lg text-blue-800 mb-1 font-roboto">Papa</span>
-    <span className="text-sm text-blue-600 font-roboto">Click to select</span>
-  </button>
-</div>
+        <div className="grid grid-cols-2 gap-4 mb-8">
+          <button 
+            onClick={() => handleSelectParent('Mama')}
+            className="p-4 bg-purple-100 hover:bg-purple-200 rounded-lg text-center transition-all"
+            disabled={isProcessing}
+          >
+            <span className="block font-bold text-lg text-purple-800 mb-1 font-roboto">Mama</span>
+            <span className="text-sm text-purple-600 font-roboto">Click to select</span>
+          </button>
+          
+          <button 
+            onClick={() => handleSelectParent('Papa')}
+            className="p-4 bg-blue-100 hover:bg-blue-200 rounded-lg text-center transition-all"
+            disabled={isProcessing}
+          >
+            <span className="block font-bold text-lg text-blue-800 mb-1 font-roboto">Papa</span>
+            <span className="text-sm text-blue-600 font-roboto">Click to select</span>
+          </button>
+        </div>
       </div>
     </div>
   );

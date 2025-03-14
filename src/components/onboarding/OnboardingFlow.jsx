@@ -2,158 +2,124 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useOnboarding } from '../../hooks/useOnboarding';
-import { useAuth } from '../../hooks/useAuth';
-
-// Import your onboarding step components
 import FamilyNameStep from './FamilyNameStep';
 import ParentsStep from './ParentsStep';
 import ChildrenStep from './ChildrenStep';
 import PrioritiesStep from './PrioritiesStep';
-import ReviewStep from './ReviewStep';
+import LoadingScreen from '../common/LoadingScreen';
 
 const OnboardingFlow = () => {
-  const navigate = useNavigate();
-  const { currentUser } = useAuth();
-  const { 
-    onboardingData, 
-    currentStep, 
-    loading, 
-    error, 
-    updateStepData, 
-    nextStep, 
-    prevStep, 
+  const {
+    onboardingData,
+    currentStep,
+    loading,
+    error,
+    updateStepData,
+    nextStep,
+    prevStep,
+    goToStep,
     completeOnboarding,
     clearError
   } = useOnboarding();
-
-  // Redirect authenticated users if they're not doing onboarding
+  
+  const [showError, setShowError] = useState(false);
+  const navigate = useNavigate();
+  
+  // Display error messages
   useEffect(() => {
-    if (currentUser) {
-      // If user is already logged in, redirect to dashboard
-      // unless they're specifically starting the onboarding flow
-      const isStartingOnboarding = sessionStorage.getItem('startingOnboarding');
-      if (!isStartingOnboarding) {
-        navigate('/dashboard');
-      }
+    if (error) {
+      setShowError(true);
+      const timer = setTimeout(() => {
+        setShowError(false);
+        clearError();
+      }, 5000);
+      
+      return () => clearTimeout(timer);
     }
-  }, [currentUser, navigate]);
-
-  // Handle step submission
-  const handleStepSubmit = async (stepName, data) => {
-    // Clear any previous errors
-    clearError();
-    
-    // Update data for this step
-    const success = updateStepData(stepName, data);
-    if (!success) return;
-    
-    // If this is the final step, complete onboarding
-    if (currentStep === 5) {
-      const family = await completeOnboarding();
-      if (family) {
-        // Clear the onboarding flag
-        sessionStorage.removeItem('startingOnboarding');
-        // Navigate to the survey
-        navigate('/survey');
-      }
-    } else {
-      // Otherwise, go to the next step
-      nextStep();
+  }, [error, clearError]);
+  
+  // Handle completion of onboarding
+  const handleComplete = async () => {
+    const result = await completeOnboarding();
+    if (result) {
+      navigate('/loading', { state: { destination: '/survey', message: 'Family created successfully! Setting up your survey...' } });
     }
   };
-
-  // Render the current step
+  
+  // Show loading screen while processing
+  if (loading) {
+    return <LoadingScreen message="Setting up your family..." />;
+  }
+  
+  // Render the appropriate step
   const renderStep = () => {
     switch (currentStep) {
       case 1:
         return (
-          <FamilyNameStep 
-            initialData={onboardingData}
-            onSubmit={(data) => handleStepSubmit('familyName', data)}
-            loading={loading}
-            error={error}
+          <FamilyNameStep
+            onboardingData={onboardingData}
+            updateStepData={updateStepData}
+            nextStep={nextStep}
           />
         );
       case 2:
         return (
-          <ParentsStep 
-            initialData={onboardingData}
-            onSubmit={(data) => handleStepSubmit('parents', data)}
-            onBack={prevStep}
-            loading={loading}
-            error={error}
+          <ParentsStep
+            onboardingData={onboardingData}
+            updateStepData={updateStepData}
+            nextStep={nextStep}
+            prevStep={prevStep}
           />
         );
       case 3:
         return (
-          <ChildrenStep 
-            initialData={onboardingData}
-            onSubmit={(data) => handleStepSubmit('children', data)}
-            onBack={prevStep}
-            loading={loading}
-            error={error}
+          <ChildrenStep
+            onboardingData={onboardingData}
+            updateStepData={updateStepData}
+            nextStep={nextStep}
+            prevStep={prevStep}
           />
         );
       case 4:
         return (
-          <PrioritiesStep 
-            initialData={onboardingData}
-            onSubmit={(data) => handleStepSubmit('priorities', data)}
-            onBack={prevStep}
-            loading={loading}
-            error={error}
-          />
-        );
-      case 5:
-        return (
-          <ReviewStep 
-            data={onboardingData}
-            onSubmit={() => handleStepSubmit('review', {})}
-            onBack={prevStep}
-            loading={loading}
-            error={error}
+          <PrioritiesStep
+            onboardingData={onboardingData}
+            updateStepData={updateStepData}
+            nextStep={handleComplete}
+            prevStep={prevStep}
+            completeOnboarding={completeOnboarding}
           />
         );
       default:
-        return <div>Invalid step</div>;
+        return <div>Unknown step</div>;
     }
   };
-
+  
   return (
-    <div className="min-h-screen bg-gray-50 pt-10 pb-16">
-      <div className="max-w-3xl mx-auto px-4">
-        {/* Progress indicator */}
-        <div className="mb-8">
-          <div className="flex items-center justify-between">
-            {[1, 2, 3, 4, 5].map((step) => (
-              <div 
-                key={step}
-                className={`w-10 h-10 rounded-full flex items-center justify-center ${
-                  step === currentStep
-                    ? 'bg-blue-600 text-white'
-                    : step < currentStep
-                      ? 'bg-green-500 text-white'
-                      : 'bg-gray-200 text-gray-500'
-                }`}
-              >
-                {step}
-              </div>
-            ))}
-          </div>
-          <div className="relative mt-2">
-            <div className="absolute left-0 right-0 h-1 bg-gray-200 top-0"></div>
-            <div 
-              className="absolute left-0 h-1 bg-blue-600 top-0"
-              style={{ width: `${((currentStep - 1) / 4) * 100}%` }}
-            ></div>
-          </div>
+    <div className="min-h-screen bg-gray-50 py-12">
+      {/* Progress indicator */}
+      <div className="max-w-md mx-auto mb-8">
+        <div className="flex justify-between items-center mb-2">
+          <span className="text-sm text-gray-600">Step {currentStep} of 4</span>
+          <span className="text-sm text-gray-600">{Math.round((currentStep / 4) * 100)}% Complete</span>
         </div>
-        
-        {/* Step content */}
-        <div className="bg-white rounded-lg shadow-sm p-6">
-          {renderStep()}
+        <div className="h-2 w-full bg-gray-200 rounded-full overflow-hidden">
+          <div 
+            className="h-full bg-blue-500 transition-all duration-300"
+            style={{ width: `${(currentStep / 4) * 100}%` }}
+          ></div>
         </div>
       </div>
+      
+      {/* Error message */}
+      {showError && (
+        <div className="max-w-md mx-auto mb-4 p-3 bg-red-100 text-red-700 rounded-md">
+          {error}
+        </div>
+      )}
+      
+      {/* Step content */}
+      {renderStep()}
     </div>
   );
 };
