@@ -1,6 +1,7 @@
+// src/components/dashboard/tabs/SurveysTab.jsx
 import React, { useState, useEffect } from 'react';
 import { CheckCircle, Calendar, X, Edit, AlertCircle } from 'lucide-react';
-import { useFamily } from '../../../contexts/FamilyContext';
+import { useFamily } from '../../../hooks/useFamily';
 
 const SurveysTab = ({ onStartWeeklyCheckIn }) => {
   const { 
@@ -380,7 +381,7 @@ const SurveysTab = ({ onStartWeeklyCheckIn }) => {
       
       {/* Survey Explanation */}
       <div className="bg-white rounded-lg shadow p-6">
-        <h3 className="text-lg font-semibold mb-3">About ParentLoad Surveys</h3>
+        <h3 className="text-lg font-semibold mb-3">About Allie Surveys</h3>
         <div className="space-y-4">
           <div className="flex items-start">
             <div className="mr-3 flex-shrink-0 mt-1">

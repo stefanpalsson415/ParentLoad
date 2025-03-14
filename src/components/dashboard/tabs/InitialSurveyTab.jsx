@@ -1,436 +1,397 @@
+// src/components/dashboard/tabs/InitialSurveyTab.jsx
 import React, { useState, useEffect } from 'react';
-import { Filter, Info, ChevronDown, ChevronUp, Lightbulb, User, ArrowRight } from 'lucide-react';
-import { useFamily } from '../../../contexts/FamilyContext';
-import { useSurvey } from '../../../contexts/SurveyContext';
 import { 
-  RadarChart, PolarGrid, PolarAngleAxis, PolarRadiusAxis, 
-  Radar, Legend, ResponsiveContainer 
-} from 'recharts';
+  ClipboardList, BarChart3, Scale, Search, 
+  SlidersHorizontal, ChevronDown, ChevronUp
+} from 'lucide-react';
+import { PieChart, Pie, Cell, ResponsiveContainer, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend } from 'recharts';
+import { useFamily } from '../../../hooks/useFamily';
+import { useSurvey } from '../../../hooks/useSurvey';
 
 const InitialSurveyTab = () => {
   const { 
-    familyMembers, 
-    surveyResponses
+    familyData,
+    familyMembers,
+    surveyResponses,
+    weekHistory
   } = useFamily();
   
-  const { fullQuestionSet } = useSurvey();
+  const {
+    fullQuestionSet,
+    calculateBalance,
+    getQuestionsByCategory,
+    getHighImpactQuestions
+  } = useSurvey();
   
-  // State for filters and expanded sections
-  const [radarFilter, setRadarFilter] = useState('all'); // 'all', 'parents', 'children'
-  const [expandedSections, setExpandedSections] = useState({
-    categories: true,
-    insights: true,
-    responses: false
+  const [categoryFilter, setCategoryFilter] = useState('all');
+  const [searchTerm, setSearchTerm] = useState('');
+  const [showWeights, setShowWeights] = useState(false);
+  const [expandedQuestions, setExpandedQuestions] = useState({});
+  const [balanceData, setBalanceData] = useState({
+    overallBalance: { mama: 50, papa: 50 },
+    categoryBalance: {}
   });
-  const [selectedMember, setSelectedMember] = useState(null);
-  const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0);
   
-  // Toggle section expansion
-  const toggleSection = (section) => {
-    setExpandedSections(prev => ({
+  const categories = [
+    "Visible Household Tasks",
+    "Invisible Household Tasks",
+    "Visible Parental Tasks",
+    "Invisible Parental Tasks"
+  ];
+
+  // Load initial survey results on component mount
+  useEffect(() => {
+    if (fullQuestionSet && Object.keys(surveyResponses).length > 0) {
+      // If we have direct history data, use that
+      if (weekHistory && weekHistory.initial) {
+        setBalanceData({
+          overallBalance: weekHistory.initial.balance || { mama: 50, papa: 50 },
+          categoryBalance: weekHistory.initial.categoryBalance || {}
+        });
+      } 
+      // Otherwise calculate balance
+      else {
+        // Get family priorities for calculation
+        const familyPriorities = familyData?.priorities || {
+          highestPriority: "Invisible Parental Tasks",
+          secondaryPriority: "Visible Parental Tasks",
+          tertiaryPriority: "Invisible Household Tasks"
+        };
+        
+        // Calculate balance scores
+        const balanceScores = calculateBalance();
+        setBalanceData(balanceScores || {
+          overallBalance: { mama: 50, papa: 50 },
+          categoryBalance: {}
+        });
+      }
+    }
+  }, [fullQuestionSet, surveyResponses, weekHistory, familyData, calculateBalance]);
+
+  // Toggle expanded state for a question
+  const toggleQuestionExpanded = (questionId) => {
+    setExpandedQuestions(prev => ({
       ...prev,
-      [section]: !prev[section]
+      [questionId]: !prev[questionId]
     }));
   };
-  
-  // Sample radar chart data based on family's task distribution
-  const getRadarData = (filter) => {
-    // This would be calculated from actual survey responses
-    // Based on the filter, we'd show different data views
-    switch(filter) {
-      case 'parents':
-        return [
-          {
-            category: "Visible Household",
-            mama: 68,
-            papa: 32
-          },
-          {
-            category: "Invisible Household",
-            mama: 80,
-            papa: 20
-          },
-          {
-            category: "Visible Parental",
-            mama: 58,
-            papa: 42
-          },
-          {
-            category: "Invisible Parental",
-            mama: 75,
-            papa: 25
-          }
-        ];
-      case 'children':
-        return [
-          {
-            category: "Visible Household",
-            mama: 62,
-            papa: 38
-          },
-          {
-            category: "Invisible Household",
-            mama: 70,
-            papa: 30
-          },
-          {
-            category: "Visible Parental",
-            mama: 50,
-            papa: 50
-          },
-          {
-            category: "Invisible Parental",
-            mama: 65,
-            papa: 35
-          }
-        ];
-      case 'all':
-      default:
-        return [
-          {
-            category: "Visible Household",
-            mama: 65,
-            papa: 35
-          },
-          {
-            category: "Invisible Household",
-            mama: 75,
-            papa: 25
-          },
-          {
-            category: "Visible Parental",
-            mama: 55,
-            papa: 45
-          },
-          {
-            category: "Invisible Parental",
-            mama: 70,
-            papa: 30
-          }
-        ];
-    }
-  };
-  
-  // Get key insights based on data
-  const getKeyInsights = () => {
-    // This would be generated based on actual data analysis
-    return [
-      {
-        type: 'challenge',
-        title: 'Mental Load Imbalance',
-        description: 'There\'s a significant 75/25 imbalance in Invisible Household Tasks, with Mama carrying most of the mental load.',
-        icon: <Info size={20} className="text-amber-600" />
-      },
-      {
-        type: 'insight',
-        title: 'Children See More Balance',
-        description: 'Children perceive the workload as more balanced than the parents do themselves, especially for Visible Parental Tasks.',
-        icon: <Lightbulb size={20} className="text-blue-600" />
-      },
-      {
-        type: 'actionable',
-        title: 'Starting Point',
-        description: 'The biggest opportunity is sharing the mental load of household management and planning.',
-        icon: <ArrowRight size={20} className="text-purple-600" />
-      }
-    ];
-  };
-  
-  // Navigate to next question
-  const nextQuestion = () => {
-    if (currentQuestionIndex < fullQuestionSet.length - 1) {
-      setCurrentQuestionIndex(currentQuestionIndex + 1);
-    }
-  };
-  
-  // Navigate to previous question
-  const prevQuestion = () => {
-    if (currentQuestionIndex > 0) {
-      setCurrentQuestionIndex(currentQuestionIndex - 1);
-    }
-  };
-  
-  // Get responses for the current question
-  const getResponsesForCurrentQuestion = () => {
-    const questionId = fullQuestionSet[currentQuestionIndex]?.id;
-    if (!questionId) return {};
+
+  // Filter and search questions
+  const getFilteredQuestions = () => {
+    // Start with all questions or category-specific questions
+    let filteredQuestions = categoryFilter === 'all' 
+      ? fullQuestionSet
+      : getQuestionsByCategory(categoryFilter);
     
-    // In a real implementation, this would fetch actual responses from the surveyResponses data
-    // For now, we'll generate some sample responses
-    const responses = {};
+    // Apply search filter if search term exists
+    if (searchTerm.trim()) {
+      const searchLower = searchTerm.toLowerCase();
+      filteredQuestions = filteredQuestions.filter(question => 
+        question.text.toLowerCase().includes(searchLower) ||
+        question.category.toLowerCase().includes(searchLower)
+      );
+    }
     
-    familyMembers.forEach(member => {
-      // Use actual responses if available, otherwise generate sample ones
-      const memberResponse = surveyResponses[`${member.id}-${questionId}`];
-      responses[member.id] = memberResponse || (Math.random() > 0.5 ? 'Mama' : 'Papa');
+    return filteredQuestions;
+  };
+
+  // Get color for balance visualization
+  const getBalanceColor = (value) => {
+    const imbalance = Math.abs(value - 50);
+    if (imbalance < 10) return "#4ade80"; // Green for good balance
+    if (imbalance < 20) return "#facc15"; // Yellow for moderate imbalance
+    return "#ef4444"; // Red for significant imbalance
+  };
+
+  // Prepare chart data
+  const prepareCategoryChartData = () => {
+    return categories.map(category => {
+      const categoryData = balanceData.categoryBalance[category] || { mama: 50, papa: 50 };
+      return {
+        category: category.replace(' Tasks', ''),
+        mama: Math.round(categoryData.mama || 50),
+        papa: Math.round(categoryData.papa || 50),
+        imbalance: Math.round(Math.abs((categoryData.mama || 50) - (categoryData.papa || 50)))
+      };
     });
-    
-    return responses;
   };
-  
-  // Current question
-  const currentQuestion = fullQuestionSet[currentQuestionIndex];
-  
-  // Get current question responses
-  const currentResponses = getResponsesForCurrentQuestion();
-  
-  // COLORS
-  const MAMA_COLOR = '#8884d8';
-  const PAPA_COLOR = '#82ca9d';
-  
+
+  const chartData = prepareCategoryChartData();
+  const COLORS = ['#8884d8', '#82ca9d'];
+
+  // Get weight impact text
+  const getWeightImpactText = (weight) => {
+    const numWeight = parseFloat(weight);
+    if (numWeight >= 12) return "Very High";
+    if (numWeight >= 9) return "High";
+    if (numWeight >= 6) return "Medium";
+    return "Standard";
+  };
+
   return (
-    <div className="space-y-4">
-      {/* Task Category Distribution */}
-      <div className="bg-white rounded-lg shadow">
-        <div 
-          className="p-4 flex justify-between items-center cursor-pointer hover:bg-gray-50"
-          onClick={() => toggleSection('categories')}
-        >
-          <h3 className="text-lg font-semibold">Initial Survey: Task Category Distribution</h3>
-          {expandedSections.categories ? (
-            <ChevronUp size={20} className="text-gray-500" />
-          ) : (
-            <ChevronDown size={20} className="text-gray-500" />
-          )}
+    <div className="space-y-6">
+      {/* Header */}
+      <div className="bg-white rounded-lg shadow p-4">
+        <div className="flex items-center mb-4">
+          <ClipboardList className="text-blue-500 mr-2" size={20} />
+          <h2 className="text-lg font-semibold">Initial Survey Analysis</h2>
         </div>
         
-        {expandedSections.categories && (
-          <div className="p-6 pt-0">
-            <div className="flex justify-between items-center mb-4">
-              <p className="text-sm text-gray-600">
-                Distribution of responsibilities across the four task categories
-              </p>
-              <div className="flex items-center text-sm">
-                <span className="mr-2">View:</span>
-                <div className="flex border rounded overflow-hidden">
-                  <button 
-                    className={`px-2 py-1 ${radarFilter === 'all' ? 'bg-blue-100 text-blue-700' : 'bg-white'}`}
-                    onClick={() => setRadarFilter('all')}
-                  >
-                    All
-                  </button>
-                  <button 
-                    className={`px-2 py-1 border-l ${radarFilter === 'parents' ? 'bg-blue-100 text-blue-700' : 'bg-white'}`}
-                    onClick={() => setRadarFilter('parents')}
-                  >
-                    Parents
-                  </button>
-                  <button 
-                    className={`px-2 py-1 border-l ${radarFilter === 'children' ? 'bg-blue-100 text-blue-700' : 'bg-white'}`}
-                    onClick={() => setRadarFilter('children')}
-                  >
-                    Children
-                  </button>
-                </div>
-              </div>
-            </div>
-              
-            <div className="h-64 w-full">
-              <ResponsiveContainer width="100%" height="100%">
-                <RadarChart outerRadius="80%" data={getRadarData(radarFilter)}>
-                  <PolarGrid />
-                  <PolarAngleAxis dataKey="category" />
-                  <PolarRadiusAxis angle={30} domain={[0, 100]} />
-                    
-                  <Radar
-                    name="Mama's Tasks"
-                    dataKey="mama"
-                    stroke={MAMA_COLOR}
-                    fill={MAMA_COLOR}
-                    fillOpacity={0.5}
-                  />
-                    
-                  <Radar
-                    name="Papa's Tasks"
-                    dataKey="papa"
-                    stroke={PAPA_COLOR}
-                    fill={PAPA_COLOR}
-                    fillOpacity={0.5}
-                  />
-                    
-                  <Legend />
-                </RadarChart>
-              </ResponsiveContainer>
-            </div>
-              
-            <div className="mt-4 text-sm text-center text-gray-500">
-              The chart shows what percentage of tasks in each category are handled by Mama vs Papa.
-            </div>
-          </div>
-        )}
-      </div>
-        
-      {/* Key Insights */}
-      <div className="bg-white rounded-lg shadow">
-        <div 
-          className="p-4 flex justify-between items-center cursor-pointer hover:bg-gray-50"
-          onClick={() => toggleSection('insights')}
-        >
-          <h3 className="text-lg font-semibold">Initial Survey: Key Insights</h3>
-          {expandedSections.insights ? (
-            <ChevronUp size={20} className="text-gray-500" />
-          ) : (
-            <ChevronDown size={20} className="text-gray-500" />
-          )}
-        </div>
-        
-        {expandedSections.insights && (
-          <div className="p-6 pt-0">
-            <p className="text-sm text-gray-600 mb-4">
-              Actionable insights based on your family's initial survey
-            </p>
-            
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-              {getKeyInsights().map((insight, index) => (
-                <div 
-                  key={index} 
-                  className={`p-4 rounded-lg border ${
-                    insight.type === 'progress' ? 'border-green-200 bg-green-50' :
-                    insight.type === 'challenge' ? 'border-amber-200 bg-amber-50' :
-                    insight.type === 'insight' ? 'border-blue-200 bg-blue-50' :
-                    'border-purple-200 bg-purple-50'
-                  }`}
-                >
-                  <div className="flex items-start">
-                    <div className="mt-1 mr-3">
-                      {insight.icon}
-                    </div>
-                    <div>
-                      <h4 className="font-medium text-sm">{insight.title}</h4>
-                      <p className="text-sm mt-1">{insight.description}</p>
-                    </div>
-                  </div>
-                </div>
-              ))}
-            </div>
-          </div>
-        )}
+        <p className="text-gray-600 mb-4">
+          These results represent your family's baseline balance from the initial assessment.
+          This provides the starting point for measuring your progress over time.
+        </p>
       </div>
       
-      {/* Survey Responses Explorer */}
-      <div className="bg-white rounded-lg shadow">
-        <div 
-          className="p-4 flex justify-between items-center cursor-pointer hover:bg-gray-50"
-          onClick={() => toggleSection('responses')}
-        >
-          <h3 className="text-lg font-semibold">Survey Response Explorer</h3>
-          {expandedSections.responses ? (
-            <ChevronUp size={20} className="text-gray-500" />
-          ) : (
-            <ChevronDown size={20} className="text-gray-500" />
-          )}
+      {/* Balance Overview */}
+      <div className="bg-white rounded-lg shadow p-4">
+        <div className="flex items-center mb-4">
+          <BarChart3 className="text-blue-500 mr-2" size={20} />
+          <h2 className="text-lg font-semibold">Overall Balance</h2>
         </div>
         
-        {expandedSections.responses && (
-          <div className="p-6 pt-0">
-            <p className="text-sm text-gray-600 mb-4">
-              Explore how each family member responded to the initial survey questions
-            </p>
-            
-            {/* Family Member Selection */}
-            <div className="flex items-center overflow-x-auto mb-6 pb-2">
-              <span className="text-sm font-medium mr-3">View Responses:</span>
-              <div className="flex space-x-3">
-                {familyMembers.map(member => (
-                  <div 
-                    key={member.id}
-                    className={`flex flex-col items-center cursor-pointer transition-all ${
-                      selectedMember === member.id ? 'opacity-100 scale-110' : 'opacity-70 hover:opacity-90'
-                    }`}
-                    onClick={() => setSelectedMember(member.id === selectedMember ? null : member.id)}
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+          {/* Overall Balance Pie Chart */}
+          <div className="flex flex-col items-center justify-center">
+            <h3 className="text-center font-medium mb-4">All Tasks</h3>
+            <div className="h-40 w-40">
+              <ResponsiveContainer width="100%" height="100%">
+                <PieChart>
+                  <Pie
+                    data={[
+                      { name: 'Mama', value: Math.round(balanceData.overallBalance?.mama || 50) },
+                      { name: 'Papa', value: Math.round(balanceData.overallBalance?.papa || 50) }
+                    ]}
+                    cx="50%"
+                    cy="50%"
+                    innerRadius={40}
+                    outerRadius={60}
+                    paddingAngle={5}
+                    dataKey="value"
                   >
-                    <div className={`w-12 h-12 rounded-full overflow-hidden border-2 ${
-                      selectedMember === member.id ? 'border-blue-500' : 'border-transparent'
-                    }`}>
-                      <img 
-                        src={member.profilePicture} 
-                        alt={member.name}
-                        className="w-full h-full object-cover"
-                      />
-                    </div>
-                    <span className="text-xs mt-1">{member.name}</span>
-                  </div>
-                ))}
+                    <Cell key="mama" fill="#8884d8" />
+                    <Cell key="papa" fill="#82ca9d" />
+                  </Pie>
+                </PieChart>
+              </ResponsiveContainer>
+            </div>
+            
+            <div className="flex justify-center mt-2 space-x-4">
+              <div className="flex items-center">
+                <div className="w-3 h-3 bg-purple-500 mr-1"></div>
+                <span className="text-xs">
+                  Mama: {Math.round(balanceData.overallBalance?.mama || 50)}%
+                </span>
+              </div>
+              <div className="flex items-center">
+                <div className="w-3 h-3 bg-green-500 mr-1"></div>
+                <span className="text-xs">
+                  Papa: {Math.round(balanceData.overallBalance?.papa || 50)}%
+                </span>
               </div>
             </div>
             
-            {/* Current Question and Responses */}
-            {currentQuestion && (
-              <div>
-                <div className="border rounded-lg p-4 mb-4">
-                  <h4 className="font-medium">Question {currentQuestionIndex + 1} of {fullQuestionSet.length}</h4>
-                  <p className="mt-2">{currentQuestion.text}</p>
-                  <p className="text-sm text-gray-500 mt-1">{currentQuestion.category}</p>
-                </div>
-                
-                <div className="grid gap-4 grid-cols-1 md:grid-cols-2 lg:grid-cols-3 mb-6">
-                  {familyMembers.map(member => (
-                    <div 
-                      key={member.id}
-                      className={`border rounded-lg p-4 ${
-                        selectedMember === member.id ? 'bg-blue-50 border-blue-200' : 'bg-white'
-                      } ${!selectedMember || selectedMember === member.id ? 'opacity-100' : 'opacity-50'}`}
-                    >
-                      <div className="flex items-center mb-3">
-                        <div className="w-8 h-8 rounded-full overflow-hidden mr-2">
-                          <img 
-                            src={member.profilePicture} 
-                            alt={member.name}
-                            className="w-full h-full object-cover"
-                          />
-                        </div>
-                        <div>
-                          <h5 className="font-medium text-sm">{member.name}</h5>
-                          <p className="text-xs text-gray-500 capitalize">{member.role}</p>
-                        </div>
-                      </div>
-                      
-                      <div className="flex items-center justify-between">
-                        <p className="text-sm font-medium">Response:</p>
-                        <span className={`px-2 py-1 rounded text-xs font-medium ${
-                          currentResponses[member.id] === 'Mama' ? 'bg-purple-100 text-purple-700' : 'bg-green-100 text-green-700'
-                        }`}>
-                          {currentResponses[member.id]}
-                        </span>
+            {/* Assessment of balance */}
+            <div className={`mt-4 text-center px-3 py-1 rounded-full text-xs ${
+              Math.abs((balanceData.overallBalance?.mama || 50) - 50) < 10
+                ? 'bg-green-50 text-green-600'
+                : Math.abs((balanceData.overallBalance?.mama || 50) - 50) < 20
+                  ? 'bg-amber-50 text-amber-600'
+                  : 'bg-red-50 text-red-600'
+            }`}>
+              {Math.abs((balanceData.overallBalance?.mama || 50) - 50) < 10
+                ? 'Well Balanced'
+                : Math.abs((balanceData.overallBalance?.mama || 50) - 50) < 20
+                  ? 'Slight Imbalance'
+                  : 'Significant Imbalance'}
+            </div>
+          </div>
+          
+          {/* Category Balance Bar Chart */}
+          <div className="col-span-2 flex flex-col">
+            <h3 className="font-medium mb-4">Category Breakdown</h3>
+            <div className="flex-1">
+              <ResponsiveContainer width="100%" height={250}>
+                <BarChart
+                  data={chartData}
+                  layout="vertical"
+                  margin={{ top: 5, right: 30, left: 20, bottom: 5 }}
+                >
+                  <CartesianGrid strokeDasharray="3 3" />
+                  <XAxis type="number" domain={[0, 100]} />
+                  <YAxis type="category" dataKey="category" width={150} />
+                  <Tooltip />
+                  <Legend />
+                  <Bar dataKey="mama" name="Mama" fill="#8884d8" />
+                  <Bar dataKey="papa" name="Papa" fill="#82ca9d" />
+                </BarChart>
+              </ResponsiveContainer>
+            </div>
+          </div>
+        </div>
+      </div>
+      
+      {/* Questions List */}
+      <div className="bg-white rounded-lg shadow p-4">
+        <div className="flex items-center mb-4">
+          <Scale className="text-blue-500 mr-2" size={20} />
+          <h2 className="text-lg font-semibold">Survey Questions & Responses</h2>
+        </div>
+        
+        {/* Filters */}
+        <div className="flex flex-col md:flex-row gap-4 mb-6">
+          <div className="flex-1">
+            <div className="relative">
+              <input
+                type="text"
+                placeholder="Search questions..."
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                className="w-full pl-10 pr-4 py-2 border rounded-md focus:outline-none focus:ring-1 focus:ring-blue-500"
+              />
+              <Search 
+                size={18} 
+                className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" 
+              />
+            </div>
+          </div>
+          
+          <div className="flex space-x-4">
+            <div>
+              <select
+                value={categoryFilter}
+                onChange={(e) => setCategoryFilter(e.target.value)}
+                className="border rounded-md px-4 py-2 focus:outline-none focus:ring-1 focus:ring-blue-500"
+              >
+                <option value="all">All Categories</option>
+                {categories.map(category => (
+                  <option key={category} value={category}>
+                    {category}
+                  </option>
+                ))}
+              </select>
+            </div>
+            
+            <button
+              onClick={() => setShowWeights(!showWeights)}
+              className={`flex items-center px-4 py-2 border rounded-md ${
+                showWeights ? 'bg-blue-50 text-blue-600 border-blue-200' : ''
+              }`}
+            >
+              <SlidersHorizontal size={16} className="mr-2" />
+              {showWeights ? 'Hide Weights' : 'Show Weights'}
+            </button>
+          </div>
+        </div>
+        
+        {/* Questions */}
+        <div className="space-y-4">
+          {getFilteredQuestions().map(question => {
+            const response = surveyResponses[question.id];
+            return (
+              <div 
+                key={question.id} 
+                className="border rounded-lg overflow-hidden"
+              >
+                <div 
+                  className={`p-4 cursor-pointer hover:bg-gray-50 ${
+                    expandedQuestions[question.id] ? 'border-b' : ''
+                  }`}
+                  onClick={() => toggleQuestionExpanded(question.id)}
+                >
+                  <div className="flex items-start justify-between">
+                    <div className="flex-1">
+                      <h3 className="font-medium">{question.text}</h3>
+                      <div className="flex items-center mt-1 text-sm text-gray-500">
+                        <span>{question.category}</span>
+                        {showWeights && question.totalWeight && (
+                          <span className="ml-3 px-2 py-0.5 bg-blue-50 text-blue-700 rounded-full text-xs">
+                            Weight: {question.totalWeight}
+                          </span>
+                        )}
                       </div>
                     </div>
-                  ))}
+                    
+                    <div className="flex items-center ml-4">
+                      {response && (
+                        <span className={`px-3 py-1 rounded-full text-sm mr-3 ${
+                          response === 'Mama' 
+                            ? 'bg-purple-100 text-purple-800' 
+                            : 'bg-green-100 text-green-800'
+                        }`}>
+                          {response}
+                        </span>
+                      )}
+                      
+                      {expandedQuestions[question.id] ? (
+                        <ChevronUp size={20} className="text-gray-400" />
+                      ) : (
+                        <ChevronDown size={20} className="text-gray-400" />
+                      )}
+                    </div>
+                  </div>
                 </div>
                 
-                {/* Navigation */}
-                <div className="flex justify-between">
-                  <button
-                    onClick={prevQuestion}
-                    disabled={currentQuestionIndex === 0}
-                    className={`px-4 py-2 rounded ${
-                      currentQuestionIndex === 0 
-                        ? 'bg-gray-100 text-gray-400 cursor-not-allowed' 
-                        : 'bg-blue-100 text-blue-600 hover:bg-blue-200'
-                    }`}
-                  >
-                    Previous Question
-                  </button>
-                  
-                  <div className="text-sm text-gray-500">
-                    Question {currentQuestionIndex + 1} of {fullQuestionSet.length}
+                {/* Expanded details */}
+                {expandedQuestions[question.id] && (
+                  <div className="p-4 bg-gray-50">
+                    {/* Response Details */}
+                    <div className="mb-4">
+                      <h4 className="font-medium text-sm mb-2">Response:</h4>
+                      {response ? (
+                        <div className="p-3 bg-white rounded border">
+                          <span className="font-medium">{response}</span>
+                        </div>
+                      ) : (
+                        <div className="p-3 bg-amber-50 rounded border border-amber-200 text-amber-800">
+                          No response recorded
+                        </div>
+                      )}
+                    </div>
+                    
+                    {/* Question Info */}
+                    <div>
+                      <h4 className="font-medium text-sm mb-2">Question Information:</h4>
+                      <div className="p-3 bg-white rounded border">
+                        <p className="text-sm mb-2">{question.explanation}</p>
+                        
+                        {showWeights && (
+                          <>
+                            <h5 className="font-medium text-sm mt-3 mb-1">Weight Factors:</h5>
+                            <div className="grid grid-cols-2 md:grid-cols-3 gap-2 text-xs">
+                              <div className="p-1.5 bg-gray-50 rounded">
+                                <span className="font-medium">Base Weight:</span> {question.baseWeight}/5
+                              </div>
+                              <div className="p-1.5 bg-gray-50 rounded">
+                                <span className="font-medium">Frequency:</span> {question.frequency}
+                              </div>
+                              <div className="p-1.5 bg-gray-50 rounded">
+                                <span className="font-medium">Invisibility:</span> {question.invisibility}
+                              </div>
+                              <div className="p-1.5 bg-gray-50 rounded">
+                                <span className="font-medium">Emotional Labor:</span> {question.emotionalLabor}
+                              </div>
+                              <div className="p-1.5 bg-gray-50 rounded">
+                                <span className="font-medium">Impact Level:</span> {question.researchImpact}
+                              </div>
+                              <div className="p-1.5 bg-gray-50 rounded">
+                                <span className="font-medium">Total Weight:</span> {question.totalWeight}
+                              </div>
+                            </div>
+                            
+                            <p className="text-xs mt-3 text-gray-600">
+                              {question.weightExplanation}
+                            </p>
+                          </>
+                        )}
+                      </div>
+                    </div>
                   </div>
-                  
-                  <button
-                    onClick={nextQuestion}
-                    disabled={currentQuestionIndex === fullQuestionSet.length - 1}
-                    className={`px-4 py-2 rounded ${
-                      currentQuestionIndex === fullQuestionSet.length - 1
-                        ? 'bg-gray-100 text-gray-400 cursor-not-allowed' 
-                        : 'bg-blue-100 text-blue-600 hover:bg-blue-200'
-                    }`}
-                  >
-                    Next Question
-                  </button>
-                </div>
+                )}
               </div>
-            )}
-          </div>
-        )}
+            );
+          })}
+        </div>
       </div>
     </div>
   );
