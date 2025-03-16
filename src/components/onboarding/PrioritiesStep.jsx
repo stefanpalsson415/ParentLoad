@@ -2,6 +2,26 @@
 import React, { useState } from 'react';
 import { ArrowRight, ArrowLeft, CheckCircle, Award, Star, Scale, Sliders } from 'lucide-react';
 
+// Add this debug function at the top of the file
+const debugObject = (obj) => {
+  const safe = {};
+  for (const [key, value] of Object.entries(obj || {})) {
+    if (key === 'password') {
+      safe[key] = '******';
+    } else if (Array.isArray(value)) {
+      safe[key] = value.map(item => 
+        typeof item === 'object' ? 
+          (item.password ? {...item, password: '******'} : item) : 
+          item
+      );
+    } else {
+      safe[key] = value;
+    }
+  }
+  return JSON.stringify(safe, null, 2);
+};
+
+
 const PrioritiesStep = ({ onboardingData, updateStepData, nextStep, prevStep, completeOnboarding }) => {
   const defaultPriorities = {
     highestPriority: "Invisible Parental Tasks",
@@ -41,49 +61,54 @@ const PrioritiesStep = ({ onboardingData, updateStepData, nextStep, prevStep, co
   const handleSubmit = async (e) => {
     e.preventDefault();
     
-    console.log("Submitting priorities:", JSON.stringify(priorities));
-
-
-    // Check for duplicate priorities before proceeding
+    // Debug output to see exactly what we're working with
+    console.log("ONBOARDING DATA BEFORE SUBMIT:", debugObject(onboardingData));
+    
+    // Check for duplicate priorities
     const priorityValues = Object.values(priorities);
     const uniqueValues = new Set(priorityValues);
     
     if (uniqueValues.size !== priorityValues.length) {
-      setError('Each category can only be selected once. Please choose different categories for each priority level.');
-      return; // Prevent form submission
-    }
-    
-    // Update the priorities data
-    const success = updateStepData('priorities', { priorities });
-    if (!success) {
-      setError('Failed to update priorities. Please try again.');
+      setError('Each category can only be selected once.');
       return;
     }
     
+    // Update priorities
+    updateStepData('priorities', { priorities });
+    
+    // Start loading and clear errors
     setLoading(true);
-    setError(''); // Clear any previous errors
+    setError('');
     
     try {
-      // Complete the onboarding process
-      console.log("Starting onboarding completion with priorities:", JSON.stringify(priorities));
+      // Log explicit debug info about parent data
+      console.log("PARENT DATA CHECK:");
+      console.log("- Parents array exists:", !!onboardingData.parentData);
+      console.log("- Parents array length:", onboardingData.parentData?.length || 0);
+      if (onboardingData.parentData?.[0]) {
+        console.log("- First parent has name:", !!onboardingData.parentData[0].name);
+        console.log("- First parent has email:", !!onboardingData.parentData[0].email);
+        console.log("- First parent has password:", !!onboardingData.parentData[0].password);
+      }
+      
+      // Complete onboarding
       const result = await completeOnboarding();
-      console.log("Onboarding result:", result);
       
       if (result) {
-        // Onboarding is complete, navigate to the next page
         nextStep();
       } else {
-        setError('Failed to complete onboarding. Please check your information and try again.');
+        setError('Failed to complete setup. Check console for details.');
       }
     } catch (err) {
-      console.error("Complete onboarding error details:", err);
-      // More specific error message based on common issues
+      console.error("COMPLETION ERROR:", err);
+      
+      // Specific error messages based on what might be happening
       if (err.message?.includes('email-already-in-use')) {
-        setError('An account with this email already exists. Please use a different email or log in.');
-      } else if (err.message?.includes('network')) {
-        setError('Network error. Please check your internet connection and try again.');
+        setError('Email already in use. Please use a different email.');
+      } else if (err.message?.includes('required')) {
+        setError('Missing information. Please check parent details.');
       } else {
-        setError(err.message || 'Failed to complete onboarding. Please try again.');
+        setError(`Error: ${err.message || 'Unknown error'}`);
       }
     } finally {
       setLoading(false);

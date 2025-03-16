@@ -94,9 +94,9 @@ const ParentsStep = ({ onboardingData, updateStepData, nextStep, prevStep }) => 
       return;
     }
     
-    // This is the key step - passing the parentData directly to updateStepData
-    console.log("About to call updateStepData with parentData:", parentData.length, "parents");
-    const success = updateStepData('parentData', parentData);
+    // Make sure we're passing an array of parent objects
+console.log("About to call updateStepData with parentData:", parentData.length, "parents");
+const success = updateStepData('parentData', parentData);
     console.log("updateStepData result:", success);
     
     if (success) {

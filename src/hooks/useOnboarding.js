@@ -27,41 +27,51 @@ export function useOnboarding() {
       // Validate the step data
       console.log("updateStepData called with:", step, data);
       
-      // Extra logging for debugging
+      // Handle parent data specifically
       if (step === 'parentData') {
+        const parentArray = Array.isArray(data) ? data : [data];
+        console.log("Setting parent data:", parentArray);
+        
         setOnboardingData(prev => {
-          return {
+          const updated = {
             ...prev,
-            parentData: Array.isArray(data) ? data : [data]
+            parentData: parentArray
           };
+          console.log("Updated onboarding data with parents:", updated);
+          return updated;
         });
         return true;
       }
       
-      const validatedData = onboardingService.validateOnboardingStep(step, data);
-      console.log("Validation successful, validated data:", validatedData);
-      
-      // Update the onboarding data
-      setOnboardingData(prev => {
-        const updated = {
-          ...prev,
-          ...validatedData
-        };
-        console.log("Updated onboarding data:", updated);
-        return updated;
-      });
-      
-      return true;
+      // For all other steps
+      try {
+        const validatedData = onboardingService.validateOnboardingStep(step, data);
+        console.log("Validation successful, validated data:", validatedData);
+        
+        // Update the onboarding data
+        setOnboardingData(prev => {
+          const updated = {
+            ...prev,
+            ...validatedData
+          };
+          console.log("Updated onboarding data:", updated);
+          return updated;
+        });
+        
+        return true;
+      } catch (validationErr) {
+        console.error("Validation error:", validationErr);
+        setError(validationErr.message || "Invalid data provided");
+        return false;
+      }
     } catch (err) {
       console.error("Error in updateStepData for step:", step);
-      console.error("Error object:", err);
       console.error("Error message:", err.message);
-      console.error("Error stack:", err.stack);
       setError(err.message || "Error updating data");
       return false;
     }
   }, []);
-
+  
   // Navigate to the next step
   const nextStep = useCallback(() => {
     setCurrentStep(prev => prev + 1);
