@@ -24,6 +24,8 @@ import OnboardingFlow from './components/onboarding/OnboardingFlow';
 import { ChatProvider } from './contexts/ChatContext';
 import ChatButton from './components/chat/ChatButton';
 import CoupleCheckInScreen from './components/assessment/CoupleCheckInScreen';
+import PreviewChoiceScreen from './components/onboarding/PreviewChoiceScreen';
+
 
 // App Routes Component - Used after context providers are set up
 function AppRoutes() {
@@ -34,6 +36,8 @@ function AppRoutes() {
       <Route path="/" element={<LandingPage />} />
       <Route path="/login" element={<FamilySelectionScreen />} />
       <Route path="/onboarding" element={<OnboardingFlow />} />
+      <Route path="/preview-choice" element={<PreviewChoiceScreen />} />
+
       <Route path="/signup" element={<UserSignupScreen />} />
 
       <Route path="/how-it-works" element={<HowThisWorksScreen />} />

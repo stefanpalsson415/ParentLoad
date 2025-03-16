@@ -120,6 +120,7 @@ for (const parent of parentData) {
     const familyMembers = [
       ...parentData.map((parent, index) => {
         const userId = parentUsers[index]?.uid || `${parent.role.toLowerCase()}-${familyId}`;
+        console.log(`Creating family member for ${parent.name} with ID ${userId}`);
         return {
           id: userId,
           name: parent.name,
@@ -134,6 +135,7 @@ for (const parent of parentData) {
       }),
       ...(childrenData || []).map(child => {
         const childId = `${child.name.toLowerCase()}-${familyId}`;
+        console.log(`Creating family member for child ${child.name} with ID ${childId}`);
         return {
           id: childId,
           name: child.name,

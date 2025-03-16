@@ -45,7 +45,16 @@ const OnboardingFlow = () => {
   const handleComplete = async () => {
     const result = await completeOnboarding();
     if (result) {
-      navigate('/loading', { state: { destination: '/survey', message: 'Family created successfully! Setting up your survey...' } });
+      // Store the family data in localStorage as a backup
+      localStorage.setItem('pendingFamilyData', JSON.stringify(result));
+      
+      // Navigate to your existing preview choice screen
+      navigate('/preview-choice', { 
+        state: { 
+          familyData: result,
+          fromOnboarding: true
+        } 
+      });
     }
   };
   
