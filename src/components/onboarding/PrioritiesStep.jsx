@@ -21,8 +21,12 @@ const PrioritiesStep = ({ onboardingData, updateStepData, nextStep, prevStep, co
   ];
 
   const handlePriorityChange = (priorityLevel, value) => {
-    // Don't allow the same category to be selected multiple times
-    if (Object.values(priorities).includes(value) && priorities[priorityLevel] !== value) {
+    // Check if this value is already used in another priority level
+    const isValueUsedElsewhere = Object.entries(priorities).some(
+      ([key, val]) => val === value && key !== priorityLevel
+    );
+    
+    if (isValueUsedElsewhere) {
       setError('Each category can only be selected once');
       return;
     }
@@ -37,16 +41,28 @@ const PrioritiesStep = ({ onboardingData, updateStepData, nextStep, prevStep, co
   const handleSubmit = async (e) => {
     e.preventDefault();
     
+    // Check for duplicate priorities before proceeding
+    const priorityValues = Object.values(priorities);
+    const uniqueValues = new Set(priorityValues);
+    
+    if (uniqueValues.size !== priorityValues.length) {
+      setError('Each category can only be selected once. Please choose different categories for each priority level.');
+      return; // Prevent form submission
+    }
+    
     // Update the priorities data
     const success = updateStepData('priorities', { priorities });
-    if (!success) return;
+    if (!success) {
+      setError('Failed to update priorities. Please try again.');
+      return;
+    }
     
     setLoading(true);
     setError(''); // Clear any previous errors
     
     try {
       // Complete the onboarding process
-      console.log("Starting onboarding completion...");
+      console.log("Starting onboarding completion with priorities:", JSON.stringify(priorities));
       const result = await completeOnboarding();
       console.log("Onboarding result:", result);
       
@@ -54,7 +70,7 @@ const PrioritiesStep = ({ onboardingData, updateStepData, nextStep, prevStep, co
         // Onboarding is complete, navigate to the next page
         nextStep();
       } else {
-        setError('Failed to complete onboarding. Please check email addresses and try again.');
+        setError('Failed to complete onboarding. Please check your information and try again.');
       }
     } catch (err) {
       console.error("Complete onboarding error details:", err);
@@ -99,6 +115,12 @@ const PrioritiesStep = ({ onboardingData, updateStepData, nextStep, prevStep, co
       default:
         return null;
     }
+  };
+
+  // Check if there are any duplicate selections
+  const hasDuplicates = () => {
+    const values = Object.values(priorities);
+    return new Set(values).size !== values.length;
   };
 
   return (
@@ -185,7 +207,11 @@ const PrioritiesStep = ({ onboardingData, updateStepData, nextStep, prevStep, co
                 <select
                   value={priorities[priorityLevel]}
                   onChange={(e) => handlePriorityChange(priorityLevel, e.target.value)}
-                  className="w-full px-4 py-3 border border-gray-300 rounded-md"
+                  className={`w-full px-4 py-3 border rounded-md ${
+                    error && (error.includes('category') || hasDuplicates()) 
+                      ? 'border-red-500' 
+                      : 'border-gray-300'
+                  }`}
                 >
                   {categories.map(category => (
                     <option key={category} value={category}>
@@ -201,7 +227,11 @@ const PrioritiesStep = ({ onboardingData, updateStepData, nextStep, prevStep, co
             ))}
           </div>
           
-          {error && <p className="text-red-500 text-sm mb-6">{error}</p>}
+          {error && (
+            <div className="bg-red-50 border border-red-200 text-red-700 p-3 rounded mb-6">
+              {error}
+            </div>
+          )}
           
           <div className="flex gap-4">
             <button
@@ -216,7 +246,7 @@ const PrioritiesStep = ({ onboardingData, updateStepData, nextStep, prevStep, co
             <button
               type="submit"
               className="flex-1 flex items-center justify-center bg-black text-white py-3 px-6 rounded-md hover:bg-gray-800 transition-colors font-medium"
-              disabled={loading}
+              disabled={loading || hasDuplicates()}
             >
               {loading ? 'Creating Family...' : 'Complete Setup'}
               {!loading && <ArrowRight size={18} className="ml-2" />}
