@@ -43,7 +43,6 @@ export async function createFamilyFromOnboarding(onboardingData) {
           console.log(`Successfully created user for ${parent.role}:`, user.uid);
         } catch (error) {
           console.error(`Error creating user for ${parent.role}:`, error.code, error.message);
-          logError(`Creating user for ${parent.role}`, error);
           
           // Specific handling for common Firebase auth errors
           if (error.code === 'auth/email-already-in-use') {
@@ -73,6 +72,8 @@ export async function createFamilyFromOnboarding(onboardingData) {
         }
       }
     }
+    
+    // Rest of the function...
     
     if (parentUsers.length === 0) {
       throw createError(

@@ -76,7 +76,12 @@ export function useOnboarding() {
     try {
       setLoading(true);
       
-      console.log("Completing onboarding with data:", JSON.stringify(onboardingData));
+      console.log("Completing onboarding with data:", JSON.stringify({
+        familyName: onboardingData.familyName,
+        parentData: onboardingData.parentData?.map(p => ({...p, password: '******'})),
+        childrenData: onboardingData.childrenData,
+        priorities: onboardingData.priorities
+      }));
       
       // Create the family
       const newFamily = await onboardingService.createFamilyFromOnboarding(onboardingData);
@@ -91,7 +96,7 @@ export function useOnboarding() {
       setLoading(false);
     }
   }, [onboardingData]);
-  
+
   // Reset error state
   const clearError = useCallback(() => {
     setError(null);

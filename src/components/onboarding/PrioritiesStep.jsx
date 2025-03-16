@@ -103,6 +103,13 @@ const PrioritiesStep = ({ onboardingData, updateStepData, nextStep, prevStep, co
     }
   };
 
+
+  // Check if there are any duplicate selections
+const hasDuplicates = () => {
+  const values = Object.values(priorities);
+  return new Set(values).size !== values.length;
+};
+
   // Helper function to get appropriate icon for each priority level
   const getPriorityIcon = (level) => {
     switch(level) {
@@ -244,13 +251,13 @@ const PrioritiesStep = ({ onboardingData, updateStepData, nextStep, prevStep, co
               Back
             </button>
             <button
-              type="submit"
-              className="flex-1 flex items-center justify-center bg-black text-white py-3 px-6 rounded-md hover:bg-gray-800 transition-colors font-medium"
-              disabled={loading || hasDuplicates()}
-            >
-              {loading ? 'Creating Family...' : 'Complete Setup'}
-              {!loading && <ArrowRight size={18} className="ml-2" />}
-            </button>
+  type="submit"
+  className="flex-1 flex items-center justify-center bg-black text-white py-3 px-6 rounded-md hover:bg-gray-800 transition-colors font-medium"
+  disabled={loading || hasDuplicates()}
+>
+  {loading ? 'Creating Family...' : 'Complete Setup'}
+  {!loading && <ArrowRight size={18} className="ml-2" />}
+</button>
           </div>
         </form>
       </div>
