@@ -19,6 +19,13 @@ const [currentTaskId, setCurrentTaskId] = useState(null);
 const [effectivenessRating, setEffectivenessRating] = useState(5);
 const [effectivenessFeedback, setEffectivenessFeedback] = useState('');
 
+  // ADD THIS FUNCTION:
+  // Temporary task effectiveness tracking function
+  const trackTaskEffectiveness = async (taskId, effectivenessScore, feedback) => {
+    console.log("Task effectiveness tracking:", {taskId, effectivenessScore, feedback});
+    return true; // Just return success for now
+  };
+
   const { updateTaskCompletion, updateSubtaskCompletion, addTaskComment } = useTasks();
   
   // Local state

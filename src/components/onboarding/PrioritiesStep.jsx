@@ -1,6 +1,6 @@
 // src/components/onboarding/PrioritiesStep.jsx
 import React, { useState } from 'react';
-import { ArrowRight, ArrowLeft, CheckCircle, Award, Star, Scale } from 'lucide-react';
+import { ArrowRight, ArrowLeft, CheckCircle, Award, Star, Scale, Sliders } from 'lucide-react';
 
 const PrioritiesStep = ({ onboardingData, updateStepData, nextStep, prevStep, completeOnboarding }) => {
   const defaultPriorities = {
@@ -48,7 +48,6 @@ const PrioritiesStep = ({ onboardingData, updateStepData, nextStep, prevStep, co
       const result = await completeOnboarding();
       if (result) {
         // Onboarding is complete, navigate to the next page
-        // Note: The navigation should be handled by the parent component
         nextStep();
       } else {
         setError('Failed to complete onboarding');
@@ -135,6 +134,19 @@ const PrioritiesStep = ({ onboardingData, updateStepData, nextStep, prevStep, co
           <p className="text-amber-800 text-sm font-light">
             <strong>Example:</strong> If "Invisible Parental Tasks" is your highest priority, tasks like monitoring children's emotional wellbeing receive 50% more weight in balance calculations, ensuring these important but often unrecognized contributions are properly valued.
           </p>
+        </div>
+      </div>
+      
+      {/* AI Weighting System */}
+      <div className="bg-purple-50 p-4 rounded-lg border border-purple-200 mb-8">
+        <div className="flex items-start">
+          <Sliders size={20} className="text-purple-600 mt-1 mr-2 flex-shrink-0" />
+          <div>
+            <h4 className="font-medium text-purple-800">How Allie Uses This Information</h4>
+            <p className="text-sm text-purple-700 mt-1">
+              Your priorities directly influence our AI weighting system. High-priority tasks receive a multiplier of 1.5x in our calculations, secondary priorities get a 1.3x multiplier, and tertiary priorities get a 1.1x multiplier. This ensures our recommendations focus on the areas that matter most to your family.
+            </p>
+          </div>
         </div>
       </div>
       

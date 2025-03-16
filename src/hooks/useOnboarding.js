@@ -26,6 +26,7 @@ export function useOnboarding() {
   const updateStepData = useCallback((step, data) => {
     try {
       // Validate the step data
+      console.log("updateStepData called with:", step, data); // Add this debug line
       const validatedData = onboardingService.validateOnboardingStep(step, data);
       
       // Update the onboarding data
@@ -36,10 +37,11 @@ export function useOnboarding() {
       
       return true;
     } catch (err) {
-      const errorMessage = getUserFriendlyError(err);
-      setError(errorMessage);
+      setError(err.message || "Error updating data");
+
       return false;
     }
+    
   }, []);
 
   // Navigate to the next step

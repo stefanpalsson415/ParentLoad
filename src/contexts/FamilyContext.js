@@ -609,6 +609,54 @@ if (allComplete) {
     return imbalances.sort((a, b) => b.imbalanceScore - a.imbalanceScore);
   };
 
+  
+  // Get relationship trend data
+const getRelationshipTrendData = useCallback(() => {
+  // Default demo data
+  const demoData = [
+    { week: 'Initial', satisfaction: 3.5, communication: 3.2, workloadBalance: 30 },
+    { week: 'Week 1', satisfaction: 3.7, communication: 3.4, workloadBalance: 35 },
+    { week: 'Week 2', satisfaction: 3.9, communication: 3.6, workloadBalance: 40 },
+    { week: 'Week 3', satisfaction: 4.1, communication: 3.8, workloadBalance: 45 },
+    { week: 'Current', satisfaction: 4.3, communication: 4.0, workloadBalance: 48 }
+  ];
+  
+  // If we have real data in family data, use that instead
+  if (coupleCheckInData && Object.keys(coupleCheckInData).length > 0) {
+    const trends = [];
+    
+    // Add initial point
+    trends.push({ 
+      week: 'Initial', 
+      satisfaction: 3.5, 
+      communication: 3.2, 
+      workloadBalance: 30 
+    });
+    
+    // Add data for each week with check-in data
+    Object.entries(coupleCheckInData).forEach(([weekKey, data]) => {
+      const weekNum = parseInt(weekKey);
+      if (!isNaN(weekNum)) {
+        trends.push({
+          week: `Week ${weekNum}`,
+          satisfaction: data.satisfaction || 3,
+          communication: data.communication || 3,
+          workloadBalance: data.workloadBalance || 30 + (weekNum * 5)
+        });
+      }
+    });
+    
+    // Sort by week
+    return trends.sort((a, b) => {
+      if (a.week === 'Initial') return -1;
+      if (b.week === 'Initial') return 1;
+      return parseInt(a.week.replace('Week ', '')) - parseInt(b.week.replace('Week ', ''));
+    });
+  }
+  
+  return demoData;
+}, [coupleCheckInData]);
+  
   // NEW: Analyze task effectiveness
   const analyzeTaskEffectiveness = (completedTasks, weekHistoryData) => {
     console.log("Analyzing task effectiveness based on historical data");
