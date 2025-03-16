@@ -1,6 +1,10 @@
 // src/components/onboarding/PrioritiesStep.jsx
 import React, { useState } from 'react';
 import { ArrowRight, ArrowLeft, CheckCircle, Award, Star, Scale, Sliders } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
+
+
+
 
 // Add this debug function at the top of the file
 const debugObject = (obj) => {
@@ -57,6 +61,9 @@ const PrioritiesStep = ({ onboardingData, updateStepData, nextStep, prevStep, co
     });
     setError('');
   };
+
+  const navigate = useNavigate();
+
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -263,6 +270,71 @@ const hasDuplicates = () => {
               {error}
             </div>
           )}
+
+{error && (
+  <div className="mt-4">
+    <button
+      type="button"
+      className="w-full flex items-center justify-center bg-blue-600 text-white py-3 px-6 rounded-md hover:bg-blue-700 transition-colors font-medium"
+      onClick={() => {
+        // Create a temporary family object
+        const tempFamily = {
+          familyId: `temp-${Date.now()}`,
+          familyName: onboardingData.familyName || "My Family",
+          familyMembers: [
+            ...(onboardingData.parentData || []).map(parent => ({
+              id: `temp-${Date.now()}-${parent.name}`,
+              name: parent.name,
+              role: 'parent',
+              roleType: parent.role,
+              email: parent.email,
+              completed: false,
+              completedDate: null,
+              weeklyCompleted: [],
+              profilePicture: '/api/placeholder/150/150'
+            })),
+            ...(onboardingData.childrenData || []).map(child => ({
+              id: `temp-${Date.now()}-${child.name}`,
+              name: child.name,
+              role: 'child',
+              age: child.age,
+              completed: false,
+              completedDate: null,
+              weeklyCompleted: [],
+              profilePicture: '/api/placeholder/150/150'
+            }))
+          ],
+          tasks: [],
+          completedWeeks: [],
+          currentWeek: 1,
+          createdAt: new Date().toISOString(),
+          updatedAt: new Date().toISOString(),
+          memberIds: onboardingData.parentData?.map(p => `temp-${Date.now()}-${p.name}`) || [],
+          priorities: priorities || {
+            highestPriority: "Invisible Parental Tasks",
+            secondaryPriority: "Visible Parental Tasks",
+            tertiaryPriority: "Invisible Household Tasks"
+          },
+          surveySchedule: {},
+          familyPicture: null
+        };
+        
+        // Store the temporary family
+        localStorage.setItem('pendingFamilyData', JSON.stringify(tempFamily));
+        
+        // Navigate to the preview choice screen
+        navigate('/preview-choice', { 
+          state: { 
+            familyData: tempFamily,
+            fromOnboarding: true
+          } 
+        });
+      }}
+    >
+      Continue with Alternative Setup
+    </button>
+  </div>
+)}
           
           <div className="flex gap-4">
             <button
