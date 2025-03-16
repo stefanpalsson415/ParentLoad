@@ -106,16 +106,16 @@ const renderStep = () => {
           prevStep={prevStep}
         />
       );
-    case 7:
-      return (
-        <PrioritiesStep
-          onboardingData={onboardingData}
-          updateStepData={updateStepData}
-          nextStep={handleComplete}
-          prevStep={prevStep}
-          completeOnboarding={completeOnboarding}
-        />
-      );
+      case 7:
+        return (
+          <PrioritiesStep
+            onboardingData={onboardingData}
+            updateStepData={updateStepData}
+            nextStep={handleComplete}
+            prevStep={prevStep}
+            completeOnboarding={completeOnboarding}
+          />
+        );
     default:
       return <div>Unknown step</div>;
   }

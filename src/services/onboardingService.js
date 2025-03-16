@@ -1,8 +1,12 @@
 // src/services/onboardingService.js
-import { createUserWithEmailAndPassword } from 'firebase/auth';
+import { createUserWithEmailAndPassword, signInWithEmailAndPassword } from 'firebase/auth';
 import { auth } from './firebase';
 import * as familyService from './familyService';
 import { createError, ErrorCodes, logError } from '../utils/errorHandling';
+
+
+
+
 
 /**
  * Create a new family during onboarding
@@ -25,13 +29,31 @@ export async function createFamilyFromOnboarding(onboardingData) {
     }
     
     // Create user accounts for parents
-    const parentUsers = [];
-    for (const parent of parentData) {
-      if (parent.email && parent.password) {
-        try {
-          console.log(`Attempting to create user for ${parent.role} with email: ${parent.email}`);
-          
-          // Use Firebase auth directly since we're handling this specially
+    // Create user accounts for parents
+const parentUsers = [];
+for (const parent of parentData) {
+  if (parent.email && parent.password) {
+    try {
+      console.log(`Attempting to create user for ${parent.role} with email: ${parent.email}`);
+      
+      // First check if we can sign in with these credentials
+      try {
+        const userCredential = await signInWithEmailAndPassword(auth, parent.email, parent.password);
+        const user = userCredential.user;
+        
+        // If we got here, the account exists and credentials are valid
+        console.log(`User already exists, logged in as: ${user.uid}`);
+        
+        parentUsers.push({
+          uid: user.uid,
+          email: parent.email,
+          role: parent.role
+        });
+      } catch (signInError) {
+        // If we can't sign in, try creating the account
+        if (signInError.code === 'auth/user-not-found' || 
+            signInError.code === 'auth/wrong-password') {
+          // Create a new account
           const userCredential = await createUserWithEmailAndPassword(auth, parent.email, parent.password);
           const user = userCredential.user;
           
@@ -41,37 +63,45 @@ export async function createFamilyFromOnboarding(onboardingData) {
             role: parent.role
           });
           console.log(`Successfully created user for ${parent.role}:`, user.uid);
-        } catch (error) {
-          console.error(`Error creating user for ${parent.role}:`, error.code, error.message);
-          
-          // Specific handling for common Firebase auth errors
-          if (error.code === 'auth/email-already-in-use') {
-            throw createError(
-              ErrorCodes.AUTH_EMAIL_ALREADY_IN_USE, 
-              `The email ${parent.email} is already in use. Please use a different email or log in.`
-            );
-          } else if (error.code === 'auth/invalid-email') {
-            throw createError(
-              ErrorCodes.AUTH_INVALID_EMAIL, 
-              `The email address ${parent.email} is not valid.`
-            );
-          } else if (error.code === 'auth/weak-password') {
-            throw createError(
-              ErrorCodes.AUTH_WEAK_PASSWORD, 
-              "Password is too weak. Please use at least 6 characters."
-            );
-          } else if (error.code === 'auth/network-request-failed') {
-            throw createError(
-              ErrorCodes.NETWORK_OFFLINE, 
-              "Network error. Please check your internet connection and try again."
-            );
-          }
-          
-          // For other errors, continue with other parents
-          console.warn(`Continuing with other parents after error for ${parent.role}`);
+        } else {
+          // Other sign-in error, rethrow
+          throw signInError;
         }
       }
+    } catch (error) {
+      console.error(`Error processing user for ${parent.role}:`, error.code, error.message);
+      
+      // Only throw if this is the last parent and we have no users
+      if (parentUsers.length === 0 && parent === parentData[parentData.length - 1]) {
+        if (error.code === 'auth/email-already-in-use') {
+          throw createError(
+            ErrorCodes.AUTH_EMAIL_ALREADY_IN_USE, 
+            `The email ${parent.email} is already in use. Please use a different email or log in.`
+          );
+        } else if (error.code === 'auth/invalid-email') {
+          throw createError(
+            ErrorCodes.AUTH_INVALID_EMAIL, 
+            `The email address ${parent.email} is not valid.`
+          );
+        } else if (error.code === 'auth/weak-password') {
+          throw createError(
+            ErrorCodes.AUTH_WEAK_PASSWORD, 
+            "Password is too weak. Please use at least 6 characters."
+          );
+        } else if (error.code === 'auth/network-request-failed') {
+          throw createError(
+            ErrorCodes.NETWORK_OFFLINE, 
+            "Network error. Please check your internet connection and try again."
+          );
+        } else {
+          throw error;
+        }
+      }
+      // Otherwise, continue with other parents
+      console.warn(`Continuing with other parents after error for ${parent.role}`);
     }
+  }
+}
     
     // Rest of the function...
     

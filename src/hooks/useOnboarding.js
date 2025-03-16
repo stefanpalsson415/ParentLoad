@@ -29,7 +29,13 @@ export function useOnboarding() {
       
       // Extra logging for debugging
       if (step === 'parentData') {
-        console.log("Parent data structure:", JSON.stringify(data));
+        setOnboardingData(prev => {
+          return {
+            ...prev,
+            parentData: Array.isArray(data) ? data : [data]
+          };
+        });
+        return true;
       }
       
       const validatedData = onboardingService.validateOnboardingStep(step, data);
@@ -76,6 +82,15 @@ export function useOnboarding() {
     try {
       setLoading(true);
       
+      console.log("COMPLETE ONBOARDING DATA CHECK:");
+      console.log("- familyName:", onboardingData.familyName);
+      console.log("- parentData:", onboardingData.parentData ? 
+        `${onboardingData.parentData.length} parents` : 'MISSING - THIS IS THE LIKELY ISSUE');
+      console.log("- childrenData:", onboardingData.childrenData ? 
+        `${onboardingData.childrenData.length} children` : 'none');
+      console.log("- priorities:", onboardingData.priorities);
+
+
       console.log("Completing onboarding with data:", JSON.stringify({
         familyName: onboardingData.familyName,
         parentData: onboardingData.parentData?.map(p => ({...p, password: '******'})),

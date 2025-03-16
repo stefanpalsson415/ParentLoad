@@ -41,6 +41,9 @@ const PrioritiesStep = ({ onboardingData, updateStepData, nextStep, prevStep, co
   const handleSubmit = async (e) => {
     e.preventDefault();
     
+    console.log("Submitting priorities:", JSON.stringify(priorities));
+
+
     // Check for duplicate priorities before proceeding
     const priorityValues = Object.values(priorities);
     const uniqueValues = new Set(priorityValues);
@@ -124,11 +127,7 @@ const hasDuplicates = () => {
     }
   };
 
-  // Check if there are any duplicate selections
-  const hasDuplicates = () => {
-    const values = Object.values(priorities);
-    return new Set(values).size !== values.length;
-  };
+  
 
   return (
     <div className="max-w-2xl mx-auto">
