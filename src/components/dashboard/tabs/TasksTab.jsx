@@ -1,48 +1,21 @@
 // src/components/dashboard/tabs/TasksTab.jsx
 import React, { useState, useEffect } from 'react';
 import { 
-  CheckCircle, X, MessageCircle, Clock, AlertCircle, 
-  ChevronDown, ChevronUp, Brain
+  CheckCircle, MessageCircle, Brain, Clock, 
+  ChevronDown, ChevronUp, AlertTriangle
 } from 'lucide-react';
 import { useFamily } from '../../../hooks/useFamily';
+import { useTasks } from '../../../hooks/useTasks';
 
-const TasksTab = () => {
-  const { 
-    familyData, 
-    familyMembers, 
-    selectedMember,
-    taskRecommendations,
-    loadCurrentWeekTasks,
-    updateTaskCompletion,
-    updateSubtaskCompletion,
-    addTaskComment
-  } = useFamily();
+const TasksTab = ({ weeklyTasks, familyData, familyMembers, selectedMember }) => {
+  const { updateTaskCompletion, updateSubtaskCompletion, addTaskComment } = useTasks();
   
-  const [tasks, setTasks] = useState([]);
+  // Local state
   const [expandedTasks, setExpandedTasks] = useState({});
-  const [expandedComments, setExpandedComments] = useState({});
   const [newComments, setNewComments] = useState({});
-  const [loading, setLoading] = useState(true);
   const [filterType, setFilterType] = useState('all');
-
-  // Load tasks on component mount
-  useEffect(() => {
-    const loadTasks = async () => {
-      try {
-        const loadedTasks = await loadCurrentWeekTasks();
-        if (loadedTasks) {
-          setTasks(loadedTasks);
-        }
-      } catch (error) {
-        console.error("Error loading tasks:", error);
-      } finally {
-        setLoading(false);
-      }
-    };
-    
-    loadTasks();
-  }, [loadCurrentWeekTasks]);
-
+  const [loading, setLoading] = useState(false);
+  
   // Toggle task expansion
   const toggleTaskExpanded = (taskId) => {
     setExpandedTasks(prev => ({
@@ -50,15 +23,7 @@ const TasksTab = () => {
       [taskId]: !prev[taskId]
     }));
   };
-
-  // Toggle comments expansion
-  const toggleCommentsExpanded = (taskId) => {
-    setExpandedComments(prev => ({
-      ...prev,
-      [taskId]: !prev[taskId]
-    }));
-  };
-
+  
   // Handle comment input change
   const handleCommentChange = (taskId, value) => {
     setNewComments(prev => ({
@@ -66,12 +31,13 @@ const TasksTab = () => {
       [taskId]: value
     }));
   };
-
+  
   // Submit a new comment
   const submitComment = async (taskId) => {
     if (!newComments[taskId]?.trim() || !selectedMember) return;
     
     try {
+      setLoading(true);
       await addTaskComment(
         taskId, 
         selectedMember.id, 
@@ -86,56 +52,78 @@ const TasksTab = () => {
       }));
     } catch (error) {
       console.error("Error adding comment:", error);
+    } finally {
+      setLoading(false);
     }
   };
-
+  
   // Handle task completion toggle
   const handleTaskCompletion = async (taskId, isCompleted) => {
     try {
+      setLoading(true);
       await updateTaskCompletion(taskId, !isCompleted);
     } catch (error) {
       console.error("Error updating task completion:", error);
+    } finally {
+      setLoading(false);
     }
   };
-
+  
   // Handle subtask completion toggle
   const handleSubtaskCompletion = async (taskId, subtaskId, isCompleted) => {
     try {
+      setLoading(true);
       await updateSubtaskCompletion(taskId, subtaskId, !isCompleted);
     } catch (error) {
       console.error("Error updating subtask completion:", error);
+    } finally {
+      setLoading(false);
     }
   };
-
-  // Filter tasks for the current user
-  const filteredTasks = tasks.filter(task => {
-    // Filter by assignment
-    if (filterType === 'mine' && task.assignedTo !== selectedMember?.roleType) {
-      return false;
-    }
+  
+  // Filter tasks
+  const getFilteredTasks = () => {
+    if (!weeklyTasks) return [];
     
-    // Filter by completion status
-    if (filterType === 'completed' && !task.completed) {
-      return false;
-    }
-    
-    if (filterType === 'pending' && task.completed) {
-      return false;
-    }
-    
-    return true;
-  });
-
-  if (loading) {
-    return <div className="flex justify-center py-8">Loading tasks...</div>;
+    return weeklyTasks.filter(task => {
+      // Filter by assignment to current user
+      if (filterType === 'mine' && task.assignedTo !== selectedMember?.roleType) {
+        return false;
+      }
+      
+      // Filter by completion status
+      if (filterType === 'completed' && !task.completed) {
+        return false;
+      }
+      
+      if (filterType === 'pending' && task.completed) {
+        return false;
+      }
+      
+      return true;
+    });
+  };
+  
+  // Format date from ISO string
+  const formatDate = (dateString) => {
+    if (!dateString) return '';
+    return new Date(dateString).toLocaleDateString();
+  };
+  
+  const filteredTasks = getFilteredTasks();
+  
+  if (!weeklyTasks) {
+    return <div className="p-6 text-center">Loading tasks...</div>;
   }
-
+  
   return (
-    <div className="space-y-4">
-      {/* Filter options */}
-      <div className="flex items-center space-x-2 p-2 mb-4 bg-gray-50 rounded-lg">
-        <span className="text-sm text-gray-500">Filter:</span>
-        <div className="flex space-x-1">
+    <div className="space-y-6">
+      {/* Header with filter options */}
+      <div className="bg-white rounded-lg shadow p-6">
+        <h2 className="text-xl font-bold mb-4">Week {familyData?.currentWeek || 1} Tasks</h2>
+        
+        <div className="flex flex-wrap items-center gap-2">
+          <span className="text-sm text-gray-600">Filter by:</span>
           <button 
             className={`px-3 py-1 text-sm rounded-full ${
               filterType === 'all' 
@@ -178,96 +166,97 @@ const TasksTab = () => {
           </button>
         </div>
       </div>
-
-      {/* Tasks list */}
+      
+      {/* Task list */}
       {filteredTasks.length === 0 ? (
-        <div className="text-center py-8 bg-white rounded-lg shadow">
-          <p className="text-gray-500">No tasks found</p>
+        <div className="bg-white rounded-lg shadow p-6 text-center">
+          <p className="text-gray-500">No tasks found matching your filter criteria</p>
         </div>
       ) : (
         <div className="space-y-4">
           {filteredTasks.map(task => (
-            <div key={task.id} className="bg-white rounded-lg shadow overflow-hidden">
+            <div key={task.id} className="bg-white rounded-lg shadow">
               {/* Task Header */}
               <div className="p-4 border-b">
-                <div className="flex items-start justify-between">
-                  <div className="flex items-start mr-2">
-                    <div 
-                      className={`h-6 w-6 rounded-full flex items-center justify-center flex-shrink-0 mr-3 mt-0.5 border ${
-                        task.completed 
-                          ? 'bg-green-100 border-green-500 text-green-700' 
-                          : 'bg-gray-100 border-gray-300 text-gray-500'
-                      }`}
-                      onClick={() => handleTaskCompletion(task.id, task.completed)}
-                    >
-                      {task.completed && <CheckCircle size={14} />}
-                    </div>
-                    <div>
-                      <h3 className={`font-medium ${task.completed ? 'line-through text-gray-500' : ''}`}>
-                        {task.title}
-                      </h3>
-                      <p className="text-sm text-gray-600 mt-1">{task.description}</p>
-                    </div>
-                  </div>
-                  <div className="flex flex-col items-end">
-                    <span className={`px-2 py-1 rounded-full text-xs ${
-                      task.assignedTo === 'Mama' 
-                        ? 'bg-purple-100 text-purple-800' 
-                        : 'bg-blue-100 text-blue-800'
-                    }`}>
-                      {task.assignedToName || task.assignedTo}
-                    </span>
-                    
-                    {task.isAIGenerated && (
-                      <span className="mt-1 px-2 py-1 bg-purple-50 text-purple-600 rounded-full text-xs flex items-center">
-                        <Brain size={10} className="mr-1" />
-                        AI Insight
-                      </span>
-                    )}
-                  </div>
-                </div>
-                
-                {/* Task Details Button */}
-                <div className="mt-3 flex items-center justify-between">
-                  <button 
-                    className="text-xs flex items-center text-blue-600"
-                    onClick={() => toggleTaskExpanded(task.id)}
+                <div className="flex items-start">
+                  <div 
+                    className={`flex-shrink-0 w-6 h-6 mt-1 mr-3 rounded-full flex items-center justify-center cursor-pointer ${
+                      task.completed 
+                        ? 'bg-green-100 text-green-700 border border-green-400' 
+                        : 'bg-gray-100 text-gray-500 border border-gray-300'
+                    }`}
+                    onClick={() => handleTaskCompletion(task.id, task.completed)}
                   >
-                    {expandedTasks[task.id] ? (
-                      <>
-                        <ChevronUp size={14} className="mr-1" />
-                        Hide Details
-                      </>
-                    ) : (
-                      <>
-                        <ChevronDown size={14} className="mr-1" />
-                        Show Details
-                      </>
-                    )}
-                  </button>
+                    {task.completed && <CheckCircle size={14} />}
+                  </div>
                   
-                  {task.completedDate && (
-                    <span className="text-xs text-gray-500 flex items-center">
-                      <Clock size={12} className="mr-1" />
-                      Completed {new Date(task.completedDate).toLocaleDateString()}
-                    </span>
-                  )}
+                  <div className="flex-1">
+                    <div className="flex items-start justify-between">
+                      <div>
+                        <h3 className={`font-medium ${task.completed ? 'line-through text-gray-500' : ''}`}>
+                          {task.title}
+                        </h3>
+                        <p className="text-sm text-gray-600 mt-1">{task.description}</p>
+                      </div>
+                      
+                      <div className="ml-3 flex flex-col items-end">
+                        <span className={`px-2 py-1 rounded-full text-xs ${
+                          task.assignedTo === 'Mama' 
+                            ? 'bg-purple-100 text-purple-800' 
+                            : 'bg-green-100 text-green-800'
+                        }`}>
+                          {task.assignedToName || task.assignedTo}
+                        </span>
+                        
+                        {task.isAIGenerated && (
+                          <span className="mt-1 flex items-center text-xs px-2 py-1 bg-purple-50 text-purple-700 rounded-full">
+                            <Brain size={10} className="mr-1" />
+                            AI Insight
+                          </span>
+                        )}
+                      </div>
+                    </div>
+                    
+                    <div className="mt-3 flex items-center justify-between">
+                      <button 
+                        className="text-xs flex items-center text-blue-600"
+                        onClick={() => toggleTaskExpanded(task.id)}
+                      >
+                        {expandedTasks[task.id] ? (
+                          <>
+                            <ChevronUp size={14} className="mr-1" />
+                            Hide Details
+                          </>
+                        ) : (
+                          <>
+                            <ChevronDown size={14} className="mr-1" />
+                            Show Details
+                          </>
+                        )}
+                      </button>
+                      
+                      {task.completedDate && (
+                        <span className="text-xs text-gray-500 flex items-center">
+                          <Clock size={12} className="mr-1" />
+                          Completed {formatDate(task.completedDate)}
+                        </span>
+                      )}
+                    </div>
+                  </div>
                 </div>
               </div>
               
-              {/* Task Details (expandable) */}
+              {/* Task Details (expanded) */}
               {expandedTasks[task.id] && (
-                <div className="px-4 py-3 bg-gray-50">
+                <div className="p-4 bg-gray-50">
                   {/* AI Insight if available */}
                   {(task.insight || task.aiInsight) && (
-                    <div className="mb-3 p-3 bg-purple-50 rounded-md border border-purple-200">
+                    <div className="mb-4 p-3 bg-purple-50 rounded-lg border border-purple-200">
                       <div className="flex items-start">
-                        <Brain size={16} className="text-purple-600 mr-2 mt-0.5 flex-shrink-0" />
+                        <Brain size={16} className="text-purple-600 mr-2 mt-1 flex-shrink-0" />
                         <div>
                           <h4 className="text-sm font-medium text-purple-800">AI Insight:</h4>
-                          <p className="text-xs text-purple-700 mt-1">
-                            {task.insight || task.aiInsight}
-                          </p>
+                          <p className="text-sm text-purple-700 mt-1">{task.insight || task.aiInsight}</p>
                         </div>
                       </div>
                     </div>
@@ -275,30 +264,34 @@ const TasksTab = () => {
                   
                   {/* Subtasks if available */}
                   {task.subTasks && task.subTasks.length > 0 && (
-                    <div className="mb-3">
+                    <div className="mb-4">
                       <h4 className="text-sm font-medium mb-2">Subtasks:</h4>
                       <div className="space-y-2">
                         {task.subTasks.map(subtask => (
-                          <div 
-                            key={subtask.id} 
-                            className="flex items-start p-2 bg-white rounded border border-gray-200"
-                          >
+                          <div key={subtask.id} className="flex items-start p-3 bg-white rounded-lg border border-gray-200">
                             <div 
-                              className={`h-5 w-5 rounded-full flex items-center justify-center flex-shrink-0 mr-2 border ${
+                              className={`flex-shrink-0 w-5 h-5 mt-0.5 mr-3 rounded-full flex items-center justify-center cursor-pointer ${
                                 subtask.completed 
-                                  ? 'bg-green-100 border-green-500 text-green-700' 
-                                  : 'bg-gray-100 border-gray-300 text-gray-500'
+                                  ? 'bg-green-100 text-green-700 border border-green-400' 
+                                  : 'bg-gray-100 text-gray-500 border border-gray-300'
                               }`}
                               onClick={() => handleSubtaskCompletion(task.id, subtask.id, subtask.completed)}
                             >
                               {subtask.completed && <CheckCircle size={12} />}
                             </div>
-                            <div>
+                            
+                            <div className="flex-1">
                               <p className={`text-sm ${subtask.completed ? 'line-through text-gray-500' : ''}`}>
                                 {subtask.title}
                               </p>
                               {subtask.description && (
-                                <p className="text-xs text-gray-500 mt-0.5">{subtask.description}</p>
+                                <p className="text-xs text-gray-600 mt-1">{subtask.description}</p>
+                              )}
+                              {subtask.completed && subtask.completedDate && (
+                                <div className="flex items-center mt-1 text-xs text-gray-500">
+                                  <Clock size={10} className="mr-1" />
+                                  {formatDate(subtask.completedDate)}
+                                </div>
                               )}
                             </div>
                           </div>
@@ -308,79 +301,64 @@ const TasksTab = () => {
                   )}
                   
                   {/* Task metadata */}
-                  <div className="grid grid-cols-2 gap-2 mb-3 text-xs text-gray-600">
+                  <div className="mb-4 grid grid-cols-2 gap-3 text-xs text-gray-600">
                     {task.category && (
                       <div>
                         <span className="font-medium">Category:</span> {task.category}
                       </div>
                     )}
-                    {task.focusArea && (
+                    {task.dueDate && (
                       <div>
-                        <span className="font-medium">Focus Area:</span> {task.focusArea}
+                        <span className="font-medium">Due:</span> {formatDate(task.dueDate)}
+                      </div>
+                    )}
+                    {task.priority && (
+                      <div>
+                        <span className="font-medium">Priority:</span> {task.priority}
                       </div>
                     )}
                     {task.hiddenWorkloadType && (
                       <div>
-                        <span className="font-medium">Hidden Workload Type:</span> {task.hiddenWorkloadType}
+                        <span className="font-medium">Workload Type:</span> {task.hiddenWorkloadType}
                       </div>
                     )}
                   </div>
                   
                   {/* Comments section */}
                   <div>
-                    <div className="flex items-center justify-between mb-2">
-                      <h4 className="text-sm font-medium">Comments:</h4>
-                      {task.comments?.length > 0 && (
-                        <button 
-                          className="text-xs flex items-center text-gray-600"
-                          onClick={() => toggleCommentsExpanded(task.id)}
-                        >
-                          {expandedComments[task.id] ? (
-                            <>
-                              <ChevronUp size={12} className="mr-1" />
-                              Hide
-                            </>
-                          ) : (
-                            <>
-                              <ChevronDown size={12} className="mr-1" />
-                              Show {task.comments.length} {task.comments.length === 1 ? 'comment' : 'comments'}
-                            </>
-                          )}
-                        </button>
-                      )}
-                    </div>
+                    <h4 className="text-sm font-medium mb-3">Comments:</h4>
                     
                     {/* Existing comments */}
-                    {expandedComments[task.id] && task.comments?.length > 0 && (
-                      <div className="space-y-2 mb-3">
+                    {task.comments && task.comments.length > 0 ? (
+                      <div className="mb-3 space-y-2">
                         {task.comments.map(comment => (
-                          <div 
-                            key={comment.id} 
-                            className="p-2 bg-gray-100 rounded text-sm"
-                          >
-                            <div className="flex justify-between items-start mb-1">
+                          <div key={comment.id} className="p-3 bg-white rounded-lg border border-gray-200">
+                            <div className="flex items-center justify-between mb-1">
                               <span className="font-medium text-xs">{comment.userName}</span>
-                              <span className="text-xs text-gray-500">{comment.timestamp}</span>
+                              <span className="text-xs text-gray-500">{formatDate(comment.timestamp)}</span>
                             </div>
                             <p className="text-sm">{comment.text}</p>
                           </div>
                         ))}
                       </div>
+                    ) : (
+                      <p className="text-xs text-gray-500 mb-3">No comments yet</p>
                     )}
                     
                     {/* Add new comment */}
-                    <div className="mt-2 flex">
+                    <div className="flex">
                       <input
                         type="text"
                         value={newComments[task.id] || ''}
                         onChange={(e) => handleCommentChange(task.id, e.target.value)}
                         placeholder="Add a comment..."
-                        className="flex-1 px-3 py-1 text-sm border rounded-l focus:outline-none focus:ring-1 focus:ring-blue-500"
+                        className="flex-1 px-3 py-2 text-sm border rounded-l-md focus:outline-none focus:ring-1 focus:ring-blue-500"
+                        disabled={loading}
                       />
                       <button
                         onClick={() => submitComment(task.id)}
-                        disabled={!newComments[task.id]?.trim()}
-                        className="px-3 py-1 bg-blue-600 text-white rounded-r text-sm hover:bg-blue-700 disabled:bg-blue-300"
+                        disabled={!newComments[task.id]?.trim() || loading}
+                        className="px-3 py-2 bg-blue-600 text-white rounded-r-md text-sm hover:bg-blue-700 disabled:bg-blue-300"
                       >
                         Post
                       </button>
@@ -392,6 +370,28 @@ const TasksTab = () => {
           ))}
         </div>
       )}
+      
+      {/* AI Task Insights Section */}
+      <div className="bg-white rounded-lg shadow p-6">
+        <div className="flex items-center mb-4">
+          <Brain className="text-purple-600 mr-2" size={20} />
+          <h3 className="text-lg font-medium">AI Task Insights</h3>
+        </div>
+        
+        <div className="p-4 bg-purple-50 rounded-lg border border-purple-200">
+          <div className="flex items-start">
+            <AlertTriangle className="text-purple-600 mr-3 mt-1 flex-shrink-0" size={20} />
+            <div>
+              <h4 className="font-medium text-purple-800">Hidden Workload Analysis</h4>
+              <p className="text-sm text-purple-700 mt-1">
+                Our AI has detected that invisible household tasks like meal planning and appointment scheduling
+                are disproportionately handled by Mama. Consider redistributing some of these tasks to create
+                better balance.
+              </p>
+            </div>
+          </div>
+        </div>
+      </div>
     </div>
   );
 };

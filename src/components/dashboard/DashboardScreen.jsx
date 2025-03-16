@@ -11,11 +11,12 @@ import { useSurvey } from '../../hooks/useSurvey';
 import { useTasks } from '../../hooks/useTasks';
 
 // Tab components (will import later)
+// Updated imports:
 import FamilyOverviewTab from './tabs/FamilyOverviewTab';
-import TaskListTab from './tabs/TaskListTab';
+import TasksTab from './tabs/TasksTab';  // Correct import name
 import RelationshipTab from './tabs/RelationshipTab';
-import SurveyResultsTab from './tabs/SurveyResultsTab';
-import WeekHistoryTab from './tabs/WeekHistoryTab';
+import SurveysTab from './tabs/SurveysTab';  // Correct import name
+import WeeklyHistoryTab from './tabs/WeeklyHistoryTab';  // More comprehensive implementation
 
 const DashboardScreen = () => {
   const navigate = useNavigate();
@@ -182,35 +183,37 @@ const DashboardScreen = () => {
       );
     }
     
-    switch(activeTab) {
-      case 'overview':
-        return <FamilyOverviewTab 
-                familyData={familyData} 
-                familyMembers={familyMembers}
-                tasks={tasks}
-               />;
-      case 'tasks':
-        return <TaskListTab 
-                weeklyTasks={weeklyTasks} 
-                familyData={familyData}
-                familyMembers={familyMembers}
-                selectedMember={selectedMember}
-               />;
-      case 'relationship':
-        return <RelationshipTab familyData={familyData} />;
-      case 'survey-results':
-        return <SurveyResultsTab familyData={familyData} />;
-      default:
-        // If it's a week history tab
-        if (activeTab.startsWith('week-') && selectedWeek) {
-          return <WeekHistoryTab 
-                  weekNumber={selectedWeek}
-                  familyData={familyData}
+    const renderTabContent = () => {
+      // ... loading and error handling code ...
+      
+      switch(activeTab) {
+        case 'overview':
+          return <FamilyOverviewTab 
+                  familyData={familyData} 
+                  familyMembers={familyMembers}
+                  tasks={tasks}
                  />;
-        }
-        return <div>Tab content not found</div>;
-    }
-  };
+        case 'tasks':
+          return <TasksTab  // Fixed component name
+                  weeklyTasks={weeklyTasks} 
+                  familyData={familyData}
+                  familyMembers={familyMembers}
+                  selectedMember={selectedMember}
+                 />;
+        case 'relationship':
+          return <RelationshipTab familyData={familyData} />;
+        case 'survey-results':
+          return <SurveysTab familyData={familyData} />;  // Fixed component
+        default:
+          // If it's a week history tab
+          if (activeTab.startsWith('week-') && selectedWeek) {
+            return <WeeklyHistoryTab  // Fixed component name
+                    weekNumber={selectedWeek}
+                   />;
+          }
+          return <div>Tab content not found</div>;
+      }
+    };
   
   // If no family data is loaded yet
   if (!familyData && !familyLoading) {
