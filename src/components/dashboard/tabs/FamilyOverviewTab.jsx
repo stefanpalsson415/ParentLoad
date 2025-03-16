@@ -1,6 +1,6 @@
 // src/components/dashboard/tabs/FamilyOverviewTab.jsx
 import React, { useState, useEffect } from 'react';
-import { CheckCircle, AlertTriangle, Brain, Award, Info, ArrowRight, Users } from 'lucide-react';
+import { CheckCircle, AlertTriangle, Brain, Award, Info, ArrowRight, Users, Clock, Heart } from 'lucide-react';
 import { 
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer,
   PieChart, Pie, Cell, RadarChart, PolarGrid, PolarAngleAxis, Radar
@@ -16,10 +16,59 @@ const FamilyOverviewTab = ({ familyData, familyMembers, tasks }) => {
     insights: true,
     categories: true
   });
+  const [aiInsights, setAiInsights] = useState([]);
+  const [loadingInsights, setLoadingInsights] = useState(false);
   
   // Colors for charts
   const MAMA_COLOR = '#8884d8';
   const PAPA_COLOR = '#82ca9d';
+  
+  // Load AI insights when component mounts
+  useEffect(() => {
+    const loadAiInsights = async () => {
+      if (!familyData) return;
+      
+      setLoadingInsights(true);
+      try {
+        // Import AI service
+        const aiService = await import('../../../services/aiService').then(module => module.default);
+        
+        // Get AI insights
+        const aiResults = await aiService.generateInsights(familyData);
+        
+        // Map AI insights to our format
+        const formattedInsights = aiResults.insights.map(insight => {
+          let icon = <Info size={20} className="text-blue-600" />;
+          let type = 'insight';
+          
+          if (insight.type === 'challenge') {
+            icon = <AlertTriangle size={20} className="text-amber-600" />;
+            type = 'challenge';
+          } else if (insight.type === 'progress') {
+            icon = <CheckCircle size={20} className="text-green-600" />;
+            type = 'progress';
+          }
+          
+          return {
+            type,
+            title: insight.title,
+            description: insight.content || insight.description,
+            icon
+          };
+        });
+        
+        setAiInsights(formattedInsights);
+      } catch (error) {
+        console.error("Error getting AI insights:", error);
+        // Use fallback insights
+        setAiInsights(getFallbackInsights());
+      } finally {
+        setLoadingInsights(false);
+      }
+    };
+    
+    loadAiInsights();
+  }, [familyData]);
   
   // Toggle section expansion
   const toggleSection = (section) => {
@@ -86,22 +135,12 @@ const FamilyOverviewTab = ({ familyData, familyMembers, tasks }) => {
     return defaultCategories;
   };
   
-  // Generate key insights based on data
-  const getKeyInsights = () => {
-    if (!familyData) {
-      return [
-        {
-          type: 'waiting',
-          title: 'Waiting for Survey Data',
-          description: 'Complete the initial survey and weekly check-ins to generate insights.',
-          icon: <Info size={20} className="text-blue-600" />
-        }
-      ];
-    }
-    
-    const insights = [];
+  // Fallback insights if AI fails
+  const getFallbackInsights = () => {
     const balance = getCurrentBalance();
     const categoryData = getCategoryData();
+    
+    const insights = [];
     
     // Find the most imbalanced category
     const mostImbalancedCategory = [...categoryData].sort((a, b) => 
@@ -147,6 +186,37 @@ const FamilyOverviewTab = ({ familyData, familyMembers, tasks }) => {
     });
     
     return insights.slice(0, 3); // Just return top 3 insights
+  };
+  
+  // Get key insights from AI or fallback
+  const getKeyInsights = () => {
+    if (loadingInsights) {
+      return [
+        {
+          type: 'loading',
+          title: 'Generating Insights',
+          description: 'Our AI is analyzing your family data to provide personalized insights...',
+          icon: <Brain size={20} className="text-blue-600" />
+        }
+      ];
+    }
+    
+    if (aiInsights.length > 0) {
+      return aiInsights;
+    }
+    
+    if (!familyData) {
+      return [
+        {
+          type: 'waiting',
+          title: 'Waiting for Survey Data',
+          description: 'Complete the initial survey and weekly check-ins to generate insights.',
+          icon: <Info size={20} className="text-blue-600" />
+        }
+      ];
+    }
+    
+    return getFallbackInsights();
   };
   
   const currentBalance = getCurrentBalance();
@@ -342,6 +412,7 @@ const FamilyOverviewTab = ({ familyData, familyMembers, tasks }) => {
                     insight.type === 'challenge' ? 'border-amber-200 bg-amber-50' :
                     insight.type === 'insight' ? 'border-blue-200 bg-blue-50' :
                     insight.type === 'harmony' ? 'border-purple-200 bg-purple-50' :
+                    insight.type === 'loading' ? 'border-blue-200 bg-blue-50 animate-pulse' :
                     'border-gray-200 bg-gray-50'
                   }`}
                 >
@@ -360,60 +431,61 @@ const FamilyOverviewTab = ({ familyData, familyMembers, tasks }) => {
           </div>
         )}
       </div>
-      {/* Research Insights */}
-{/* Data Interpretation Section */}
-<div className="bg-white rounded-lg shadow p-6">
-  <h3 className="text-lg font-medium mb-4">How Allie Uses Your Data</h3>
-  
-  <div className="bg-white rounded-lg p-4 mb-4 border border-black">
-    <h4 className="font-medium text-lg mb-2">Allie Task Weighting System</h4>
-    <p className="text-sm mb-3">
-      Our proprietary task weighting system goes beyond simple counting to analyze the true impact of different tasks:
-    </p>
-    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-      <div className="flex items-start">
-        <div className="flex-shrink-0 w-8 h-8 rounded-full bg-blue-100 flex items-center justify-center mr-2">
-          <Clock size={16} className="text-blue-600" />
-        </div>
-        <div>
-          <h5 className="font-medium text-sm">Time & Frequency</h5>
-          <p className="text-xs text-gray-600">Tasks done daily or requiring significant time receive higher weight</p>
+      
+      {/* Data Interpretation Section */}
+      <div className="bg-white rounded-lg shadow p-6">
+        <h3 className="text-lg font-medium mb-4">How Allie Uses Your Data</h3>
+        
+        <div className="bg-white rounded-lg p-4 mb-4 border border-black">
+          <h4 className="font-medium text-lg mb-2">Allie Task Weighting System</h4>
+          <p className="text-sm mb-3">
+            Our proprietary task weighting system goes beyond simple counting to analyze the true impact of different tasks:
+          </p>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className="flex items-start">
+              <div className="flex-shrink-0 w-8 h-8 rounded-full bg-blue-100 flex items-center justify-center mr-2">
+                <Clock size={16} className="text-blue-600" />
+              </div>
+              <div>
+                <h5 className="font-medium text-sm">Time & Frequency</h5>
+                <p className="text-xs text-gray-600">Tasks done daily or requiring significant time receive higher weight</p>
+              </div>
+            </div>
+            
+            <div className="flex items-start">
+              <div className="flex-shrink-0 w-8 h-8 rounded-full bg-purple-100 flex items-center justify-center mr-2">
+                <Brain size={16} className="text-purple-600" />
+              </div>
+              <div>
+                <h5 className="font-medium text-sm">Invisibility Factor</h5>
+                <p className="text-xs text-gray-600">Mental load from tasks that go unnoticed receives higher weight</p>
+              </div>
+            </div>
+            
+            <div className="flex items-start">
+              <div className="flex-shrink-0 w-8 h-8 rounded-full bg-red-100 flex items-center justify-center mr-2">
+                <Heart size={16} className="text-red-600" />
+              </div>
+              <div>
+                <h5 className="font-medium text-sm">Emotional Labor</h5>
+                <p className="text-xs text-gray-600">Tasks requiring emotional energy are weighted more heavily</p>
+              </div>
+            </div>
+            
+            <div className="flex items-start">
+              <div className="flex-shrink-0 w-8 h-8 rounded-full bg-green-100 flex items-center justify-center mr-2">
+                <Users size={16} className="text-green-600" />
+              </div>
+              <div>
+                <h5 className="font-medium text-sm">Child Development Impact</h5>
+                <p className="text-xs text-gray-600">Tasks that influence how children view gender roles receive higher weight</p>
+              </div>
+            </div>
+          </div>
         </div>
       </div>
       
-      <div className="flex items-start">
-        <div className="flex-shrink-0 w-8 h-8 rounded-full bg-purple-100 flex items-center justify-center mr-2">
-          <Brain size={16} className="text-purple-600" />
-        </div>
-        <div>
-          <h5 className="font-medium text-sm">Invisibility Factor</h5>
-          <p className="text-xs text-gray-600">Mental load from tasks that go unnoticed receives higher weight</p>
-        </div>
-      </div>
-      
-      <div className="flex items-start">
-        <div className="flex-shrink-0 w-8 h-8 rounded-full bg-red-100 flex items-center justify-center mr-2">
-          <Heart size={16} className="text-red-600" />
-        </div>
-        <div>
-          <h5 className="font-medium text-sm">Emotional Labor</h5>
-          <p className="text-xs text-gray-600">Tasks requiring emotional energy are weighted more heavily</p>
-        </div>
-      </div>
-      
-      <div className="flex items-start">
-        <div className="flex-shrink-0 w-8 h-8 rounded-full bg-green-100 flex items-center justify-center mr-2">
-          <Users size={16} className="text-green-600" />
-        </div>
-        <div>
-          <h5 className="font-medium text-sm">Child Development Impact</h5>
-          <p className="text-xs text-gray-600">Tasks that influence how children view gender roles receive higher weight</p>
-        </div>
-      </div>
-    </div>
-  </div>
-</div>
-<ResearchInsightsCard />
+      <ResearchInsightsCard />
     </div>
   );
 };

@@ -22,6 +22,7 @@ import PaymentScreen from './components/payment/PaymentScreen';
 import LandingPage from './components/marketing/LandingPage';
 import OnboardingFlow from './components/onboarding/OnboardingFlow';
 import { ChatProvider } from './contexts/ChatContext';
+import ChatButton from './components/chat/ChatButton';
 
 // App Routes Component - Used after context providers are set up
 function AppRoutes() {
@@ -162,6 +163,7 @@ function App() {
               <ChatProvider>
                 <div className="App">
                   <AppRoutes />
+                  <ChatButton />
                 </div>
               </ChatProvider>
             </SurveyProvider>

@@ -46,10 +46,23 @@ class ChatService {
   // Get AI response from Claude
   async getAIResponse(text, familyId, previousMessages) {
     try {
-      // In a production app, you would call your backend API that interfaces with Claude
-      // For now, we'll simulate a response with a placeholder
+      // Import the AI service
+      const aiService = await import('../services/aiService').then(module => module.default);
       
-      // Create a conversation history for context
+      // Get the family data
+      const familyData = await import('./DatabaseService').then(module => {
+        return module.default.loadFamilyData(familyId);
+      });
+      
+      // Use AI service to get a response
+      const response = await aiService.getChatResponse(text, familyData, previousMessages);
+      
+      return response;
+    } catch (error) {
+      console.error("Error getting AI response:", error);
+      return "I'm sorry, I'm having trouble processing your request right now. Please try again in a moment.";
+    }
+  }
       const conversationHistory = previousMessages
         .slice(-10) // Last 10 messages for context
         .map(msg => ({

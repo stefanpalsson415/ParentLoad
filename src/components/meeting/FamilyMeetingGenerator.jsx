@@ -1,75 +1,93 @@
-    // src/components/meeting/FamilyMeetingGenerator.jsx
-import React, { useState } from 'react';
+// src/components/meeting/FamilyMeetingGenerator.jsx
+import React, { useState, useEffect } from 'react';
 import { 
   Users, MessageCircle, CheckCircle, Lightbulb, 
-  Calendar, Clock, Download, Star
+  Calendar, Clock, Download, Star, Brain
 } from 'lucide-react';
 
 const FamilyMeetingGenerator = ({ weekNumber, familyData, weeklyTasks }) => {
   const [generatedAgenda, setGeneratedAgenda] = useState(null);
   const [generating, setGenerating] = useState(false);
+  const [error, setError] = useState(null);
   
   // Generate meeting agenda based on family data
-  const generateAgenda = () => {
+  const generateAgenda = async () => {
     setGenerating(true);
+    setError(null);
     
-    // Simulate API call to generate agenda
-    setTimeout(() => {
-      // Count completed tasks
-      const completedTasks = weeklyTasks ? weeklyTasks.filter(t => t.completed).length : 0;
-      const totalTasks = weeklyTasks ? weeklyTasks.length : 0;
+    try {
+      // Import AI service
+      const aiService = await import('../../services/aiService').then(module => module.default);
       
-      // Generate sample agenda based on data
-      setGeneratedAgenda({
-        weekNumber,
-        suggestedDate: new Date(Date.now() + 2 * 24 * 60 * 60 * 1000).toLocaleDateString(),
-        suggestedDuration: "30 minutes",
-        sections: [
-          {
-            title: "Review Progress",
-            duration: "10 minutes",
-            description: "Discuss task completion and survey responses",
-            details: [
-              `Review ${completedTasks} of ${totalTasks} completed tasks`,
-              "Discuss any challenges with incomplete tasks",
-              "Review survey responses from family members"
-            ]
-          },
-          {
-            title: "Celebrate Wins",
-            duration: "5 minutes",
-            description: "Recognize improvements and efforts",
-            details: [
-              `Acknowledge ${completedTasks} completed tasks`,
-              "Recognize effort in balancing responsibilities",
-              "Celebrate any improved balance metrics"
-            ]
-          },
-          {
-            title: "Address Challenges",
-            duration: "10 minutes",
-            description: "Discuss obstacles and find solutions",
-            details: [
-              "Identify ongoing imbalance areas",
-              "Brainstorm solutions for difficult tasks",
-              "Address any communication issues"
-            ]
-          },
-          {
-            title: "Set Next Week's Goals",
-            duration: "5 minutes",
-            description: "Agree on focus areas for the coming week",
-            details: [
-              "Set specific goals for Week " + (weekNumber + 1),
-              "Assign new rebalancing tasks",
-              "Schedule next family meeting"
-            ]
-          }
-        ]
-      });
+      // Generate agenda using AI
+      const agenda = await aiService.generateMeetingAgenda(familyData, weekNumber);
       
+      setGeneratedAgenda(agenda);
+    } catch (error) {
+      console.error("Error generating AI meeting agenda:", error);
+      setError("There was an error generating your meeting agenda. Please try again.");
+      
+      // Fallback to rule-based agenda
+      generateFallbackAgenda();
+    } finally {
       setGenerating(false);
-    }, 1500);
+    }
+  };
+  
+  // Generate a fallback agenda if AI fails
+  const generateFallbackAgenda = () => {
+    // Count completed tasks
+    const completedTasks = weeklyTasks ? weeklyTasks.filter(t => t.completed).length : 0;
+    const totalTasks = weeklyTasks ? weeklyTasks.length : 0;
+    
+    // Generate sample agenda based on data
+    setGeneratedAgenda({
+      weekNumber,
+      suggestedDate: new Date(Date.now() + 2 * 24 * 60 * 60 * 1000).toLocaleDateString(),
+      suggestedDuration: "30 minutes",
+      sections: [
+        {
+          title: "Review Progress",
+          duration: "10 minutes",
+          description: "Discuss task completion and survey responses",
+          details: [
+            `Review ${completedTasks} of ${totalTasks} completed tasks`,
+            "Discuss any challenges with incomplete tasks",
+            "Review survey responses from family members"
+          ]
+        },
+        {
+          title: "Celebrate Wins",
+          duration: "5 minutes",
+          description: "Recognize improvements and efforts",
+          details: [
+            `Acknowledge ${completedTasks} completed tasks`,
+            "Recognize effort in balancing responsibilities",
+            "Celebrate any improved balance metrics"
+          ]
+        },
+        {
+          title: "Address Challenges",
+          duration: "10 minutes",
+          description: "Discuss obstacles and find solutions",
+          details: [
+            "Identify ongoing imbalance areas",
+            "Brainstorm solutions for difficult tasks",
+            "Address any communication issues"
+          ]
+        },
+        {
+          title: "Set Next Week's Goals",
+          duration: "5 minutes",
+          description: "Agree on focus areas for the coming week",
+          details: [
+            "Set specific goals for Week " + (weekNumber + 1),
+            "Assign new rebalancing tasks",
+            "Schedule next family meeting"
+          ]
+        }
+      ]
+    });
   };
   
   // Get meeting status message based on current date and family data
@@ -106,6 +124,12 @@ const FamilyMeetingGenerator = ({ weekNumber, familyData, weeklyTasks }) => {
           Generate an AI-powered agenda for your Week {weekNumber} family meeting
         </p>
         
+        {/* AI Feature Badge */}
+        <div className="mb-4 inline-flex items-center px-3 py-1 bg-purple-100 text-purple-700 rounded-full text-sm">
+          <Brain size={14} className="mr-1" />
+          Powered by Claude AI
+        </div>
+        
         {/* Meeting Status */}
         <div className={`p-4 rounded-lg ${
           meetingStatus.type === "ready" 
@@ -126,6 +150,13 @@ const FamilyMeetingGenerator = ({ weekNumber, familyData, weeklyTasks }) => {
           </div>
         </div>
         
+        {/* Error display */}
+        {error && (
+          <div className="mt-4 p-3 bg-red-50 text-red-700 rounded-lg border border-red-200">
+            {error}
+          </div>
+        )}
+        
         {/* Generate Button */}
         <div className="mt-6 text-center">
           <button 
@@ -133,8 +164,17 @@ const FamilyMeetingGenerator = ({ weekNumber, familyData, weeklyTasks }) => {
             disabled={generating}
             className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 inline-flex items-center"
           >
-            <MessageCircle size={16} className="mr-2" />
-            {generating ? 'Generating...' : 'Generate Meeting Agenda'}
+            {generating ? (
+              <>
+                <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin mr-2"></div>
+                Generating...
+              </>
+            ) : (
+              <>
+                <MessageCircle size={16} className="mr-2" />
+                Generate Meeting Agenda
+              </>
+            )}
           </button>
         </div>
       </div>
