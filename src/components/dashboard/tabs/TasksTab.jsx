@@ -6,6 +6,8 @@ import {
 } from 'lucide-react';
 import { useFamily } from '../../../hooks/useFamily';
 import { useTasks } from '../../../hooks/useTasks';
+import TaskEffectivenessAnalysis from '../TaskEffectivenessAnalysis';
+
 
 // Task effectiveness modal
 const [showEffectivenessModal, setShowEffectivenessModal] = useState(false);

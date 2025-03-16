@@ -17,6 +17,7 @@ import TasksTab from './tabs/TasksTab';  // Correct import name
 import RelationshipTab from './tabs/RelationshipTab';
 import SurveysTab from './tabs/SurveysTab';  // Correct import name
 import WeeklyHistoryTab from './tabs/WeeklyHistoryTab';  // More comprehensive implementation
+import FamilyMeetingGenerator from '../meeting/FamilyMeetingGenerator';
 
 const DashboardScreen = () => {
   const navigate = useNavigate();
@@ -202,6 +203,12 @@ const DashboardScreen = () => {
                  />;
         case 'relationship':
           return <RelationshipTab familyData={familyData} />;
+          case 'meeting':
+            return <FamilyMeetingGenerator 
+                    weekNumber={currentWeek}
+                    familyData={familyData}
+                    weeklyTasks={weeklyTasks}
+                   />;  
         case 'survey-results':
           return <SurveysTab familyData={familyData} />;  // Fixed component
         default:
@@ -249,6 +256,7 @@ const DashboardScreen = () => {
     { id: 'overview', label: 'Family Dashboard', icon: <BarChart3 size={18} /> },
     { id: 'tasks', label: 'Your To-Do List', icon: <CheckSquare size={18} /> },
     { id: 'relationship', label: 'Relationship', icon: <Heart size={18} /> },
+    { id: 'meeting', label: 'Family Meeting', icon: <MessageCircle size={18} /> },
     { id: 'survey-results', label: 'Initial Survey', icon: <ClipboardCheck size={18} /> },
     ...weekHistoryTabs
   ];
