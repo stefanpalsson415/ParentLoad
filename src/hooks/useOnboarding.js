@@ -22,27 +22,38 @@ export function useOnboarding() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
 
-  // Update onboarding data for a specific step
   const updateStepData = useCallback((step, data) => {
     try {
       // Validate the step data
-      console.log("updateStepData called with:", step, data); // Add this debug line
+      console.log("updateStepData called with:", step, data);
+      
+      // Extra logging for debugging
+      if (step === 'parentData') {
+        console.log("Parent data structure:", JSON.stringify(data));
+      }
+      
       const validatedData = onboardingService.validateOnboardingStep(step, data);
+      console.log("Validation successful, validated data:", validatedData);
       
       // Update the onboarding data
-      setOnboardingData(prev => ({
-        ...prev,
-        ...validatedData
-      }));
+      setOnboardingData(prev => {
+        const updated = {
+          ...prev,
+          ...validatedData
+        };
+        console.log("Updated onboarding data:", updated);
+        return updated;
+      });
       
       return true;
     } catch (err) {
-      console.error("Error updating data:", err); // Add this line
+      console.error("Error in updateStepData for step:", step);
+      console.error("Error object:", err);
+      console.error("Error message:", err.message);
+      console.error("Error stack:", err.stack);
       setError(err.message || "Error updating data");
-
       return false;
     }
-    
   }, []);
 
   // Navigate to the next step

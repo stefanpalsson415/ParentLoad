@@ -1,23 +1,23 @@
+// src/services/firebase.js (Update or verify this)
 import { initializeApp } from 'firebase/app';
 import { getFirestore } from 'firebase/firestore';
 import { getAuth } from 'firebase/auth';
 import { getStorage } from 'firebase/storage';
 
+// Your web app's Firebase configuration
 const firebaseConfig = {
-  apiKey: "AIzaSyALjXkZiFZ_Fy143N_dzdaUbyDCtabBr7Y",
-  authDomain: "parentload-ba995.firebaseapp.com",
-  projectId: "parentload-ba995",
-  storageBucket: "parentload-ba995.firebasestorage.app",
-  messagingSenderId: "363935868004",
-  appId: "1:363935868004:web:8802abceeca81cc10deb71",
-  measurementId: "G-7T846QZH0J"
+  apiKey: "YOUR_API_KEY",
+  authDomain: "YOUR_AUTH_DOMAIN",
+  projectId: "YOUR_PROJECT_ID",
+  storageBucket: "YOUR_STORAGE_BUCKET",
+  messagingSenderId: "YOUR_MESSAGING_SENDER_ID",
+  appId: "YOUR_APP_ID"
 };
 
-// Initialize Firebase services
+// Initialize Firebase
 const app = initializeApp(firebaseConfig);
 const db = getFirestore(app);
 const auth = getAuth(app);
 const storage = getStorage(app);
 
-// Export the Firebase services (but not app twice)
 export { db, auth, storage };
