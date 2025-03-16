@@ -229,37 +229,45 @@ export function validateOnboardingStep(step, data) {
       
       return { childrenData: data.children || [] };
       
-    case 'priorities':
-      // Validate that priorities are set correctly
-      if (!data.priorities) {
-        // Set default priorities if none provided
-        return {
-          priorities: {
-            highestPriority: "Invisible Parental Tasks",
-            secondaryPriority: "Visible Parental Tasks",
-            tertiaryPriority: "Invisible Household Tasks"
-          }
-        };
-      }
-      
-      const validCategories = [
-        "Visible Household Tasks",
-        "Invisible Household Tasks",
-        "Visible Parental Tasks",
-        "Invisible Parental Tasks"
-      ];
-      
-      // Check that priorities are valid categories
-      ['highestPriority', 'secondaryPriority', 'tertiaryPriority'].forEach(priority => {
-        if (data.priorities[priority] && !validCategories.includes(data.priorities[priority])) {
-          throw createError(
-            ErrorCodes.DATA_INVALID, 
-            `Invalid priority category: ${data.priorities[priority]}`
-          );
+      case 'priorities':
+        // Validate that priorities are set correctly
+        let prioritiesObj;
+        
+        if (data.priorities) {
+          // If data has a priorities property, use that
+          prioritiesObj = data.priorities;
+        } else if (data.highestPriority) {
+          // If data directly contains the priority properties, use data itself
+          prioritiesObj = data;
+        } else {
+          // Set default priorities if none provided
+          return {
+            priorities: {
+              highestPriority: "Invisible Parental Tasks",
+              secondaryPriority: "Visible Parental Tasks",
+              tertiaryPriority: "Invisible Household Tasks"
+            }
+          };
         }
-      });
-      
-      return { priorities: data.priorities };
+        
+        const validCategories = [
+          "Visible Household Tasks",
+          "Invisible Household Tasks",
+          "Visible Parental Tasks",
+          "Invisible Parental Tasks"
+        ];
+        
+        // Check that priorities are valid categories
+        ['highestPriority', 'secondaryPriority', 'tertiaryPriority'].forEach(priority => {
+          if (prioritiesObj[priority] && !validCategories.includes(prioritiesObj[priority])) {
+            throw createError(
+              ErrorCodes.DATA_INVALID, 
+              `Invalid priority category: ${prioritiesObj[priority]}`
+            );
+          }
+        });
+        
+        return { priorities: prioritiesObj };
       
     default:
       console.warn(`Unknown onboarding step: ${step}`);

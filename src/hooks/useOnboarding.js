@@ -71,17 +71,19 @@ export function useOnboarding() {
     setCurrentStep(step);
   }, []);
 
-  // Complete the onboarding process
   const completeOnboarding = useCallback(async () => {
     setError(null);
     try {
       setLoading(true);
+      
+      console.log("Completing onboarding with data:", JSON.stringify(onboardingData));
       
       // Create the family
       const newFamily = await onboardingService.createFamilyFromOnboarding(onboardingData);
       
       return newFamily;
     } catch (err) {
+      console.error("Error in completeOnboarding:", err);
       const errorMessage = getUserFriendlyError(err);
       setError(errorMessage);
       return null;
@@ -89,7 +91,7 @@ export function useOnboarding() {
       setLoading(false);
     }
   }, [onboardingData]);
-
+  
   // Reset error state
   const clearError = useCallback(() => {
     setError(null);
