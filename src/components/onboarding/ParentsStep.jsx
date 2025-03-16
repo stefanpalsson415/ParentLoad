@@ -48,8 +48,28 @@ const ParentsStep = ({ onboardingData, updateStepData, nextStep, prevStep }) => 
     
     console.log("Submitting parent data:", parentData);
     
+    // Validation checks
+    if (parentData.length === 0) {
+      setError('Please add at least one parent with complete information');
+      return;
+    }
+
+    // Make sure emails are valid
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    for (const parent of parentData) {
+      if (!emailRegex.test(parent.email)) {
+        setError('Please enter valid email addresses');
+        return;
+      }
+      
+      if (parent.password.length < 6) {
+        setError('Passwords must be at least 6 characters');
+        return;
+      }
+    }
+    
     // THIS IS THE KEY CHANGE - pass the data with the right structure
-    const success = updateStepData('parents', { parentData });
+    const success = updateStepData('parentData', parentData);
     if (success) {
       nextStep();
     } else {

@@ -37,6 +37,7 @@ export function useOnboarding() {
       
       return true;
     } catch (err) {
+      console.error("Error updating data:", err); // Add this line
       setError(err.message || "Error updating data");
 
       return false;
