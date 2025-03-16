@@ -7,6 +7,12 @@ import {
 import { useFamily } from '../../../hooks/useFamily';
 import { useTasks } from '../../../hooks/useTasks';
 
+// Task effectiveness modal
+const [showEffectivenessModal, setShowEffectivenessModal] = useState(false);
+const [currentTaskId, setCurrentTaskId] = useState(null);
+const [effectivenessRating, setEffectivenessRating] = useState(5);
+const [effectivenessFeedback, setEffectivenessFeedback] = useState('');
+
 const TasksTab = ({ weeklyTasks, familyData, familyMembers, selectedMember }) => {
   const { updateTaskCompletion, updateSubtaskCompletion, addTaskComment } = useTasks();
   
@@ -58,7 +64,10 @@ const TasksTab = ({ weeklyTasks, familyData, familyMembers, selectedMember }) =>
   };
   
   // Handle task completion toggle
-  const handleTaskCompletion = async (taskId, isCompleted) => {
+  // Handle task completion toggle
+const handleTaskCompletion = async (taskId, isCompleted) => {
+  // If task is already completed, just toggle it
+  if (isCompleted) {
     try {
       setLoading(true);
       await updateTaskCompletion(taskId, !isCompleted);
@@ -67,8 +76,40 @@ const TasksTab = ({ weeklyTasks, familyData, familyMembers, selectedMember }) =>
     } finally {
       setLoading(false);
     }
-  };
+    return;
+  }
   
+  // If completing a task, show effectiveness modal
+  setCurrentTaskId(taskId);
+  setEffectivenessRating(5);
+  setEffectivenessFeedback('');
+  setShowEffectivenessModal(true);
+};
+ 
+// Handle effectiveness feedback submission
+const handleEffectivenessSubmit = async () => {
+  try {
+    setLoading(true);
+    
+    // First track the effectiveness
+    await trackTaskEffectiveness(
+      currentTaskId, 
+      effectivenessRating, 
+      effectivenessFeedback
+    );
+    
+    // Then mark the task as complete
+    await updateTaskCompletion(currentTaskId, true);
+    
+    // Close the modal
+    setShowEffectivenessModal(false);
+  } catch (error) {
+    console.error("Error submitting effectiveness:", error);
+  } finally {
+    setLoading(false);
+  }
+};
+
   // Handle subtask completion toggle
   const handleSubtaskCompletion = async (taskId, subtaskId, isCompleted) => {
     try {
@@ -208,6 +249,18 @@ const TasksTab = ({ weeklyTasks, familyData, familyMembers, selectedMember }) =>
                           {task.assignedToName || task.assignedTo}
                         </span>
                         
+                        {task.priority && (
+    <span className={`mt-1 flex items-center text-xs px-2 py-1 rounded-full ${
+      task.priority === 'High' 
+        ? 'bg-red-100 text-red-700' 
+        : task.priority === 'Medium'
+          ? 'bg-amber-100 text-amber-700'
+          : 'bg-blue-100 text-blue-700'
+    }`}>
+      {task.priority} Priority
+    </span>
+  )}
+
                         {task.isAIGenerated && (
                           <span className="mt-1 flex items-center text-xs px-2 py-1 bg-purple-50 text-purple-700 rounded-full">
                             <Brain size={10} className="mr-1" />
@@ -392,6 +445,66 @@ const TasksTab = ({ weeklyTasks, familyData, familyMembers, selectedMember }) =>
           </div>
         </div>
       </div>
+      {/* Task Effectiveness Modal */}
+{showEffectivenessModal && (
+  <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+    <div className="bg-white rounded-lg p-6 max-w-md w-full">
+      <h3 className="text-lg font-medium mb-4">Task Effectiveness Feedback</h3>
+      
+      <p className="text-sm text-gray-600 mb-4">
+        How effective was this task in helping balance responsibilities in your family?
+      </p>
+      
+      <div className="mb-4">
+        <label className="block text-sm font-medium mb-2">
+          Effectiveness Rating (1-10):
+        </label>
+        <input
+          type="range"
+          min="1"
+          max="10"
+          value={effectivenessRating}
+          onChange={(e) => setEffectivenessRating(parseInt(e.target.value))}
+          className="w-full"
+        />
+        <div className="flex justify-between text-xs text-gray-500">
+          <span>1 (Not Effective)</span>
+          <span>5 (Somewhat)</span>
+          <span>10 (Very Effective)</span>
+        </div>
+      </div>
+      
+      <div className="mb-4">
+        <label className="block text-sm font-medium mb-2">
+          Feedback (Optional):
+        </label>
+        <textarea
+          value={effectivenessFeedback}
+          onChange={(e) => setEffectivenessFeedback(e.target.value)}
+          placeholder="Share your thoughts on this task..."
+          className="w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-1 focus:ring-blue-500"
+          rows={3}
+        ></textarea>
+      </div>
+      
+      <div className="flex justify-end space-x-3">
+        <button
+          onClick={() => setShowEffectivenessModal(false)}
+          className="px-4 py-2 border rounded-md hover:bg-gray-50"
+        >
+          Cancel
+        </button>
+        <button
+          onClick={handleEffectivenessSubmit}
+          disabled={loading}
+          className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700"
+        >
+          {loading ? 'Submitting...' : 'Submit & Complete'}
+        </button>
+      </div>
+    </div>
+  </div>
+)}
     </div>
   );
 };

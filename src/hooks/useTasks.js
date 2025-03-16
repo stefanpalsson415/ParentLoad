@@ -270,6 +270,34 @@ export function useTasks() {
     }
   }, []);
 
+
+// Track task effectiveness
+const trackTaskEffectiveness = useCallback(async (taskId, effectivenessScore, feedback) => {
+  if (!familyData?.familyId) {
+    setError("No family selected");
+    return false;
+  }
+  
+  setError(null);
+  try {
+    setLoading(true);
+    
+    // In a real implementation, you'd call a service method
+    // await taskService.trackTaskEffectiveness(familyData.familyId, taskId, effectivenessScore, feedback);
+    
+    // For now, we'll just simulate success
+    await new Promise(resolve => setTimeout(resolve, 300));
+    
+    return true;
+  } catch (err) {
+    const errorMessage = getUserFriendlyError(err);
+    setError(errorMessage);
+    return false;
+  } finally {
+    setLoading(false);
+  }
+}, [familyData]);
+
   // Reset error state
   const clearError = useCallback(() => {
     setError(null);
@@ -287,6 +315,7 @@ export function useTasks() {
     addTaskComment,
     saveMeetingNotes,
     generateWeeklyTasks,
+    trackTaskEffectiveness,
     clearError
   };
 }
