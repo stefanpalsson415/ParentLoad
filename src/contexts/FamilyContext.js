@@ -19,6 +19,85 @@ export function useFamily() {
 export function FamilyProvider({ children }) {
   const { currentUser, familyData: initialFamilyData } = useAuth();
   
+// Get relationship trend data
+const getRelationshipTrendData = useCallback(() => {
+  if (!familyData) return [];
+  
+  const trends = [];
+  
+  // Add initial point from family data if available
+  if (familyData.initialRelationshipData) {
+    trends.push({
+      week: 'Initial',
+      satisfaction: familyData.initialRelationshipData.satisfaction || 3,
+      communication: familyData.initialRelationshipData.communication || 3,
+      workloadBalance: 50 - Math.abs(50 - (familyData.balance?.mama || 70))
+    });
+  } else {
+    // Start with default values
+    trends.push({
+      week: 'Initial',
+      satisfaction: 3,
+      communication: 3,
+      workloadBalance: 30
+    });
+  }
+  
+  // Add data points from completed weeks
+  for (let i = 1; i <= Math.max(...completedWeeks, currentWeek); i++) {
+    if (familyData.coupleCheckIns && familyData.coupleCheckIns[`week${i}`]) {
+      const weekData = familyData.coupleCheckIns[`week${i}`];
+      
+      trends.push({
+        week: `Week ${i}`,
+        satisfaction: weekData.satisfaction || 3,
+        communication: weekData.communication || 3,
+        workloadBalance: getWeekBalance(i).papa // Use papa's percentage as a proxy for balance
+      });
+    } else if (completedWeeks.includes(i)) {
+      // If week is completed but no check-in data, use simulated data
+      const prevWeek = trends[trends.length - 1];
+      trends.push({
+        week: `Week ${i}`,
+        satisfaction: Math.min(5, prevWeek.satisfaction + 0.3),
+        communication: Math.min(5, prevWeek.communication + 0.2),
+        workloadBalance: Math.min(90, prevWeek.workloadBalance + 5)
+      });
+    }
+  }
+  
+  return trends;
+}, [familyData, completedWeeks, currentWeek]);
+
+// Save couple check-in data
+const saveCoupleCheckInData = useCallback(async (familyId, weekNumber, data) => {
+  if (!familyId) {
+    throw new Error("No family ID provided");
+  }
+  
+  try {
+    await DatabaseService.saveCoupleCheckInData(familyId, weekNumber, data);
+    
+    // Update local state
+    setFamilyData(prev => ({
+      ...prev,
+      coupleCheckIns: {
+        ...(prev.coupleCheckIns || {}),
+        [`week${weekNumber}`]: {
+          ...data,
+          completed: true,
+          completedAt: new Date().toISOString()
+        }
+      }
+    }));
+    
+    return true;
+  } catch (error) {
+    console.error("Error saving couple check-in data:", error);
+    throw error;
+  }
+}, []);
+
   // Reference to store survey data passed from SurveyContext via the bridge component
   const surveyDataRef = useRef({
     fullQuestionSet: [],

@@ -258,6 +258,9 @@ export function useTasks() {
     }
   }, [familyData]);
 
+
+
+  
   // Generate tasks for a week
   const generateWeeklyTasks = useCallback((weekNumber, previousTasks = [], surveyResponses = {}) => {
     try {

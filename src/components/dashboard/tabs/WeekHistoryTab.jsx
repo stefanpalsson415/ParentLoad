@@ -22,7 +22,8 @@ const WeekHistoryTab = ({ weekNumber }) => {
     responses: false,
     balance: true,
     tasks: true,
-    meeting: true
+    meeting: true,
+    familyProgress: true  // Add this new section
   });
   const [selectedMember, setSelectedMember] = useState(null);
   const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0);
@@ -543,6 +544,120 @@ const WeekHistoryTab = ({ weekNumber }) => {
         )}
       </div>
       
+{/* Add this new component after the "Week Balance" section, around line 420 */}
+{/* Family Progress Tracking */}
+<div className="bg-white rounded-lg shadow">
+  <div 
+    className="p-4 flex justify-between items-center cursor-pointer hover:bg-gray-50"
+    onClick={() => toggleSection('familyProgress')}
+  >
+    <h3 className="text-lg font-semibold">Family Progress Journey</h3>
+    {expandedSections.familyProgress ? (
+      <ChevronUp size={20} className="text-gray-500" />
+    ) : (
+      <ChevronDown size={20} className="text-gray-500" />
+    )}
+  </div>
+  
+  {expandedSections.familyProgress && (
+    <div className="p-6 pt-0">
+      <p className="text-sm text-gray-600 mb-4">
+        Your family's journey to better balance over time
+      </p>
+      
+      {/* Journey Timeline */}
+      <div className="relative pt-10 pb-16">
+        {/* The Journey Path */}
+        <div className="absolute left-0 right-0 top-1/2 h-2 bg-gray-300 rounded"></div>
+        
+        {/* Initial Point */}
+        <div className="absolute left-0 top-1/2 transform -translate-y-1/2">
+          <div className="w-8 h-8 bg-blue-500 rounded-full flex items-center justify-center text-white font-bold">
+            S
+          </div>
+          <div className="text-center mt-2">
+            <div className="text-xs font-medium">Initial</div>
+            <div className="text-xs text-red-600">70% / 30%</div>
+          </div>
+          <div className="absolute -top-14 left-0 text-center text-red-600">
+            😫
+            <br />
+            <span className="text-xs">Unbalanced</span>
+          </div>
+        </div>
+        
+        {/* Week 1 Point */}
+        <div className="absolute left-1/4 top-1/2 transform -translate-y-1/2">
+          <div className="w-8 h-8 bg-amber-500 rounded-full flex items-center justify-center text-white font-bold">
+            1
+          </div>
+          <div className="text-center mt-2">
+            <div className="text-xs font-medium">Week 1</div>
+            <div className="text-xs text-amber-600">65% / 35%</div>
+          </div>
+          <div className="absolute -top-14 left-0 text-center text-amber-600">
+            🙂
+            <br />
+            <span className="text-xs">Getting Better</span>
+          </div>
+        </div>
+        
+        {/* Week 2 Point */}
+        <div className="absolute left-1/2 top-1/2 transform -translate-y-1/2">
+          <div className="w-8 h-8 bg-amber-500 rounded-full flex items-center justify-center text-white font-bold">
+            2
+          </div>
+          <div className="text-center mt-2">
+            <div className="text-xs font-medium">Week 2</div>
+            <div className="text-xs text-amber-600">60% / 40%</div>
+          </div>
+          <div className="absolute -top-14 left-0 text-center text-amber-600">
+            🙂
+            <br />
+            <span className="text-xs">Getting Better</span>
+          </div>
+        </div>
+        
+        {/* Week 3 Point */}
+        <div className="absolute left-3/4 top-1/2 transform -translate-y-1/2">
+          <div className="w-8 h-8 bg-green-500 rounded-full flex items-center justify-center text-white font-bold">
+            3
+          </div>
+          <div className="text-center mt-2">
+            <div className="text-xs font-medium">Week 3</div>
+            <div className="text-xs text-green-600">55% / 45%</div>
+          </div>
+          <div className="absolute -top-14 left-0 text-center text-green-600">
+            😀
+            <br />
+            <span className="text-xs">Balanced!</span>
+          </div>
+        </div>
+        
+        {/* Current Week Point */}
+        <div className="absolute right-0 top-1/2 transform -translate-y-1/2">
+          <div className="w-8 h-8 bg-green-500 rounded-full flex items-center justify-center text-white font-bold">
+            {currentWeek}
+          </div>
+          <div className="text-center mt-2">
+            <div className="text-xs font-medium">Current</div>
+            <div className="text-xs text-green-600">52% / 48%</div>
+          </div>
+          <div className="absolute -top-14 left-0 text-center text-green-600">
+            😀
+            <br />
+            <span className="text-xs">Balanced!</span>
+          </div>
+        </div>
+      </div>
+      
+      <div className="mt-4 text-sm text-center text-green-700">
+        <p><strong>Great progress!</strong> Your family has improved from a 40% imbalance to nearly 50/50!</p>
+      </div>
+    </div>
+  )}
+</div>
+
       {/* Tasks Section */}
       {weekData && weekData.tasks && weekData.tasks.length > 0 && (
         <div className="bg-white rounded-lg shadow">

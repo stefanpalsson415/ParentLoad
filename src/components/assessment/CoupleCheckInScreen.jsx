@@ -1,291 +1,319 @@
-import React, { useState } from 'react';
-import { X, Save, Heart, MessageCircle } from 'lucide-react';
-import { useFamily } from '../../contexts/FamilyContext';
+import React, { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
+import { 
+  Heart, ArrowLeft, ArrowRight, CheckCircle, 
+  Info, Clock, Calendar
+} from 'lucide-react';
+import { useFamily } from '../../hooks/useFamily';
 
-const CoupleCheckInScreen = ({ onClose }) => {
-  const { 
-    familyId, 
-    familyMembers, 
-    currentWeek, 
-    selectedUser,
-    saveCoupleCheckInData
-  } = useFamily();
+const CoupleCheckInScreen = () => {
+  const navigate = useNavigate();
+  const { familyData, saveCoupleCheckInData } = useFamily();
   
+  const [currentStep, setCurrentStep] = useState(0);
   const [responses, setResponses] = useState({
-    satisfaction: 3,
-    communication: 3,
-    balance: 3,
-    stress: 3,
-    appreciation: 3,
-    notes: '',
-    nextSteps: ''
+    satisfaction: 5,
+    communication: 5,
+    workloadBalance: 5,
+    support: 5,
+    stress: 5,
+    teamwork: 5,
+    appreciation: 5,
+    qualityTime: 5
   });
-  const [isSaving, setIsSaving] = useState(false);
+  const [feedback, setFeedback] = useState('');
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState(null);
   
-  // Get parent members for showing responses
-  const parentMembers = familyMembers.filter(m => m.role === 'parent');
-  const mamaUser = parentMembers.find(m => m.roleType === 'Mama');
-  const papaUser = parentMembers.find(m => m.roleType === 'Papa');
+  // Steps for the check-in process
+  const steps = [
+    {
+      id: 'introduction',
+      title: 'Weekly Couple Check-In',
+      type: 'info',
+      content: 'This short check-in helps track how workload balance affects your relationship. It takes about 3 minutes to complete.'
+    },
+    {
+      id: 'satisfaction',
+      title: 'Overall Satisfaction',
+      question: 'How satisfied are you with your relationship this week?',
+      field: 'satisfaction',
+      description: 'Consider your overall feelings about your relationship over the past 7 days.'
+    },
+    {
+      id: 'workloadBalance',
+      title: 'Workload Balance',
+      question: 'How fair did the distribution of responsibilities feel this week?',
+      field: 'workloadBalance',
+      description: 'Consider both visible tasks (like cleaning) and invisible work (like planning and emotional labor).'
+    },
+    {
+      id: 'communication',
+      title: 'Communication Quality',
+      question: 'How would you rate your communication as a couple this week?',
+      field: 'communication',
+      description: 'Consider how well you expressed needs and listened to each other.'
+    },
+    {
+      id: 'support',
+      title: 'Feeling Supported',
+      question: 'How supported did you feel by your partner this week?',
+      field: 'support',
+      description: 'Consider emotional support, practical help, and understanding.'
+    },
+    {
+      id: 'teamwork',
+      title: 'Teamwork Effectiveness',
+      question: 'How well did you work together as a team this week?',
+      field: 'teamwork',
+      description: 'Consider coordination, cooperation, and shared decision making.'
+    },
+    {
+      id: 'appreciation',
+      title: 'Feeling Appreciated',
+      question: 'How appreciated did you feel for your contributions this week?',
+      field: 'appreciation',
+      description: 'Consider verbal acknowledgment and other expressions of gratitude.'
+    },
+    {
+      id: 'qualityTime',
+      title: 'Quality Time',
+      question: 'How satisfied are you with the quality time you spent together this week?',
+      field: 'qualityTime',
+      description: 'Consider both quantity and quality of time without distractions.'
+    },
+    {
+      id: 'feedback',
+      title: 'Additional Thoughts',
+      question: 'Any specific observations or feelings about your relationship this week?',
+      field: 'feedback',
+      type: 'textarea'
+    },
+    {
+      id: 'summary',
+      title: 'Check-In Complete',
+      type: 'summary',
+      content: 'Thank you for completing your weekly couple check-in! This helps track how workload balance impacts your relationship.'
+    }
+  ];
   
-  // Handle response change
-  const handleResponseChange = (field, value) => {
+  // Get current step
+  const currentStepData = steps[currentStep];
+  
+  // Handle input changes
+  const handleInputChange = (field, value) => {
     setResponses(prev => ({
       ...prev,
       [field]: value
     }));
   };
   
-  // Format rating as text
-  const getRatingText = (rating, field) => {
-    const texts = {
-      satisfaction: ['Very Dissatisfied', 'Dissatisfied', 'Neutral', 'Satisfied', 'Very Satisfied'],
-      communication: ['Very Poor', 'Poor', 'Fair', 'Good', 'Excellent'],
-      balance: ['Very Imbalanced', 'Imbalanced', 'Somewhat Balanced', 'Balanced', 'Very Balanced'],
-      stress: ['Very High', 'High', 'Moderate', 'Low', 'Very Low'],
-      appreciation: ['Never', 'Rarely', 'Sometimes', 'Often', 'Always']
-    };
-    
-    return texts[field][rating - 1];
-  };
-  
-  // Save check-in data
-  const handleSave = async () => {
-    setIsSaving(true);
-    try {
-      await saveCoupleCheckInData(currentWeek, {
-        responses,
-        completedBy: selectedUser.id,
-        completedByName: selectedUser.name,
-        completedAt: new Date().toISOString()
-      });
-      
-      if (onClose) onClose(true);
-    } catch (error) {
-      console.error("Error saving couple check-in:", error);
-      alert("There was an error saving your check-in. Please try again.");
-    } finally {
-      setIsSaving(false);
+  // Handle next step
+  const nextStep = () => {
+    if (currentStep < steps.length - 1) {
+      setCurrentStep(currentStep + 1);
     }
   };
   
+  // Handle previous step
+  const prevStep = () => {
+    if (currentStep > 0) {
+      setCurrentStep(currentStep - 1);
+    }
+  };
+  
+  // Submit check-in data
+  const submitCheckIn = async () => {
+    if (!familyData?.familyId) {
+      setError("No family selected");
+      return;
+    }
+    
+    try {
+      setSaving(true);
+      
+      // Add timestamp and current week
+      const checkInData = {
+        ...responses,
+        feedback,
+        timestamp: new Date().toISOString(),
+        weekNumber: familyData.currentWeek || 1
+      };
+      
+      // Save to database
+      await saveCoupleCheckInData(familyData.familyId, familyData.currentWeek || 1, checkInData);
+      
+      // Go to final step
+      setCurrentStep(steps.length - 1);
+    } catch (err) {
+      setError("Error saving check-in data: " + err.message);
+    } finally {
+      setSaving(false);
+    }
+  };
+  
+  // Complete and return to dashboard
+  const finishCheckIn = () => {
+    navigate('/dashboard');
+  };
+  
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
-      <div className="bg-white rounded-lg max-w-3xl w-full max-h-[90vh] overflow-y-auto">
-        {/* Header */}
-        <div className="sticky top-0 bg-white border-b p-4 flex justify-between items-center">
-          <div className="flex items-center">
-            <Heart size={20} className="text-pink-600 mr-2" />
-            <h2 className="text-xl font-bold font-roboto">Couple Check-in: Cycle {currentWeek}</h2>
-          </div>
-          <button
-            onClick={() => onClose(false)}
-            className="p-1 rounded-full hover:bg-gray-200"
-          >
-            <X size={20} />
-          </button>
-        </div>
-        
-        {/* Content */}
-        <div className="p-6">
-          <p className="text-gray-700 mb-6 font-roboto">
-            This quick check-in helps track how workload balance affects your relationship.
-            Your responses will help guide future recommendations.
-          </p>
-          
-          {/* Questions */}
-          <div className="space-y-6">
-            <div>
-              <h3 className="font-medium mb-2 font-roboto">1. Overall Relationship Satisfaction</h3>
-              <p className="text-sm text-gray-600 mb-3 font-roboto">
-                How satisfied are you with your relationship this week?
-              </p>
-              <div className="flex flex-col sm:flex-row items-center justify-between p-2 border rounded">
-                <span className="text-sm text-gray-600 font-roboto">Very Dissatisfied</span>
-                <div className="flex space-x-4 my-3">
-                  {[1, 2, 3, 4, 5].map(value => (
-                    <button
-                      key={value}
-                      className={`w-10 h-10 rounded-full ${
-                        responses.satisfaction === value 
-                          ? 'bg-black text-white' 
-                          : 'bg-gray-100 hover:bg-gray-200'
-                      }`}
-                      onClick={() => handleResponseChange('satisfaction', value)}
-                    >
-                      {value}
-                    </button>
-                  ))}
-                </div>
-                <span className="text-sm text-gray-600 font-roboto">Very Satisfied</span>
-              </div>
-              <div className="text-center mt-2">
-                <span className="font-medium font-roboto">{getRatingText(responses.satisfaction, 'satisfaction')}</span>
-              </div>
-            </div>
-            
-            <div>
-              <h3 className="font-medium mb-2 font-roboto">2. Communication Quality</h3>
-              <p className="text-sm text-gray-600 mb-3 font-roboto">
-                How would you rate the quality of communication about household and parenting tasks?
-              </p>
-              <div className="flex flex-col sm:flex-row items-center justify-between p-2 border rounded">
-                <span className="text-sm text-gray-600 font-roboto">Very Poor</span>
-                <div className="flex space-x-4 my-3">
-                  {[1, 2, 3, 4, 5].map(value => (
-                    <button
-                      key={value}
-                      className={`w-10 h-10 rounded-full ${
-                        responses.communication === value 
-                          ? 'bg-black text-white' 
-                          : 'bg-gray-100 hover:bg-gray-200'
-                      }`}
-                      onClick={() => handleResponseChange('communication', value)}
-                    >
-                      {value}
-                    </button>
-                  ))}
-                </div>
-                <span className="text-sm text-gray-600 font-roboto">Excellent</span>
-              </div>
-              <div className="text-center mt-2">
-                <span className="font-medium font-roboto">{getRatingText(responses.communication, 'communication')}</span>
-              </div>
-            </div>
-            
-            <div>
-              <h3 className="font-medium mb-2 font-roboto">3. Workload Balance</h3>
-              <p className="text-sm text-gray-600 mb-3 font-roboto">
-                How balanced do you feel the workload distribution was this week?
-              </p>
-              <div className="flex flex-col sm:flex-row items-center justify-between p-2 border rounded">
-                <span className="text-sm text-gray-600 font-roboto">Very Imbalanced</span>
-                <div className="flex space-x-4 my-3">
-                  {[1, 2, 3, 4, 5].map(value => (
-                    <button
-                      key={value}
-                      className={`w-10 h-10 rounded-full ${
-                        responses.balance === value 
-                          ? 'bg-black text-white' 
-                          : 'bg-gray-100 hover:bg-gray-200'
-                      }`}
-                      onClick={() => handleResponseChange('balance', value)}
-                    >
-                      {value}
-                    </button>
-                  ))}
-                </div>
-                <span className="text-sm text-gray-600 font-roboto">Very Balanced</span>
-              </div>
-              <div className="text-center mt-2">
-                <span className="font-medium font-roboto">{getRatingText(responses.balance, 'balance')}</span>
-              </div>
-            </div>
-            
-            <div>
-              <h3 className="font-medium mb-2 font-roboto">4. Stress Level</h3>
-              <p className="text-sm text-gray-600 mb-3 font-roboto">
-                How would you rate your stress level related to household and parenting responsibilities?
-              </p>
-              <div className="flex flex-col sm:flex-row items-center justify-between p-2 border rounded">
-                <span className="text-sm text-gray-600 font-roboto">Very High Stress</span>
-                <div className="flex space-x-4 my-3">
-                  {[1, 2, 3, 4, 5].map(value => (
-                    <button
-                      key={value}
-                      className={`w-10 h-10 rounded-full ${
-                        responses.stress === value 
-                          ? 'bg-black text-white' 
-                          : 'bg-gray-100 hover:bg-gray-200'
-                      }`}
-                      onClick={() => handleResponseChange('stress', value)}
-                    >
-                      {value}
-                    </button>
-                  ))}
-                </div>
-                <span className="text-sm text-gray-600 font-roboto">Very Low Stress</span>
-              </div>
-              <div className="text-center mt-2">
-                <span className="font-medium font-roboto">{getRatingText(responses.stress, 'stress')}</span>
-              </div>
-            </div>
-            
-            <div>
-              <h3 className="font-medium mb-2 font-roboto">5. Appreciation</h3>
-              <p className="text-sm text-gray-600 mb-3 font-roboto">
-                How often did you feel appreciated for your contributions this week?
-              </p>
-              <div className="flex flex-col sm:flex-row items-center justify-between p-2 border rounded">
-                <span className="text-sm text-gray-600 font-roboto">Never</span>
-                <div className="flex space-x-4 my-3">
-                  {[1, 2, 3, 4, 5].map(value => (
-                    <button
-                      key={value}
-                      className={`w-10 h-10 rounded-full ${
-                        responses.appreciation === value 
-                          ? 'bg-black text-white' 
-                          : 'bg-gray-100 hover:bg-gray-200'
-                      }`}
-                      onClick={() => handleResponseChange('appreciation', value)}
-                    >
-                      {value}
-                    </button>
-                  ))}
-                </div>
-                <span className="text-sm text-gray-600 font-roboto">Always</span>
-              </div>
-              <div className="text-center mt-2">
-                <span className="font-medium font-roboto">{getRatingText(responses.appreciation, 'appreciation')}</span>
-              </div>
-            </div>
-            
-            <div>
-              <h3 className="font-medium mb-2 font-roboto">6. Additional Notes</h3>
-              <p className="text-sm text-gray-600 mb-3 font-roboto">
-                Any other thoughts about how workload balance affected your relationship this week?
-              </p>
-              <textarea
-                value={responses.notes}
-                onChange={(e) => handleResponseChange('notes', e.target.value)}
-                className="w-full border rounded p-3 h-24 font-roboto"
-                placeholder="Share your thoughts..."
-              ></textarea>
-            </div>
-            
-            <div>
-              <h3 className="font-medium mb-2 font-roboto">7. Next Steps</h3>
-              <p className="text-sm text-gray-600 mb-3 font-roboto">
-                What specific actions would you like to see to improve balance and your relationship?
-              </p>
-              <textarea
-                value={responses.nextSteps}
-                onChange={(e) => handleResponseChange('nextSteps', e.target.value)}
-                className="w-full border rounded p-3 h-24 font-roboto"
-                placeholder="What would help improve balance and your relationship?"
-              ></textarea>
-            </div>
-          </div>
-        </div>
-        
-        {/* Footer with save button */}
-        <div className="sticky bottom-0 bg-white border-t p-4 flex justify-end">
-          <button
-            onClick={handleSave}
-            disabled={isSaving}
-            className="px-4 py-2 bg-black text-white rounded font-roboto flex items-center"
-          >
-            {isSaving ? (
-              <>
-                <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin mr-2"></div>
-                Saving...
-              </>
-            ) : (
-              <>
-                <Save size={16} className="mr-2" />
-                Save Check-In
-              </>
+    <div className="min-h-screen bg-gray-50 py-12 px-4 sm:px-6 lg:px-8">
+      <div className="max-w-3xl mx-auto">
+        {/* Progress Indicator */}
+        <div className="mb-8">
+          <div className="flex items-center justify-between mb-2">
+            <span className="text-sm text-gray-500">
+              Step {currentStep + 1} of {steps.length}
+            </span>
+            {currentStepData.type !== 'summary' && (
+              <span className="text-sm text-gray-500">
+                {Math.round((currentStep / (steps.length - 1)) * 100)}% complete
+              </span>
             )}
-          </button>
+          </div>
+          <div className="h-2 bg-gray-200 rounded-full">
+            <div 
+              className="h-full bg-blue-600 rounded-full transition-all duration-300"
+              style={{ width: `${(currentStep / (steps.length - 1)) * 100}%` }}
+            ></div>
+          </div>
+        </div>
+        
+        {/* Card */}
+        <div className="bg-white rounded-lg shadow-lg overflow-hidden">
+          {/* Header */}
+          <div className="px-6 py-4 bg-gradient-to-r from-blue-500 to-purple-600 text-white">
+            <div className="flex items-center">
+              <Heart className="mr-2" size={24} />
+              <h2 className="text-xl font-bold">{currentStepData.title}</h2>
+            </div>
+          </div>
+          
+          {/* Content */}
+          <div className="p-6">
+            {/* Error Message */}
+            {error && (
+              <div className="mb-4 p-3 bg-red-50 text-red-700 rounded-lg">
+                {error}
+              </div>
+            )}
+            
+            {/* Step Content */}
+            {currentStepData.type === 'info' && (
+              <div className="flex items-start mb-6">
+                <Info className="text-blue-500 mr-3 flex-shrink-0 mt-1" size={20} />
+                <div>
+                  <p className="text-gray-700">{currentStepData.content}</p>
+                  <div className="mt-4 grid grid-cols-2 gap-4 text-sm">
+                    <div className="flex items-center">
+                      <Clock className="text-gray-500 mr-2" size={16} />
+                      <span>Takes 3 minutes</span>
+                    </div>
+                    <div className="flex items-center">
+                      <Calendar className="text-gray-500 mr-2" size={16} />
+                      <span>Week {familyData?.currentWeek || 1}</span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            )}
+            
+            {currentStepData.type === 'summary' && (
+              <div className="text-center py-6">
+                <div className="w-16 h-16 mx-auto bg-green-100 rounded-full flex items-center justify-center mb-4">
+                  <CheckCircle className="text-green-600" size={32} />
+                </div>
+                <h3 className="text-xl font-medium mb-2">Check-In Complete!</h3>
+                <p className="text-gray-600 mb-6">{currentStepData.content}</p>
+                <button
+                  onClick={finishCheckIn}
+                  className="px-6 py-3 bg-blue-600 text-white rounded-md hover:bg-blue-700"
+                >
+                  Return to Dashboard
+                </button>
+              </div>
+            )}
+            
+            {!currentStepData.type && (
+              <div>
+                <h3 className="text-lg font-medium mb-1">{currentStepData.question}</h3>
+                <p className="text-sm text-gray-600 mb-6">{currentStepData.description}</p>
+                
+                {currentStepData.field === 'feedback' ? (
+                  <textarea
+                    value={feedback}
+                    onChange={(e) => setFeedback(e.target.value)}
+                    placeholder="Share your thoughts (optional)"
+                    className="w-full px-4 py-3 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    rows={5}
+                  ></textarea>
+                ) : (
+                  <div>
+                    <input
+                      type="range"
+                      min="1"
+                      max="10"
+                      value={responses[currentStepData.field]}
+                      onChange={(e) => handleInputChange(currentStepData.field, parseInt(e.target.value))}
+                      className="w-full"
+                    />
+                    <div className="flex justify-between text-sm text-gray-600 mt-1">
+                      <span>Poor (1)</span>
+                      <span>Average (5)</span>
+                      <span>Excellent (10)</span>
+                    </div>
+                    
+                    <div className="mt-6 text-center">
+                      <div className="inline-block px-4 py-2 bg-blue-50 rounded-lg">
+                        <span className="text-3xl font-bold text-blue-600">
+                          {responses[currentStepData.field]}
+                        </span>
+                        <span className="text-sm text-blue-600">/10</span>
+                      </div>
+                    </div>
+                  </div>
+                )}
+              </div>
+            )}
+          </div>
+          
+          {/* Footer with Navigation */}
+          {currentStepData.type !== 'summary' && (
+            <div className="px-6 py-4 bg-gray-50 flex justify-between">
+              <button
+                onClick={prevStep}
+                disabled={currentStep === 0}
+                className={`flex items-center px-4 py-2 rounded-md ${
+                  currentStep === 0 
+                    ? 'text-gray-400 cursor-not-allowed' 
+                    : 'text-gray-700 hover:bg-gray-200'
+                }`}
+              >
+                <ArrowLeft size={16} className="mr-1" />
+                Back
+              </button>
+              
+              {currentStep === steps.length - 2 ? (
+                <button
+                  onClick={submitCheckIn}
+                  disabled={saving}
+                  className="flex items-center px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700"
+                >
+                  {saving ? 'Saving...' : 'Submit'}
+                  {!saving && <CheckCircle size={16} className="ml-1" />}
+                </button>
+              ) : (
+                <button
+                  onClick={nextStep}
+                  className="flex items-center px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700"
+                >
+                  Next
+                  <ArrowRight size={16} className="ml-1" />
+                </button>
+              )}
+            </div>
+          )}
         </div>
       </div>
     </div>

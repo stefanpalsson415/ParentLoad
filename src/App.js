@@ -23,6 +23,7 @@ import LandingPage from './components/marketing/LandingPage';
 import OnboardingFlow from './components/onboarding/OnboardingFlow';
 import { ChatProvider } from './contexts/ChatContext';
 import ChatButton from './components/chat/ChatButton';
+import CoupleCheckInScreen from './components/assessment/CoupleCheckInScreen';
 
 // App Routes Component - Used after context providers are set up
 function AppRoutes() {
@@ -49,6 +50,8 @@ function AppRoutes() {
       <Route path="/mini-results" element={<MiniResultsScreen />} />
       <Route path="/payment" element={<PaymentScreen />} />
       <Route path="/dashboard" element={<DashboardScreen />} />
+      // Find the Routes component and add this new route:
+<Route path="/couple-check-in" element={<CoupleCheckInScreen />} />
       
       {/* Route for weekly check-in - directs kids to kid-friendly version */}
       <Route path="/weekly-check-in" element={
