@@ -6,6 +6,7 @@ import {
 } from 'lucide-react';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
 import { useFamily } from '../../../hooks/useFamily';
+import { Link } from 'react-router-dom';
 
 const RelationshipTab = ({ familyData }) => {
   // Local state for the couple check-in form
@@ -150,6 +151,27 @@ const RelationshipTab = ({ familyData }) => {
         </div>
       </div>
       
+      {/* Action buttons */}
+<div className="mt-6 text-center">
+  <button 
+    onClick={() => setShowCheckInForm(!showCheckInForm)}
+    className="px-4 py-2 bg-red-500 text-white rounded-md hover:bg-red-600 inline-flex items-center"
+  >
+    <Heart size={16} className="mr-2" />
+    {showCheckInForm ? 'Cancel Check-in' : 'Start Weekly Check-in'}
+  </button>
+  
+  {/* Add navigation link to dedicated check-in page */}
+  <Link 
+    to="/couple-check-in" 
+    className="ml-3 px-4 py-2 border border-red-500 text-red-500 rounded-md hover:bg-red-50 inline-flex items-center"
+  >
+    <Calendar size={16} className="mr-2" />
+    Full Check-in Page
+  </Link>
+</div>
+
+
       {/* Check-in Form */}
       {showCheckInForm && (
         <div className="bg-white rounded-lg shadow p-6">

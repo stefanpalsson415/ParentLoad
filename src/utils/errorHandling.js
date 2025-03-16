@@ -85,14 +85,44 @@ export const ErrorCodes = {
    * @param {string} context Where the error occurred
    * @param {Error} error The error object
    */
-  export function logError(context, error) {
-    console.error(`Error in ${context}:`, error);
+
+
+// Enhanced implementation
+export function logError(context, error) {
+  console.error(`Error in ${context}:`, error);
+  
+  // Add timestamp
+  const timestamp = new Date().toISOString();
+  const errorInfo = {
+    context,
+    message: error.message || error,
+    stack: error.stack,
+    timestamp
+  };
+  
+  // Save to localStorage for debugging
+  try {
+    const errorLog = JSON.parse(localStorage.getItem('errorLog') || '[]');
+    errorLog.push(errorInfo);
     
-    // Here you could add integration with monitoring services like Sentry
-    // if (window.Sentry) {
-    //   window.Sentry.captureException(error, { tags: { context } });
-    // }
+    // Keep only the last 20 errors
+    if (errorLog.length > 20) {
+      errorLog.shift();
+    }
+    
+    localStorage.setItem('errorLog', JSON.stringify(errorLog));
+  } catch (e) {
+    // Silent fail if localStorage is not available
   }
+  
+  // Here you could also send the error to a monitoring service
+  // if (window.Sentry) {
+  //   window.Sentry.captureException(error, { 
+  //     tags: { context },
+  //     extra: errorInfo
+  //   });
+  // }
+}
   
   /**
    * Create a standardized error object

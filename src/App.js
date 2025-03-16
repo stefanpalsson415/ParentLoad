@@ -50,7 +50,7 @@ function AppRoutes() {
       <Route path="/mini-results" element={<MiniResultsScreen />} />
       <Route path="/payment" element={<PaymentScreen />} />
       <Route path="/dashboard" element={<DashboardScreen />} />
-      // Find the Routes component and add this new route:
+{/* Couple Check-in route */}
 <Route path="/couple-check-in" element={<CoupleCheckInScreen />} />
       
       {/* Route for weekly check-in - directs kids to kid-friendly version */}

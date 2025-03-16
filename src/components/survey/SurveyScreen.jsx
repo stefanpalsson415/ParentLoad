@@ -4,6 +4,8 @@ import { useNavigate } from 'react-router-dom';
 import { LogOut, Info, HelpCircle, Scale, Brain, Heart, Clock } from 'lucide-react';
 import { useFamily } from '../../hooks/useFamily';
 import { useSurvey } from '../../hooks/useSurvey';
+import ErrorMessage from '../../common/ErrorMessage';
+
 
 const SurveyScreen = () => {
   const navigate = useNavigate();
