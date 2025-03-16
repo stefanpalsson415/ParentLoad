@@ -1,6 +1,7 @@
-// src/services/taskService.js
 import { 
-  doc, getDoc, updateDoc, serverTimestamp 
+  doc, getDoc, setDoc, updateDoc, 
+  collection, query, where, getDocs, 
+  serverTimestamp, arrayUnion
 } from 'firebase/firestore';
 import { db } from './firebase';
 import { createError, ErrorCodes, logError } from '../utils/errorHandling';

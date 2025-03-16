@@ -56,19 +56,19 @@ export function useAuth() {
   }, []);
 
   // Sign out the current user
-  const signOut = useCallback(async () => {
-    setError(null);
-    try {
-      setLoading(true);
-      await authService.signOut();
-    } catch (err) {
-      const errorMessage = getUserFriendlyError(err);
-      setError(errorMessage);
-      throw new Error(errorMessage);
-    } finally {
-      setLoading(false);
-    }
-  }, []);
+const signOut = useCallback(async () => {
+  setError(null);
+  try {
+    setLoading(true);
+    await authService.signOutUser();
+  } catch (err) {
+    const errorMessage = getUserFriendlyError(err);
+    setError(errorMessage);
+    throw new Error(errorMessage);
+  } finally {
+    setLoading(false);
+  }
+}, []);
 
   // Reset error state
   const clearError = useCallback(() => {

@@ -9,13 +9,16 @@ import { useTasks } from '../../../hooks/useTasks';
 import TaskEffectivenessAnalysis from '../TaskEffectivenessAnalysis';
 
 
+
+
+const TasksTab = ({ weeklyTasks, familyData, familyMembers, selectedMember }) => {
+
 // Task effectiveness modal
 const [showEffectivenessModal, setShowEffectivenessModal] = useState(false);
 const [currentTaskId, setCurrentTaskId] = useState(null);
 const [effectivenessRating, setEffectivenessRating] = useState(5);
 const [effectivenessFeedback, setEffectivenessFeedback] = useState('');
 
-const TasksTab = ({ weeklyTasks, familyData, familyMembers, selectedMember }) => {
   const { updateTaskCompletion, updateSubtaskCompletion, addTaskComment } = useTasks();
   
   // Local state
