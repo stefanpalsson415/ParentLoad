@@ -69,34 +69,7 @@ const getRelationshipTrendData = useCallback(() => {
   return trends;
 }, [familyData, completedWeeks, currentWeek]);
 
-// Save couple check-in data
-const saveCoupleCheckInData = useCallback(async (familyId, weekNumber, data) => {
-  if (!familyId) {
-    throw new Error("No family ID provided");
-  }
-  
-  try {
-    await DatabaseService.saveCoupleCheckInData(familyId, weekNumber, data);
-    
-    // Update local state
-    setFamilyData(prev => ({
-      ...prev,
-      coupleCheckIns: {
-        ...(prev.coupleCheckIns || {}),
-        [`week${weekNumber}`]: {
-          ...data,
-          completed: true,
-          completedAt: new Date().toISOString()
-        }
-      }
-    }));
-    
-    return true;
-  } catch (error) {
-    console.error("Error saving couple check-in data:", error);
-    throw error;
-  }
-}, []);
+
 
   // Reference to store survey data passed from SurveyContext via the bridge component
   const surveyDataRef = useRef({
@@ -300,70 +273,13 @@ const saveCoupleCheckInData = useCallback(async (familyId, weekNumber, data) => 
     }
   };
 
-  // Save couple check-in data
-  const saveCoupleCheckInData = async (weekNumber, data) => {
-    try {
-      if (!familyId) throw new Error("No family ID available");
-      
-      await DatabaseService.saveCoupleCheckInData(familyId, weekNumber, data);
-      
-      // Update local state
-      setCoupleCheckInData(prev => ({
-        ...prev,
-        [weekNumber]: data
-      }));
-      
-      return true;
-    } catch (error) {
-      console.error("Error saving couple check-in data:", error);
-      throw error;
-    }
-  };
 
   // Get couple check-in data for a specific week
   const getCoupleCheckInData = (weekNumber) => {
     return coupleCheckInData[weekNumber] || null;
   };
 
-  // Get relationship satisfaction trend data
-  const getRelationshipTrendData = () => {
-    const trendData = [];
-    
-    // Add initial data point if available
-    if (coupleCheckInData[1]) {
-      trendData.push({
-        week: 'Week 1',
-        satisfaction: coupleCheckInData[1].responses.satisfaction,
-        communication: coupleCheckInData[1].responses.communication,
-        workloadBalance: 50, // From initial survey
-      });
-    }
-    
-    // Add data for each week
-    Object.keys(coupleCheckInData)
-      .map(Number)
-      .sort((a, b) => a - b)
-      .forEach(week => {
-        if (week === 1) return; // Skip week 1 as it's already added
-        
-        const data = coupleCheckInData[week];
-        if (!data) return;
-        
-        // Get workload balance for this week
-        const weekBalance = getWeekHistoryData(week)?.balance || { mama: 50, papa: 50 };
-        const balanceScore = 100 - Math.abs(weekBalance.mama - 50) * 2; // Convert to 0-100 scale where 100 is perfect balance
-        
-        trendData.push({
-          week: `Week ${week}`,
-          satisfaction: data.responses.satisfaction,
-          communication: data.responses.communication,
-          workloadBalance: balanceScore
-        });
-      });
-    
-    return trendData;
-  };
-
+  
   // Update survey schedule
   const updateSurveySchedule = async (weekNumber, dueDate) => {
     try {

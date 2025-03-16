@@ -32,7 +32,7 @@ export function AuthProvider({ children }) {
   async function logout() {
     setFamilyData(null);
     setAvailableFamilies([]);
-    return authService.signOut();
+    return authService.signOutUser();
   }
 
   // Create a new family

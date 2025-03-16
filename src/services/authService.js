@@ -39,19 +39,19 @@ import {
     }
   }
   
-  /**
-   * Sign out current user
-   * @returns {Promise<void>}
-   */
-  export async function signOut() {
-    try {
-      await signOut(auth);
-      return true;
-    } catch (error) {
-      console.error("Error signing out:", error);
-      throw error;
-    }
+/**
+ * Sign out current user
+ * @returns {Promise<void>}
+ */
+export async function signOutUser() {
+  try {
+    await signOut(auth);
+    return true;
+  } catch (error) {
+    console.error("Error signing out:", error);
+    throw error;
   }
+}
   
   /**
    * Get the current authenticated user

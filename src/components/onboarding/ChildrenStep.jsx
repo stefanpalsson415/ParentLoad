@@ -1,6 +1,6 @@
 // src/components/onboarding/ChildrenStep.jsx
 import React, { useState } from 'react';
-import { ArrowRight, ArrowLeft, Plus, X, Users, Child } from 'lucide-react';
+import { ArrowRight, ArrowLeft, Plus, X, Users, Baby } from 'lucide-react';
 
 const ChildrenStep = ({ onboardingData, updateStepData, nextStep, prevStep }) => {
   const [children, setChildren] = useState(onboardingData.childrenData || []);
@@ -59,8 +59,7 @@ const ChildrenStep = ({ onboardingData, updateStepData, nextStep, prevStep }) =>
       {/* Educational Panel */}
       <div className="bg-green-50 p-6 rounded-lg border border-green-100 mb-8">
         <div className="flex items-center mb-4">
-          <Child size={24} className="text-green-600 mr-2" />
-          <h3 className="text-xl font-medium text-green-800">The Impact on Children</h3>
+        <Baby size={24} className="text-green-600 mr-2" />          <h3 className="text-xl font-medium text-green-800">The Impact on Children</h3>
         </div>
         
         <div className="mb-4">
