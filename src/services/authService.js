@@ -15,11 +15,21 @@ import {
    */
   export async function createUser(email, password) {
     try {
+      console.log(`Attempting to create user with email: ${email}`);
       const userCredential = await createUserWithEmailAndPassword(auth, email, password);
+      console.log(`User created successfully: ${userCredential.user.uid}`);
       return userCredential.user;
     } catch (error) {
-      console.error("Error creating user:", error);
-      throw error;
+      console.error("Error creating user:", error.code, error.message);
+      
+      // Enhance error with more specific codes and messages
+      if (error.code === 'auth/email-already-in-use') {
+        console.warn(`Email already in use: ${email}`);
+      } else if (error.code === 'auth/network-request-failed') {
+        console.error("Network error during authentication");
+      }
+      
+      throw error; // Rethrow to handle upstream
     }
   }
   

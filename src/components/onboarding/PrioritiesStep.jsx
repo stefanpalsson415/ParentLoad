@@ -42,23 +42,35 @@ const PrioritiesStep = ({ onboardingData, updateStepData, nextStep, prevStep, co
     if (!success) return;
     
     setLoading(true);
+    setError(''); // Clear any previous errors
     
     try {
       // Complete the onboarding process
+      console.log("Starting onboarding completion...");
       const result = await completeOnboarding();
+      console.log("Onboarding result:", result);
+      
       if (result) {
         // Onboarding is complete, navigate to the next page
         nextStep();
       } else {
-        setError('Failed to complete onboarding');
+        setError('Failed to complete onboarding. Please check email addresses and try again.');
       }
     } catch (err) {
-      setError(err.message || 'Failed to complete onboarding');
+      console.error("Complete onboarding error details:", err);
+      // More specific error message based on common issues
+      if (err.message?.includes('email-already-in-use')) {
+        setError('An account with this email already exists. Please use a different email or log in.');
+      } else if (err.message?.includes('network')) {
+        setError('Network error. Please check your internet connection and try again.');
+      } else {
+        setError(err.message || 'Failed to complete onboarding. Please try again.');
+      }
     } finally {
       setLoading(false);
     }
   };
-
+  
   // Helper function to describe each category
   const getCategoryDescription = (category) => {
     switch(category) {
