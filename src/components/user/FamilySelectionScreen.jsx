@@ -32,71 +32,114 @@ const FamilySelectionScreen = () => {
   
 
   // Handle selecting a user from the family
-  const handleSelectUser = async (member) => {
-    // Prevent multiple clicks
-    if (isLoggingIn) return;
-    setIsLoggingIn(true);
-    
+  // Handle selecting a user from the family
+const handleSelectUser = async (member) => {
+  // Prevent multiple clicks
+  if (isLoggingIn) return;
+  setIsLoggingIn(true);
+  
+  try {
     console.log("====== SELECTION DEBUG ======");
     console.log("Selected user:", member);
-    console.log("Family data available:", !!familyData);
-    console.log("Available families:", availableFamilies);
     
-    try {
-      // First, ensure we have a family ID
-      let familyId = null;
-      
-      if (familyData && familyData.familyId) {
-        familyId = familyData.familyId;
-        console.log("Using current family ID:", familyId);
-      } else if (availableFamilies && availableFamilies.length > 0) {
-        familyId = availableFamilies[0].familyId;
-        console.log("Using first available family ID:", familyId);
-      } else {
-        // Try to get from localStorage
-        familyId = localStorage.getItem('selectedFamilyId');
-        console.log("Using localStorage family ID:", familyId);
-      }
-      
-      if (!familyId) {
-        console.error("CRITICAL: No family ID available!");
+    // Create a debugging DIV to see what's happening
+    const debugDiv = document.createElement('div');
+    debugDiv.style.position = 'fixed';
+    debugDiv.style.top = '0';
+    debugDiv.style.left = '0';
+    debugDiv.style.right = '0';
+    debugDiv.style.padding = '10px';
+    debugDiv.style.background = 'rgba(0,0,0,0.8)';
+    debugDiv.style.color = 'white';
+    debugDiv.style.zIndex = '9999';
+    debugDiv.style.fontSize = '12px';
+    document.body.appendChild(debugDiv);
+    
+    const updateDebug = (msg) => {
+      debugDiv.innerHTML += msg + '<br>';
+    };
+    
+    updateDebug("Starting family selection process...");
+    
+    // First, ensure we have a family ID
+    let familyId = null;
+    
+    if (familyData && familyData.familyId) {
+      familyId = familyData.familyId;
+      updateDebug(`Using current family ID: ${familyId}`);
+    } else if (availableFamilies && availableFamilies.length > 0) {
+      familyId = availableFamilies[0].familyId;
+      updateDebug(`Using first available family ID: ${familyId}`);
+    } else {
+      // Try to get from localStorage
+      familyId = localStorage.getItem('selectedFamilyId');
+      updateDebug(`Using localStorage family ID: ${familyId}`);
+    }
+    
+    if (!familyId) {
+      updateDebug("CRITICAL: No family ID available!");
+      setTimeout(() => {
         alert("No family found. Please create a new family.");
         navigate('/onboarding');
-        return;
-      }
-      
-      // Save everything to localStorage first
-      localStorage.setItem('selectedMemberId', member.id);
-      localStorage.setItem('selectedFamilyId', familyId);
-      localStorage.setItem('selectedMemberName', member.name);
-      localStorage.setItem('selectedMemberRole', member.role);
-      console.log("Saved to localStorage:", {
-        memberId: member.id,
-        familyId: familyId,
-        memberName: member.name
-      });
-      
-      // Explicitly select in the context
-      console.log("Selecting member in context:", member.id);
-      selectFamilyMember(member);
-      
-      // Explicitly load family data before navigation
-      console.log("Loading family data:", familyId);
-      await loadFamilyData(familyId);
-      
-      // Add a delay to ensure everything is processed
-      await new Promise(resolve => setTimeout(resolve, 500));
-      
-      // Use a direct browser navigation to guarantee a clean state
-      console.log("EMERGENCY: Forcing direct navigation to dashboard");
-      window.location.href = '/dashboard';
-    } catch (error) {
-      console.error("Error in handleSelectUser:", error);
-      alert("There was an error selecting your profile. Please try again.");
-    } finally {
-      setIsLoggingIn(false);
+      }, 1000);
+      return;
     }
-  };
+    
+    // CLEAR ALL OTHER LOCALSTORAGE FIRST - this might be interfering
+    // Only keep what we need
+    const keysToKeep = ['selectedFamilyId', 'selectedMemberId', 'selectedMemberName', 'selectedMemberRole'];
+    Object.keys(localStorage).forEach(key => {
+      if (!keysToKeep.includes(key)) {
+        localStorage.removeItem(key);
+      }
+    });
+    
+    // Save everything to localStorage with clear values
+    localStorage.setItem('selectedMemberId', member.id);
+    localStorage.setItem('selectedFamilyId', familyId);
+    localStorage.setItem('selectedMemberName', member.name);
+    localStorage.setItem('selectedMemberRole', member.role || 'parent');
+    
+    updateDebug(`Saved to localStorage: memberId=${member.id}, familyId=${familyId}`);
+    
+    // Explicitly select in the context
+    updateDebug(`Selecting member in context: ${member.id}`);
+    selectFamilyMember(member);
+    
+    // Explicitly load family data before navigation
+    updateDebug(`Loading family data: ${familyId}`);
+    const familyResult = await loadFamilyData(familyId);
+    
+    if (!familyResult) {
+      updateDebug("WARNING: Family data load returned null/undefined");
+    } else {
+      updateDebug("Family data loaded successfully!");
+    }
+    
+    // Add a delay to ensure everything is processed
+    updateDebug("Waiting for state updates...");
+    await new Promise(resolve => setTimeout(resolve, 1000));
+    
+    // Add more explicit navigation with consistent approach
+    updateDebug("Navigating to dashboard...");
+    
+    // Use React Router navigation instead of direct location change
+    navigate('/dashboard', { replace: true });
+    
+    // Remove the debug div after navigation (should display for a moment)
+    setTimeout(() => {
+      if (document.body.contains(debugDiv)) {
+        document.body.removeChild(debugDiv);
+      }
+    }, 2000);
+    
+  } catch (error) {
+    console.error("Error in handleSelectUser:", error);
+    alert("There was an error selecting your profile. Please try again.");
+  } finally {
+    setIsLoggingIn(false);
+  }
+};
   
   // Effect to check for direct navigation
   useEffect(() => {

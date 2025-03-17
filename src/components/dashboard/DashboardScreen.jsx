@@ -50,42 +50,42 @@ const DashboardScreen = () => {
 
   // Emergency patch function to fix empty family state
   // Emergency patch function to fix empty family state
-const patchFamilyData = async () => {
-  console.log("EMERGENCY: Attempting to patch family data");
-  
-  // Try to load from localStorage directly
-  const storedFamilyId = localStorage.getItem('selectedFamilyId');
-  const storedMemberId = localStorage.getItem('selectedMemberId');
-  
-  console.log("PATCH DATA - Stored Family ID:", storedFamilyId);
-  console.log("PATCH DATA - Stored Member ID:", storedMemberId);
-  
-  if (storedFamilyId) {
-    console.log("Found stored family ID:", storedFamilyId);
+  const patchFamilyData = async () => {
+    console.log("EMERGENCY: Attempting to patch family data");
     
-    try {
-      // Manually invoke the family loading function and wait for it
-      const result = await loadFamily(storedFamilyId);
-      console.log("Family load result:", result);
+    // Try to load from localStorage directly
+    const storedFamilyId = localStorage.getItem('selectedFamilyId');
+    const storedMemberId = localStorage.getItem('selectedMemberId');
+    
+    console.log("PATCH DATA - Stored Family ID:", storedFamilyId);
+    console.log("PATCH DATA - Stored Member ID:", storedMemberId);
+    
+    if (storedFamilyId) {
+      console.log("Found stored family ID:", storedFamilyId);
       
-      if (!result) {
-        console.log("RECOVERY: Family load failed, forcing direct navigation");
-        window.location.href = '/login';
-        return;
+      try {
+        // Manually invoke the family loading function and wait for it
+        const result = await loadFamily(storedFamilyId);
+        console.log("Family load result:", result);
+        
+        if (!result) {
+          console.log("RECOVERY: Family load failed, redirecting to login");
+          navigate('/login');
+          return;
+        }
+        
+        // DO NOT reload the page - it causes a loop
+        // Just rely on the state update from loadFamily
+      } catch (error) {
+        console.error("Error during emergency family load:", error);
+        // Navigate to login as a last resort
+        navigate('/login');
       }
-      
-      // Force a reload of the current page to ensure state is updated
-      window.location.reload();
-    } catch (error) {
-      console.error("Error during emergency family load:", error);
-      // Navigate to login as a last resort
-      window.location.href = '/login';
+    } else {
+      console.log("NO FAMILY ID: Navigating to login");
+      navigate('/login');
     }
-  } else {
-    console.log("NO FAMILY ID: Navigating to login");
-    window.location.href = '/login';
-  }
-};
+  };
   
   // Local state
   const [activeTab, setActiveTab] = useState('overview');
@@ -127,25 +127,22 @@ const patchFamilyData = async () => {
     }
   }, []);
 
-  // Run patch function immediately if needed
-  useEffect(() => {
-    if (!familyData && !familyLoading && recoveryAttempts === 0) {
-      patchFamilyData();
-      setRecoveryAttempts(prev => prev + 1);
-    }
-  }, [familyData, familyLoading]);
-
-  // Simple emergency recovery for family data
-  useEffect(() => {
-    if (!familyData && !familyLoading && recoveryAttempts < 2) {
-      const storedFamilyId = localStorage.getItem('selectedFamilyId');
-      if (storedFamilyId) {
-        console.log("Emergency: Loading family with stored ID:", storedFamilyId);
+  // Consolidated recovery logic - single attempt
+useEffect(() => {
+  if (!familyData && !familyLoading && recoveryAttempts === 0) {
+    console.log("Making one recovery attempt");
+    const storedFamilyId = localStorage.getItem('selectedFamilyId');
+    if (storedFamilyId) {
+      console.log("Found stored family ID:", storedFamilyId);
+      try {
         loadFamily(storedFamilyId);
-        setRecoveryAttempts(prev => prev + 1);
+      } catch (error) {
+        console.error("Error loading family:", error);
       }
     }
-  }, [familyData, familyLoading, loadFamily, recoveryAttempts]);
+    setRecoveryAttempts(1); // Only make one attempt
+  }
+}, [familyData, familyLoading, loadFamily, recoveryAttempts]);
   
   // Load family data and tasks when component mounts
   useEffect(() => {
@@ -296,44 +293,31 @@ const handleRetryLoading = async () => {
     }
     
     // Enhanced error handling
-    if (familyError || tasksError) {
-      return (
-        <div className="bg-red-50 p-6 rounded-lg border border-red-200">
-          <h3 className="text-red-700 font-bold text-xl mb-3">Error Loading Dashboard</h3>
-          <p className="text-red-600 mb-4">{familyError || tasksError}</p>
-          
-          <div className="space-y-3">
-            <button 
-              onClick={handleRetryLoading}
-              className="px-4 py-2 bg-red-100 text-red-700 rounded hover:bg-red-200 w-full flex items-center justify-center"
-            >
-              <RefreshCw size={16} className="mr-2" /> Retry Loading Family
-            </button>
-            
-            <button 
-              onClick={() => navigate('/login')}
-              className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 w-full"
-            >
-              Select Family Member
-            </button>
-            
-            <button 
-  onClick={() => {
-    // Clear any cached state that might be causing problems
-    localStorage.removeItem('selectedMemberId');
-    // Keep the familyId so we can see the family list
-    
-    // Force direct navigation
-    window.location.href = '/login';
-  }}
-  className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 w-full"
->
-  Go to Initial Survey
-</button>
-          </div>
-        </div>
-      );
-    }
+    // Enhanced error handling - simpler options
+if (familyError || tasksError) {
+  return (
+    <div className="bg-red-50 p-6 rounded-lg border border-red-200">
+      <h3 className="text-red-700 font-bold text-xl mb-3">Error Loading Dashboard</h3>
+      <p className="text-red-600 mb-4">{familyError || tasksError}</p>
+      
+      <div className="space-y-3">
+        <button 
+          onClick={() => navigate('/login')}
+          className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 w-full flex items-center justify-center"
+        >
+          <User size={16} className="mr-2" /> Select Family Member
+        </button>
+        
+        <button 
+          onClick={() => navigate('/survey')}
+          className="px-4 py-2 bg-green-600 text-white rounded hover:bg-green-700 w-full flex items-center justify-center"
+        >
+          <ClipboardCheck size={16} className="mr-2" /> Go to Initial Survey
+        </button>
+      </div>
+    </div>
+  );
+}
     
     switch(activeTab) {
       case 'overview':
