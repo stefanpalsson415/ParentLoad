@@ -227,13 +227,13 @@ if (parentUsers.length === 0) {
     // Save the family document
     await familyService.createFamily(familyDoc);
     console.log("Family document created successfully");
-    
-    return familyDoc;
-  } catch (error) {
-    console.error("Error in createFamilyFromOnboarding:", error);
-    logError("createFamilyFromOnboarding", error);
-    throw error;
-  }
+return familyDoc;
+} catch (error) {
+  console.error("Error in createFamilyFromOnboarding:", error);
+  logError("createFamilyFromOnboarding", error);
+  throw error; // Re-throw the error after logging
+}
+}
 }
 
 /**
