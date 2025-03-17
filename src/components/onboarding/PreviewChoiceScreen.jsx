@@ -11,13 +11,16 @@ const PreviewChoiceScreen = () => {
   // Extract family data from location state
   useEffect(() => {
     if (location.state?.familyData) {
+      console.log("Location state family data:", location.state.familyData);
       setFamilyData(location.state.familyData);
     } else {
       // Try to get from localStorage as fallback
       const storedData = localStorage.getItem('pendingFamilyData');
       if (storedData) {
         try {
-          setFamilyData(JSON.parse(storedData));
+          const parsedData = JSON.parse(storedData);
+          console.log("Parsed localStorage family data:", parsedData);
+          setFamilyData(parsedData);
         } catch (e) {
           console.error("Error parsing stored family data:", e);
         }

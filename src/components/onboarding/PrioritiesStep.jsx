@@ -281,11 +281,29 @@ const hasDuplicates = () => {
       type="button"
       className="w-full flex items-center justify-center bg-blue-600 text-white py-3 px-6 rounded-md hover:bg-blue-700 transition-colors font-medium"
       onClick={() => {
-        // Create a temporary family object
-        const tempFamily = {
-          familyId: `temp-${Date.now()}`,
-          familyName: onboardingData.familyName || "My Family",
-          familyMembers: [
+        // Create a proper family object with all onboarding data
+const familyPreviewData = {
+  familyId: `temp-${Date.now()}`,
+  familyName: onboardingData.familyName || "My Family",
+  parentData: onboardingData.parentData || [],
+  childrenData: onboardingData.childrenData || [],
+  priorities: priorities || {
+    highestPriority: "Invisible Parental Tasks",
+    secondaryPriority: "Visible Parental Tasks",
+    tertiaryPriority: "Invisible Household Tasks"
+  }
+};
+
+// Store the complete family data
+localStorage.setItem('pendingFamilyData', JSON.stringify(familyPreviewData));
+
+// Navigate to the preview choice screen
+navigate('/preview-choice', { 
+  state: { 
+    familyData: familyPreviewData,
+    fromOnboarding: true
+  } 
+});
             ...(onboardingData.parentData || []).map(parent => ({
               id: `temp-${Date.now()}-${parent.name}`,
               name: parent.name,

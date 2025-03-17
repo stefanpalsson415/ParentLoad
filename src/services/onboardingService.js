@@ -4,10 +4,6 @@ import { auth } from './firebase';
 import * as familyService from './familyService';
 import { createError, ErrorCodes, logError } from '../utils/errorHandling';
 
-
-
-
-
 /**
  * Create a new family during onboarding
  * @param {Object} onboardingData Complete onboarding data
@@ -64,99 +60,80 @@ export async function createFamilyFromOnboarding(onboardingData) {
     }
     
     // Create user accounts for parents
-    // Create user accounts for parents
-// Create user accounts for parents
-const parentUsers = [];
-for (const parent of parentData) {
-  if (parent.email && parent.password) {
-    try {
-      console.log(`Attempting to create user for ${parent.role} with email: ${parent.email}`);
-      
-      // Skip sign-in attempt and go straight to creating a new account
-      try {
-        // Create a new account directly
-        const userCredential = await createUserWithEmailAndPassword(auth, parent.email, parent.password);
-        const user = userCredential.user;
-        
-        parentUsers.push({
-          uid: user.uid,
-          email: parent.email,
-          role: parent.role
-        });
-        console.log(`Successfully created user for ${parent.role}:`, user.uid);
-      } catch (createError) {
-        // If user already exists, try signing in
-        if (createError.code === 'auth/email-already-in-use') {
+    const parentUsers = [];
+    for (const parent of parentData) {
+      if (parent.email && parent.password) {
+        try {
+          console.log(`Attempting to create user for ${parent.role} with email: ${parent.email}`);
+          
+          // Try to create a new account
           try {
-            const userCredential = await signInWithEmailAndPassword(auth, parent.email, parent.password);
+            const userCredential = await createUserWithEmailAndPassword(auth, parent.email, parent.password);
             const user = userCredential.user;
-            
-            console.log(`User already exists, logged in as: ${user.uid}`);
             
             parentUsers.push({
               uid: user.uid,
               email: parent.email,
               role: parent.role
             });
-          } catch (signInError) {
-            console.error(`Error signing in existing user for ${parent.role}:`, signInError.code, signInError.message);
-            // Just log the error but continue - don't throw
+            console.log(`Successfully created user for ${parent.role}:`, user.uid);
+          } catch (createError) {
+            // If user already exists, try signing in
+            if (createError.code === 'auth/email-already-in-use') {
+              try {
+                const userCredential = await signInWithEmailAndPassword(auth, parent.email, parent.password);
+                const user = userCredential.user;
+                
+                console.log(`User already exists, logged in as: ${user.uid}`);
+                
+                parentUsers.push({
+                  uid: user.uid,
+                  email: parent.email,
+                  role: parent.role
+                });
+              } catch (signInError) {
+                console.error(`Error signing in existing user for ${parent.role}:`, signInError.code, signInError.message);
+                // Just log the error but continue - don't throw
+              }
+            } else {
+              console.error(`Error creating user for ${parent.role}:`, createError.code, createError.message);
+              // Just log the error but continue - don't throw
+            }
           }
-        } else {
-          console.error(`Error creating user for ${parent.role}:`, createError.code, createError.message);
-          // Just log the error but continue - don't throw
+        } catch (error) {
+          console.error(`Error processing user for ${parent.role}:`, error.code, error.message);
+          
+          // Only throw if this is the last parent and we have no users
+          if (parentUsers.length === 0 && parent === parentData[parentData.length - 1]) {
+            if (error.code === 'auth/email-already-in-use') {
+              throw createError(
+                ErrorCodes.AUTH_EMAIL_ALREADY_IN_USE, 
+                `The email ${parent.email} is already in use. Please use a different email or log in.`
+              );
+            } else if (error.code === 'auth/invalid-email') {
+              throw createError(
+                ErrorCodes.AUTH_INVALID_EMAIL, 
+                `The email address ${parent.email} is not valid.`
+              );
+            } else if (error.code === 'auth/weak-password') {
+              throw createError(
+                ErrorCodes.AUTH_WEAK_PASSWORD, 
+                "Password is too weak. Please use at least 6 characters."
+              );
+            } else if (error.code === 'auth/network-request-failed') {
+              throw createError(
+                ErrorCodes.NETWORK_OFFLINE, 
+                "Network error. Please check your internet connection and try again."
+              );
+            } else {
+              throw error;
+            }
+          }
+          // Otherwise, continue with other parents
+          console.warn(`Continuing with other parents after error for ${parent.role}`);
         }
       }
-    } catch (error) {
-      console.error(`Error processing user for ${parent.role}:`, error.code, error.message);
-      // Do not throw here - keep going to try other parents
     }
-  }
-}
-
-// Only check if we have parent users after trying all parents
-if (parentUsers.length === 0) {
-  // This is a true error case - no users could be created
-  throw createError(
-    ErrorCodes.DATA_INVALID, 
-    "Could not create or authenticate any parent users. Please try again with different email/password information."
-  );
-}    } catch (error) {
-      console.error(`Error processing user for ${parent.role}:`, error.code, error.message);
-      
-      // Only throw if this is the last parent and we have no users
-      if (parentUsers.length === 0 && parent === parentData[parentData.length - 1]) {
-        if (error.code === 'auth/email-already-in-use') {
-          throw createError(
-            ErrorCodes.AUTH_EMAIL_ALREADY_IN_USE, 
-            `The email ${parent.email} is already in use. Please use a different email or log in.`
-          );
-        } else if (error.code === 'auth/invalid-email') {
-          throw createError(
-            ErrorCodes.AUTH_INVALID_EMAIL, 
-            `The email address ${parent.email} is not valid.`
-          );
-        } else if (error.code === 'auth/weak-password') {
-          throw createError(
-            ErrorCodes.AUTH_WEAK_PASSWORD, 
-            "Password is too weak. Please use at least 6 characters."
-          );
-        } else if (error.code === 'auth/network-request-failed') {
-          throw createError(
-            ErrorCodes.NETWORK_OFFLINE, 
-            "Network error. Please check your internet connection and try again."
-          );
-        } else {
-          throw error;
-        }
-      }
-      // Otherwise, continue with other parents
-      console.warn(`Continuing with other parents after error for ${parent.role}`);
-    }
-  }
-
-    
-    // Rest of the function...
     
     if (parentUsers.length === 0) {
       throw createError(
@@ -227,13 +204,13 @@ if (parentUsers.length === 0) {
     // Save the family document
     await familyService.createFamily(familyDoc);
     console.log("Family document created successfully");
-return familyDoc;
-} catch (error) {
-  console.error("Error in createFamilyFromOnboarding:", error);
-  logError("createFamilyFromOnboarding", error);
-  throw error; // Re-throw the error after logging
-}
-}
+    
+    return familyDoc;
+  } catch (error) {
+    console.error("Error in createFamilyFromOnboarding:", error);
+    logError("createFamilyFromOnboarding", error);
+    throw error; // Re-throw the error after logging
+  }
 }
 
 /**
@@ -315,45 +292,45 @@ export function validateOnboardingStep(step, data) {
       
       return { childrenData: data.children || [] };
       
-      case 'priorities':
-        // Validate that priorities are set correctly
-        let prioritiesObj;
-        
-        if (data.priorities) {
-          // If data has a priorities property, use that
-          prioritiesObj = data.priorities;
-        } else if (data.highestPriority) {
-          // If data directly contains the priority properties, use data itself
-          prioritiesObj = data;
-        } else {
-          // Set default priorities if none provided
-          return {
-            priorities: {
-              highestPriority: "Invisible Parental Tasks",
-              secondaryPriority: "Visible Parental Tasks",
-              tertiaryPriority: "Invisible Household Tasks"
-            }
-          };
-        }
-        
-        const validCategories = [
-          "Visible Household Tasks",
-          "Invisible Household Tasks",
-          "Visible Parental Tasks",
-          "Invisible Parental Tasks"
-        ];
-        
-        // Check that priorities are valid categories
-        ['highestPriority', 'secondaryPriority', 'tertiaryPriority'].forEach(priority => {
-          if (prioritiesObj[priority] && !validCategories.includes(prioritiesObj[priority])) {
-            throw createError(
-              ErrorCodes.DATA_INVALID, 
-              `Invalid priority category: ${prioritiesObj[priority]}`
-            );
+    case 'priorities':
+      // Validate that priorities are set correctly
+      let prioritiesObj;
+      
+      if (data.priorities) {
+        // If data has a priorities property, use that
+        prioritiesObj = data.priorities;
+      } else if (data.highestPriority) {
+        // If data directly contains the priority properties, use data itself
+        prioritiesObj = data;
+      } else {
+        // Set default priorities if none provided
+        return {
+          priorities: {
+            highestPriority: "Invisible Parental Tasks",
+            secondaryPriority: "Visible Parental Tasks",
+            tertiaryPriority: "Invisible Household Tasks"
           }
-        });
-        
-        return { priorities: prioritiesObj };
+        };
+      }
+      
+      const validCategories = [
+        "Visible Household Tasks",
+        "Invisible Household Tasks",
+        "Visible Parental Tasks",
+        "Invisible Parental Tasks"
+      ];
+      
+      // Check that priorities are valid categories
+      ['highestPriority', 'secondaryPriority', 'tertiaryPriority'].forEach(priority => {
+        if (prioritiesObj[priority] && !validCategories.includes(prioritiesObj[priority])) {
+          throw createError(
+            ErrorCodes.DATA_INVALID, 
+            `Invalid priority category: ${prioritiesObj[priority]}`
+          );
+        }
+      });
+      
+      return { priorities: prioritiesObj };
       
     default:
       console.warn(`Unknown onboarding step: ${step}`);

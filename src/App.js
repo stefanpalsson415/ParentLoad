@@ -38,8 +38,7 @@ function AppRoutes() {
       <Route path="/login" element={<FamilySelectionScreen />} />
       <Route path="/onboarding" element={<OnboardingFlow />} /> 
 <Route path="/preview-choice" element={<PreviewChoiceScreen />} />
-<Route path="/family-confirmation" element={<UserSignupScreen />} />
-
+<Route path="/family-confirmation" element={<FamilyConfirmationStep />} />
 
       <Route path="/how-it-works" element={<HowThisWorksScreen />} />
       <Route path="/about-us" element={<AboutUsPage />} />
