@@ -154,32 +154,6 @@ useEffect(() => {
   // Handle selecting a user from the family
 
 // Handle selecting a user from the family
-const handleSelectUser = (member) => {
-  selectFamilyMember(member);
-  
-  // Store the selected user ID in localStorage for persistence
-  localStorage.setItem('selectedUserId', member.id);
-  
-  // We need to use familyData.familyId instead of just familyId
-  if (familyData && familyData.familyId) {
-    localStorage.setItem('selectedFamilyId', familyData.familyId);
-  }
-  
-  // Add console log to help with debugging
-  console.log("Selecting user and navigating:", {
-    userId: member.id,
-    name: member.name,
-    completed: member.completed,
-    goingTo: member.completed ? '/dashboard' : '/survey'
-  });
-  
-  // Navigate to the appropriate screen based on survey completion
-  if (member.completed) {
-    navigate('/dashboard');
-  } else {
-    navigate('/survey');
-  }
-};  
   // Get the next action for a family member
   const getNextAction = (member) => {
     if (!member.completed) {

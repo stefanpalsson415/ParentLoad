@@ -43,6 +43,7 @@ const ParentsStep = ({ onboardingData, updateStepData, nextStep, prevStep }) => 
       return;
     }
     
+    
     // Create parent data array
     const parentData = [];
     
