@@ -45,14 +45,14 @@ const PaymentScreen = () => {
           setCouponApplied(true);
           
           // Instead of trying to create the family right here,
-          // store the information and navigate to signup for confirmation
+          // store the information and navigate to family-confirmation for confirmation
           if (pendingFamilyData) {
             // Store a flag indicating payment is complete
             localStorage.setItem('paymentCompleted', 'true');
             
-            console.log("Payment completed, navigating to signup for confirmation");
-            // Navigate to signup for final confirmation
-            navigate('/signup', { 
+            console.log("Payment completed, navigating to family-confirmation for confirmation");
+            // Navigate to family-confirmation for final confirmation
+            navigate('/family-confirmation', { 
               state: { 
                 fromPayment: true,
                 familyData: pendingFamilyData 
@@ -68,11 +68,11 @@ const PaymentScreen = () => {
         // Regular payment processing would happen here
         // ...
         
-        // After successful payment, navigate to signup for confirmation
+        // After successful payment, navigate to family-confirmation for confirmation
         if (pendingFamilyData) {
           localStorage.setItem('paymentCompleted', 'true');
           
-          navigate('/signup', { 
+          navigate('/family-confirmation', { 
             state: { 
               fromPayment: true,
               familyData: pendingFamilyData 
@@ -122,34 +122,32 @@ const PaymentScreen = () => {
           </div>
           
           {couponApplied ? (
-  <div className="bg-green-100 p-4 rounded mb-4">
-    <p className="text-green-800">Coupon applied successfully! Enjoy Allie at no cost.</p>
-    <button
-      onClick={() => {
-        if (pendingFamilyData) {
-          // Store a flag indicating payment is complete
-          localStorage.setItem('paymentCompleted', 'true');
-          
-          // Navigate to signup for final confirmation
-          navigate('/signup', { 
-            state: { 
-              fromPayment: true,
-              familyData: pendingFamilyData 
-            } 
-          });
-        } else {
-          console.error("No pending family data available");
-          setError("Missing family information. Please try again.");
-        }
-      }}
-      className="mt-4 w-full py-3 bg-blue-600 text-white rounded-md"
-    >
-      Continue to Confirmation
-    </button>
-  </div>
-) : (
-  // form code here
-
+            <div className="bg-green-100 p-4 rounded mb-4">
+              <p className="text-green-800">Coupon applied successfully! Enjoy Allie at no cost.</p>
+              <button
+                onClick={() => {
+                  if (pendingFamilyData) {
+                    // Store a flag indicating payment is complete
+                    localStorage.setItem('paymentCompleted', 'true');
+                    
+                    // Navigate to family-confirmation for final confirmation
+                    navigate('/family-confirmation', { 
+                      state: { 
+                        fromPayment: true,
+                        familyData: pendingFamilyData 
+                      } 
+                    });
+                  } else {
+                    console.error("No pending family data available");
+                    setError("Missing family information. Please try again.");
+                  }
+                }}
+                className="mt-4 w-full py-3 bg-blue-600 text-white rounded-md"
+              >
+                Continue to Confirmation
+              </button>
+            </div>
+          ) : (
             <form onSubmit={handleSubmit}>
               <div className="mb-4">
                 <label className="block text-sm font-medium mb-2">Card Information</label>
@@ -192,7 +190,7 @@ const PaymentScreen = () => {
                 disabled={loading}
                 className="w-full py-3 bg-blue-600 text-white rounded-md"
               >
-                {loading ? 'Processing...' : 'Subscribe - $20/month'}
+                {loading ? 'Processing...' : 'Subscribe - $1/month'}
               </button>
             </form>
           )}

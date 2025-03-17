@@ -365,11 +365,16 @@ const handleSubmit = async () => {
       <div className="container mx-auto px-4 max-w-lg">
         {/* Header with logo */}
         <div className="text-center mb-8">
-          <h1 className="text-3xl font-bold text-blue-800 mb-2">Allie</h1>
-          <p className="text-gray-600">
-            Balancing family responsibilities together
-          </p>
-        </div>
+  <h1 className="text-3xl font-bold text-blue-800 mb-2">Allie</h1>
+  <p className="text-gray-600">
+    Complete Your Family Setup
+  </p>
+  {location?.state?.fromPayment && (
+    <div className="mt-2 p-2 bg-green-50 text-green-700 rounded-md">
+      Payment successful! Please confirm your family details below.
+    </div>
+  )}
+</div>
         
         {/* Progress steps */}
         <div className="flex items-center justify-between mb-8">
@@ -430,12 +435,12 @@ const handleSubmit = async () => {
               </button>
             ) : (
               <button
-                onClick={handleSubmit}
-                className="px-6 py-2 bg-green-600 text-white rounded-md hover:bg-green-700"
-                disabled={isSubmitting}
-              >
-                {isSubmitting ? 'Creating Family...' : 'Create Family'}
-              </button>
+  onClick={handleSubmit}
+  className="px-6 py-2 bg-green-600 text-white rounded-md hover:bg-green-700"
+  disabled={isSubmitting}
+>
+  {isSubmitting ? 'Creating Family...' : location?.state?.fromPayment ? 'Confirm & Complete Setup' : 'Create Family'}
+</button>
             )}
           </div>
         </div>
