@@ -71,29 +71,8 @@ const FamilyConfirmationStep = () => {
       localStorage.removeItem('pendingFamilyData');
       localStorage.removeItem('paymentCompleted');
       
-      // Check if at least one parent email/password can be used for login
-      const loginParent = familyData.parentData.find(parent => parent.email && parent.password);
-      
-      if (loginParent) {
-        // Navigate to dashboard directly
-        navigate('/dashboard', { 
-          state: { 
-            familyId: result.familyId,
-            autoLogin: true,
-            email: loginParent.email,
-            parentId: loginParent.id
-          } 
-        });
-      } else {
-        // Navigate to family selection screen as fallback
-        navigate('/login', { 
-          state: { 
-            directAccess: true, 
-            fromConfirmation: true, 
-            familyId: result.familyId 
-          } 
-        });
-      }
+      // Navigate to family selection screen
+      navigate('/login', { state: { directAccess: true, fromConfirmation: true } });
     } catch (error) {
       console.error("Error creating family:", error);
       setError(error.message || "Error creating family. Please try again.");

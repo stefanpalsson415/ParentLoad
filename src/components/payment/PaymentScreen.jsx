@@ -44,20 +44,24 @@ const PaymentScreen = () => {
   const handleCompletePayment = () => {
     setIsProcessing(true);
     
-    // Save payment status in localStorage
+    // Save payment status and family data in localStorage
     try {
       localStorage.setItem('paymentCompleted', 'true');
+      if (familyData) {
+        localStorage.setItem('pendingFamilyData', JSON.stringify(familyData));
+      }
     } catch (e) {
       console.error("Error saving payment status:", e);
     }
     
     // Simulate payment processing
     setTimeout(() => {
-      // Redirect to family confirmation to create the family in the database
-      navigate('/family-confirmation', { 
+      // Redirect directly to login/family selection screen
+      navigate('/login', { 
         state: { 
-          familyData: familyData,
-          fromPayment: true
+          directAccess: true,
+          fromPayment: true,
+          familyData: familyData
         }
       });
     }, 1000);
