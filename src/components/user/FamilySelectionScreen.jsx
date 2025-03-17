@@ -35,24 +35,36 @@ const FamilySelectionScreen = () => {
     // Log the selection for debugging
     console.log("User selected:", member);
     
+    // Select the member in the family context
+    selectFamilyMember(member);
+    
     // Store selection in localStorage directly
     try {
       localStorage.setItem('selectedMemberId', member.id);
       localStorage.setItem('selectedMemberName', member.name);
       localStorage.setItem('selectedMemberRole', member.role);
+      
+      // IMPORTANT: Make sure we're also storing the current family ID
+      if (familyData && familyData.familyId) {
+        localStorage.setItem('selectedFamilyId', familyData.familyId);
+        console.log("Stored family ID in localStorage:", familyData.familyId);
+      } else if (availableFamilies && availableFamilies.length > 0) {
+        localStorage.setItem('selectedFamilyId', availableFamilies[0].familyId);
+        console.log("Stored first available family ID:", availableFamilies[0].familyId);
+      }
     } catch (error) {
       console.error("Error saving to localStorage:", error);
     }
     
-    // Force navigation based on completion status
-    if (member.completed) {
-      console.log("User has completed survey, redirecting to dashboard");
-      // Direct browser navigation as a fallback
-      window.location.href = '/dashboard';
+    // Explicitly load the family data before navigating
+    if (familyData && familyData.familyId) {
+      console.log("Loading family data before navigation");
+      loadFamilyData(familyData.familyId).then(() => {
+        navigate('/dashboard');
+      });
     } else {
-      console.log("User has not completed survey, redirecting to survey");
-      // Direct browser navigation as a fallback
-      window.location.href = '/survey';
+      console.log("No family ID available, redirecting to dashboard anyway");
+      navigate('/dashboard');
     }
   };
   

@@ -214,6 +214,7 @@ useEffect(() => {
 
   // Select a family member
 // Select a family member
+// Select a family member
 const selectFamilyMember = (member) => {
   if (!member) return null;
   
@@ -222,7 +223,7 @@ const selectFamilyMember = (member) => {
   
   // Store member ID in localStorage for persistence
   try {
-    localStorage.setItem('selectedUserId', member.id);
+    localStorage.setItem('selectedMemberId', member.id);
     if (familyId) {
       localStorage.setItem('selectedFamilyId', familyId);
     }

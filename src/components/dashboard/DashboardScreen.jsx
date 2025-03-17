@@ -64,20 +64,38 @@ const DashboardScreen = () => {
   }, []);
   
   // Load family data and tasks when component mounts
-  useEffect(() => {
-    const loadData = async () => {
-      try {
-        // Load tasks for the family after family data is loaded
-        await loadTasks();
-      } catch (error) {
-        console.error("Error loading dashboard data:", error);
+  // Load family data and tasks when component mounts
+useEffect(() => {
+  const loadData = async () => {
+    try {
+      // Check if we need to load family data
+      if (!familyData || !familyData.familyId) {
+        // Try to get family ID from localStorage
+        const storedFamilyId = localStorage.getItem('selectedFamilyId');
+        console.log("No family data loaded yet, trying stored ID:", storedFamilyId);
+        
+        if (storedFamilyId) {
+          // Explicitly load the family data
+          await loadFamily(storedFamilyId);
+          console.log("Loaded family data from stored ID");
+        } else {
+          console.error("No family ID available in localStorage");
+        }
+      } else {
+        console.log("Family data already loaded:", familyData.familyId);
       }
-    };
-    
-    if (familyData?.familyId) {
-      loadData();
+      
+      // Load tasks for the family after family data is loaded
+      if (familyData?.familyId) {
+        await loadTasks();
+      }
+    } catch (error) {
+      console.error("Error loading dashboard data:", error);
     }
-  }, [familyData, loadTasks]);
+  };
+  
+  loadData();
+}, [familyData, loadTasks, loadFamily]);
   
   // Generate notifications based on app state
   useEffect(() => {
@@ -205,8 +223,36 @@ const DashboardScreen = () => {
                familyData={familyData}
                weeklyTasks={weeklyTasks}
               />;  
-      case 'survey-results':
-        return <SurveysTab familyData={familyData} />;
+              case 'survey-results':
+                return selectedMember && !selectedMember.completed ? (
+                  <div className="p-6 bg-white rounded-lg shadow">
+                    <div className="text-center">
+                      <h2 className="text-2xl font-bold mb-4">Welcome to Allie</h2>
+                      <div className="mb-6">
+                        <p className="text-lg mb-4">Let's complete your initial survey to get started.</p>
+                        <p className="text-gray-600 mb-6">This helps us understand your family's current balance so we can provide personalized recommendations.</p>
+                        <button 
+                          onClick={() => navigate('/survey')}
+                          className="px-6 py-3 bg-black text-white rounded-md hover:bg-gray-800 transition-colors"
+                        >
+                          Start Initial Survey
+                        </button>
+                      </div>
+                      
+                      <div className="mt-8 p-6 bg-gray-50 rounded-lg">
+                        <h3 className="font-medium mb-2">What to expect:</h3>
+                        <ul className="text-left text-gray-600 space-y-2">
+                          <li>• A series of questions about who handles different tasks in your family</li>
+                          <li>• Takes about 10-15 minutes to complete</li>
+                          <li>• Your responses help us identify areas for better balance</li>
+                          <li>• You'll get personalized recommendations once completed</li>
+                        </ul>
+                      </div>
+                    </div>
+                  </div>
+                ) : (
+                  <SurveysTab familyData={familyData} />
+                );
       default:
         // If it's a week history tab
         if (activeTab.startsWith('week-') && selectedWeek) {
