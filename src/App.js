@@ -26,6 +26,8 @@ import ChatButton from './components/chat/ChatButton';
 import CoupleCheckInScreen from './components/assessment/CoupleCheckInScreen';
 import PreviewChoiceScreen from './components/onboarding/PreviewChoiceScreen';
 import FamilyConfirmationStep from './components/onboarding/FamilyConfirmationStep';
+import StateDebugger from './components/common/StateDebugger';
+
 
 
 
@@ -171,6 +173,8 @@ function App() {
             <SurveyProvider>
               <ChatProvider>
                 <div className="App">
+                <StateDebugger /> {/* Add this line */}
+
                   <AppRoutes />
                   <ChatButton />
                 </div>

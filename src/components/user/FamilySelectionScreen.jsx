@@ -29,81 +29,73 @@ const FamilySelectionScreen = () => {
   const [loginError, setLoginError] = useState('');
   const [showEmptyState, setShowEmptyState] = useState(false);
   const [localFamilyMembers, setLocalFamilyMembers] = useState([]);
+  
 
   // Handle selecting a user from the family
-  const handleSelectUser = (member) => {
-    // Log the selection for debugging
-    console.log("User selected:", member);
-    // Add at the beginning of handleSelectUser function
-console.log("====== SELECTION DEBUG ======");
-console.log("Selected user:", member);
-console.log("Family data available:", !!familyData);
-console.log("Available families:", availableFamilies);
+  const handleSelectUser = async (member) => {
+    // Prevent multiple clicks
+    if (isLoggingIn) return;
+    setIsLoggingIn(true);
     
-    // Select the member in the family context
-    selectFamilyMember(member);
+    console.log("====== SELECTION DEBUG ======");
+    console.log("Selected user:", member);
+    console.log("Family data available:", !!familyData);
+    console.log("Available families:", availableFamilies);
     
-    // Store selection in localStorage directly
     try {
+      // First, ensure we have a family ID
+      let familyId = null;
+      
+      if (familyData && familyData.familyId) {
+        familyId = familyData.familyId;
+        console.log("Using current family ID:", familyId);
+      } else if (availableFamilies && availableFamilies.length > 0) {
+        familyId = availableFamilies[0].familyId;
+        console.log("Using first available family ID:", familyId);
+      } else {
+        // Try to get from localStorage
+        familyId = localStorage.getItem('selectedFamilyId');
+        console.log("Using localStorage family ID:", familyId);
+      }
+      
+      if (!familyId) {
+        console.error("CRITICAL: No family ID available!");
+        alert("No family found. Please create a new family.");
+        navigate('/onboarding');
+        return;
+      }
+      
+      // Save everything to localStorage first
       localStorage.setItem('selectedMemberId', member.id);
+      localStorage.setItem('selectedFamilyId', familyId);
       localStorage.setItem('selectedMemberName', member.name);
       localStorage.setItem('selectedMemberRole', member.role);
+      console.log("Saved to localStorage:", {
+        memberId: member.id,
+        familyId: familyId,
+        memberName: member.name
+      });
       
-      // IMPORTANT: Make sure we're also storing the current family ID
-      if (familyData && familyData.familyId) {
-        localStorage.setItem('selectedFamilyId', familyData.familyId);
-        console.log("Stored family ID in localStorage:", familyData.familyId);
-      } else if (availableFamilies && availableFamilies.length > 0) {
-        localStorage.setItem('selectedFamilyId', availableFamilies[0].familyId);
-        console.log("Stored first available family ID:", availableFamilies[0].familyId);
-      }
+      // Explicitly select in the context
+      console.log("Selecting member in context:", member.id);
+      selectFamilyMember(member);
+      
+      // Explicitly load family data before navigation
+      console.log("Loading family data:", familyId);
+      await loadFamilyData(familyId);
+      
+      // Add a delay to ensure everything is processed
+      await new Promise(resolve => setTimeout(resolve, 500));
+      
+      // Use a direct browser navigation to guarantee a clean state
+      console.log("EMERGENCY: Forcing direct navigation to dashboard");
+      window.location.href = '/dashboard';
     } catch (error) {
-      console.error("Error saving to localStorage:", error);
+      console.error("Error in handleSelectUser:", error);
+      alert("There was an error selecting your profile. Please try again.");
+    } finally {
+      setIsLoggingIn(false);
     }
-    
-
-    if (familyData && familyData.familyId) {
-      localStorage.setItem('selectedFamilyId', familyData.familyId);
-      console.log("Stored family ID in localStorage:", familyData.familyId);
-    }
-    
-    // Just navigate to dashboard without the complex logic
-    console.log("EMERGENCY: Forcing direct navigation to dashboard");
-    window.location.href = '/dashboard';
-    // Explicitly load the family data before navigating
-    // Explicitly load the family data before navigating
-// Determine where to navigate based on whether the user has completed their survey
-const navigateUser = () => {
-  console.log("Navigating user with completion status:", member.completed);
-  
-  // If this user hasn't completed their initial survey, send them to the survey
-  if (!member.completed) {
-    console.log("User needs to complete survey, navigating to survey");
-    navigate('/survey');
-  } else {
-    console.log("User has completed survey, navigating to dashboard");
-    navigate('/dashboard');
-  }
-};
-
-if (familyData && familyData.familyId) {
-  console.log("Loading family data before navigation");
-  loadFamilyData(familyData.familyId).then(navigateUser);
-} else if (availableFamilies && availableFamilies.length > 0) {
-  // If we don't have familyData but we do have availableFamilies, load the first one
-  console.log("Loading first available family before navigation");
-  loadFamilyData(availableFamilies[0].familyId).then(navigateUser);
-} else {
-  // If we don't have familyData or availableFamilies, try to load from localStorage
-  const storedFamilyId = localStorage.getItem('selectedFamilyId');
-  if (storedFamilyId) {
-    console.log("Loading family from localStorage ID before navigation");
-    loadFamilyData(storedFamilyId).then(navigateUser);
-  } else {
-    console.log("No family ID available, redirecting to dashboard anyway");
-    navigate('/dashboard');
-  }
-}
   };
   
   // Effect to check for direct navigation
@@ -798,6 +790,26 @@ if (familyData && familyData.familyId) {
               >
                 Cancel
               </button>
+              <button
+  onClick={() => {
+    // Clear all app state
+    console.log("PERFORMING COMPLETE APP RESET");
+    // Clear localStorage
+    localStorage.clear();
+    // Clear sessionStorage
+    sessionStorage.clear();
+    // Log the reset
+    console.log("All storage cleared");
+    // Wait a moment
+    setTimeout(() => {
+      // Force reload from server (not cache)
+      window.location.href = '/onboarding?reset=true';
+    }, 100);
+  }}
+  className="mt-4 w-full py-3 px-4 rounded-md font-medium text-red-700 border border-red-300 hover:bg-red-50 flex items-center justify-center"
+>
+  Reset App Data
+</button>
             </div>
           </div>
         </div>

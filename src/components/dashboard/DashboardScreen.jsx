@@ -49,18 +49,43 @@ const DashboardScreen = () => {
   console.log("Local Storage FamilyId:", localStorage.getItem('selectedFamilyId'));
 
   // Emergency patch function to fix empty family state
-  const patchFamilyData = () => {
-    console.log("EMERGENCY: Attempting to patch family data");
+  // Emergency patch function to fix empty family state
+const patchFamilyData = async () => {
+  console.log("EMERGENCY: Attempting to patch family data");
+  
+  // Try to load from localStorage directly
+  const storedFamilyId = localStorage.getItem('selectedFamilyId');
+  const storedMemberId = localStorage.getItem('selectedMemberId');
+  
+  console.log("PATCH DATA - Stored Family ID:", storedFamilyId);
+  console.log("PATCH DATA - Stored Member ID:", storedMemberId);
+  
+  if (storedFamilyId) {
+    console.log("Found stored family ID:", storedFamilyId);
     
-    // Try to load from localStorage directly
-    const storedFamilyId = localStorage.getItem('selectedFamilyId');
-    if (storedFamilyId) {
-      console.log("Found stored family ID:", storedFamilyId);
+    try {
+      // Manually invoke the family loading function and wait for it
+      const result = await loadFamily(storedFamilyId);
+      console.log("Family load result:", result);
       
-      // Manually invoke the family loading function
-      loadFamily(storedFamilyId);
+      if (!result) {
+        console.log("RECOVERY: Family load failed, forcing direct navigation");
+        window.location.href = '/login';
+        return;
+      }
+      
+      // Force a reload of the current page to ensure state is updated
+      window.location.reload();
+    } catch (error) {
+      console.error("Error during emergency family load:", error);
+      // Navigate to login as a last resort
+      window.location.href = '/login';
     }
-  };
+  } else {
+    console.log("NO FAMILY ID: Navigating to login");
+    window.location.href = '/login';
+  }
+};
   
   // Local state
   const [activeTab, setActiveTab] = useState('overview');
@@ -226,20 +251,36 @@ const DashboardScreen = () => {
   };
 
   // Handle manual retry loading
-  const handleRetryLoading = () => {
-    clearFamilyError();
+  // Handle manual retry loading
+const handleRetryLoading = async () => {
+  clearFamilyError();
+  
+  // Try to load family data from localStorage
+  const storedFamilyId = localStorage.getItem('selectedFamilyId');
+  if (storedFamilyId) {
+    console.log("Retry: Loading family with ID:", storedFamilyId);
     
-    // Try to load family data from localStorage
-    const storedFamilyId = localStorage.getItem('selectedFamilyId');
-    if (storedFamilyId) {
-      console.log("Retry: Loading family with ID:", storedFamilyId);
-      loadFamily(storedFamilyId);
-    } else {
-      // If no family ID in localStorage, navigate to login
-      console.log("No family ID in localStorage, navigating to login");
+    try {
+      // Show a loading indicator
+      const loadingDiv = document.createElement('div');
+      loadingDiv.innerHTML = '<div style="position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.3);display:flex;align-items:center;justify-content:center;z-index:9999;"><div style="background:white;padding:20px;border-radius:8px;"><p>Reloading family data...</p></div></div>';
+      document.body.appendChild(loadingDiv);
+      
+      // Wait a moment to ensure state updates
+      await new Promise(resolve => setTimeout(resolve, 500));
+      
+      // Force a direct reload of the page
+      window.location.href = '/dashboard';
+    } catch (error) {
+      console.error("Error during retry:", error);
       navigate('/login');
     }
-  };
+  } else {
+    // If no family ID in localStorage, navigate to login
+    console.log("No family ID in localStorage, navigating to login");
+    navigate('/login');
+  }
+};
   
   // Determine which tab component to render
   const renderTabContent = () => {
@@ -277,11 +318,18 @@ const DashboardScreen = () => {
             </button>
             
             <button 
-              onClick={() => navigate('/survey')}
-              className="px-4 py-2 bg-green-600 text-white rounded hover:bg-green-700 w-full"
-            >
-              Go to Initial Survey
-            </button>
+  onClick={() => {
+    // Clear any cached state that might be causing problems
+    localStorage.removeItem('selectedMemberId');
+    // Keep the familyId so we can see the family list
+    
+    // Force direct navigation
+    window.location.href = '/login';
+  }}
+  className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 w-full"
+>
+  Go to Initial Survey
+</button>
           </div>
         </div>
       );

@@ -91,20 +91,47 @@ export function AuthProvider({ children }) {
         return null;
       }
       
-      console.log("AuthContext.loadFamilyData:", familyId);
-      const data = await familyService.loadFamilyById(familyId);
+      console.log("AuthContext.loadFamilyData - Loading family:", familyId);
+      
+      // Try multiple times if needed (in case of network issues)
+      let attempts = 0;
+      let data = null;
+      
+      while (!data && attempts < 3) {
+        attempts++;
+        try {
+          console.log(`Attempt ${attempts} to load family ${familyId}`);
+          data = await familyService.loadFamilyById(familyId);
+          
+          if (!data) {
+            console.warn(`Family data not found on attempt ${attempts}`);
+            // Wait a little before retrying
+            await new Promise(resolve => setTimeout(resolve, 500));
+          }
+        } catch (err) {
+          console.error(`Error on attempt ${attempts}:`, err);
+          if (attempts < 3) {
+            // Wait longer before next retry
+            await new Promise(resolve => setTimeout(resolve, 1000));
+          }
+        }
+      }
       
       if (data) {
         console.log("Successfully loaded family data:", data.familyId);
+        
+        // Update state with the loaded data
         setFamilyData(data);
         
         // Update localStorage for persistence
         localStorage.setItem('selectedFamilyId', data.familyId);
+        
+        // Return the fully populated data
+        return data;
       } else {
-        console.error("Family data not found for ID:", familyId);
+        console.error("Family data not found after multiple attempts for ID:", familyId);
+        return null;
       }
-      
-      return data;
     } catch (error) {
       console.error("Error in loadFamilyData:", error);
       return null;
