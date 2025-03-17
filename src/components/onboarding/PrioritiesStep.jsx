@@ -33,6 +33,9 @@ const PrioritiesStep = ({ onboardingData, updateStepData, nextStep, prevStep, co
     tertiaryPriority: "Invisible Household Tasks"
   };
   
+  const navigate = useNavigate();
+
+
   const [priorities, setPriorities] = useState(onboardingData.priorities || defaultPriorities);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
@@ -43,6 +46,7 @@ const PrioritiesStep = ({ onboardingData, updateStepData, nextStep, prevStep, co
     "Visible Parental Tasks",
     "Invisible Parental Tasks"
   ];
+
 
   const handlePriorityChange = (priorityLevel, value) => {
     // Check if this value is already used in another priority level
@@ -62,7 +66,7 @@ const PrioritiesStep = ({ onboardingData, updateStepData, nextStep, prevStep, co
     setError('');
   };
 
-  const navigate = useNavigate();
+  
 
 
   const handleSubmit = async (e) => {

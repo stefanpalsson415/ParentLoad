@@ -132,6 +132,47 @@ const saveCoupleCheckInData = async (weekNumber, data) => {
     }
   }, [initialFamilyData, currentUser]);
 
+
+// Load selected user from localStorage when components mount 
+// or when family members change
+useEffect(() => {
+  if (familyMembers.length > 0) {
+    try {
+      const savedUserId = localStorage.getItem('selectedUserId');
+      
+      if (savedUserId && !selectedUser) {
+        console.log("Attempting to restore selected user from localStorage:", savedUserId);
+        const member = familyMembers.find(m => m.id === savedUserId);
+        
+        if (member) {
+          console.log("Restored selected user:", member.name);
+          setSelectedUser(member);
+        } else {
+          console.log("Saved user ID not found in current family members");
+        }
+      }
+    } catch (error) {
+      console.error("Error restoring user selection from localStorage:", error);
+    }
+  }
+}, [familyMembers, selectedUser]);
+
+
+// Effect to restore selected user from localStorage
+useEffect(() => {
+  if (familyMembers.length > 0 && !selectedUser) {
+    const storedMemberId = localStorage.getItem('selectedMemberId');
+    if (storedMemberId) {
+      const member = familyMembers.find(m => m.id === storedMemberId);
+      if (member) {
+        console.log("Restoring selected member from localStorage:", member.name);
+        setSelectedUser(member);
+      }
+    }
+  }
+}, [familyMembers, selectedUser]);
+
+
   // Update favicon helper function
   const updateFavicon = (imageUrl) => {
     let link = document.querySelector("link[rel*='icon']") || document.createElement('link');
@@ -172,10 +213,25 @@ const saveCoupleCheckInData = async (weekNumber, data) => {
   };
 
   // Select a family member
-  const selectFamilyMember = (member) => {
-    setSelectedUser(member);
-    return member;
-  };
+// Select a family member
+const selectFamilyMember = (member) => {
+  if (!member) return null;
+  
+  console.log("Selecting family member:", member);
+  setSelectedUser(member);
+  
+  // Store member ID in localStorage for persistence
+  try {
+    localStorage.setItem('selectedUserId', member.id);
+    if (familyId) {
+      localStorage.setItem('selectedFamilyId', familyId);
+    }
+  } catch (error) {
+    console.error("Error storing user selection in localStorage:", error);
+  }
+  
+  return member;
+};
 
   // Update member profile
   const updateMemberProfile = async (memberId, data) => {

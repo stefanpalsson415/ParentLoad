@@ -6,6 +6,34 @@ import { useFamily } from '../../contexts/FamilyContext';
 import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
 import { storage } from '../../services/firebase';
 
+
+// Handle selecting a user from the family
+const handleSelectUser = (member) => {
+  // Log the selection for debugging
+  console.log("User selected:", member);
+  
+  // Store selection in localStorage directly
+  try {
+    localStorage.setItem('selectedMemberId', member.id);
+    localStorage.setItem('selectedMemberName', member.name);
+    localStorage.setItem('selectedMemberRole', member.role);
+  } catch (error) {
+    console.error("Error saving to localStorage:", error);
+  }
+  
+  // Force navigation based on completion status
+  if (member.completed) {
+    console.log("User has completed survey, redirecting to dashboard");
+    // Direct browser navigation as a fallback
+    window.location.href = '/dashboard';
+  } else {
+    console.log("User has not completed survey, redirecting to survey");
+    // Direct browser navigation as a fallback
+    window.location.href = '/survey';
+  }
+};
+
+
 const FamilySelectionScreen = () => {
   const { currentUser, availableFamilies, loadFamilyData, familyData, login, logout, loadAllFamilies } = useAuth();
   const { 
@@ -123,17 +151,35 @@ useEffect(() => {
   };
   
   // Handle selecting a user from the family
-  const handleSelectUser = (member) => {
-    selectFamilyMember(member);
-    
-    // Navigate to the appropriate screen based on survey completion
-    if (member.completed) {
-      navigate('/dashboard');
-    } else {
-      navigate('/survey');
-    }
-  };
+  // Handle selecting a user from the family
+
+// Handle selecting a user from the family
+const handleSelectUser = (member) => {
+  selectFamilyMember(member);
   
+  // Store the selected user ID in localStorage for persistence
+  localStorage.setItem('selectedUserId', member.id);
+  
+  // We need to use familyData.familyId instead of just familyId
+  if (familyData && familyData.familyId) {
+    localStorage.setItem('selectedFamilyId', familyData.familyId);
+  }
+  
+  // Add console log to help with debugging
+  console.log("Selecting user and navigating:", {
+    userId: member.id,
+    name: member.name,
+    completed: member.completed,
+    goingTo: member.completed ? '/dashboard' : '/survey'
+  });
+  
+  // Navigate to the appropriate screen based on survey completion
+  if (member.completed) {
+    navigate('/dashboard');
+  } else {
+    navigate('/survey');
+  }
+};  
   // Get the next action for a family member
   const getNextAction = (member) => {
     if (!member.completed) {
