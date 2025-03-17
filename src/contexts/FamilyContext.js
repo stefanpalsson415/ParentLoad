@@ -87,6 +87,21 @@ const saveCoupleCheckInData = async (weekNumber, data) => {
 
   // Initialize family data from auth context
   useEffect(() => {
+    // Log localStorage state for debugging
+useEffect(() => {
+  console.log("--- Dashboard Debug ---");
+  console.log("localStorage familyId:", localStorage.getItem('selectedFamilyId'));
+  console.log("localStorage memberId:", localStorage.getItem('selectedMemberId'));
+  console.log("Current user:", selectedUser);
+  console.log("Current family data:", familyData);
+  
+  // If we have a family ID in localStorage but no family data loaded
+  const storedFamilyId = localStorage.getItem('selectedFamilyId');
+  if (storedFamilyId && (!familyData || !familyData.familyId)) {
+    console.log("Attempting emergency family load with ID:", storedFamilyId);
+    loadFamily(storedFamilyId);
+  }
+}, []);
     if (initialFamilyData) {
       setFamilyId(initialFamilyData.familyId);
       setFamilyName(initialFamilyData.familyName || '');

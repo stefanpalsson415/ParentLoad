@@ -202,7 +202,7 @@ export function AuthProvider({ children }) {
       unsubscribe();
     };
   }, []);
-  
+
   // Context value
   const value = {
     currentUser,
