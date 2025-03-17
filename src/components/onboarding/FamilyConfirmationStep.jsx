@@ -17,41 +17,79 @@ const FamilyConfirmationStep = () => {
 // Around line 20-30 in the useEffect for loading family data
 
 useEffect(() => {
-    // Add debug logging
-    console.log("FamilyConfirmationStep checking for family data...");
-    console.log("Location state:", location.state);
+  // Add debug logging
+  console.log("FamilyConfirmationStep checking for family data...");
+  console.log("Location state:", location.state);
+  
+  // Try to get data from location state first (from payment screen)
+  if (location.state?.familyData) {
+    console.log("Using family data from location state:", {
+      familyName: location.state.familyData.familyName,
+      hasParentData: !!location.state.familyData.parentData,
+      parentCount: location.state.familyData.parentData?.length || 0
+    });
     
-    // Try to get data from location state first (from payment screen)
-    if (location.state?.familyData) {
-      console.log("Using family data from location state:", {
-        familyName: location.state.familyData.familyName,
-        hasParentData: !!location.state.familyData.parentData,
-        parentCount: location.state.familyData.parentData?.length || 0
-      });
-      setFamilyData(location.state.familyData);
-      return;
-    }
+    // Ensure parentData is an array
+    const safeData = { ...location.state.familyData };
     
-    // Fall back to localStorage
-    const storedData = localStorage.getItem('pendingFamilyData');
-    if (storedData) {
-      try {
-        const parsedData = JSON.parse(storedData);
-        console.log("Loaded family data from localStorage:", {
-          familyName: parsedData.familyName,
-          hasParentData: !!parsedData.parentData,
-          parentCount: parsedData.parentData?.length || 0
-        });
-        setFamilyData(parsedData);
-      } catch (e) {
-        console.error("Error parsing family data:", e);
-        setError("We couldn't load your family information. Please try again.");
+    if (!Array.isArray(safeData.parentData)) {
+      // If it's a single object, make it an array
+      if (safeData.parentData && typeof safeData.parentData === 'object') {
+        safeData.parentData = [safeData.parentData];
+        console.log("Fixed parentData: Converted object to array", safeData.parentData);
+      } else if (safeData.parentData) {
+        // If it's not an object but exists, try to make sense of it
+        safeData.parentData = [{ name: "Parent", role: "Parent" }];
+        console.log("Fixed parentData: Created default parent");
+      } else {
+        // Otherwise initialize as empty array
+        safeData.parentData = [];
+        console.log("Fixed parentData: Initialized as empty array");
       }
-    } else {
-      console.error("No family data found in location state or localStorage");
-      setError("No family information found. Please return to the previous steps.");
     }
-  }, [location]);
+    
+    setFamilyData(safeData);
+    return;
+  }
+  
+  // Fall back to localStorage
+  const storedData = localStorage.getItem('pendingFamilyData');
+  if (storedData) {
+    try {
+      const parsedData = JSON.parse(storedData);
+      console.log("Loaded family data from localStorage:", {
+        familyName: parsedData.familyName,
+        hasParentData: !!parsedData.parentData,
+        parentCount: parsedData.parentData?.length || 0
+      });
+      
+      // Ensure parentData is an array
+      if (!Array.isArray(parsedData.parentData)) {
+        // If it's a single object, make it an array
+        if (parsedData.parentData && typeof parsedData.parentData === 'object') {
+          parsedData.parentData = [parsedData.parentData];
+          console.log("Fixed localStorage parentData: Converted object to array", parsedData.parentData);
+        } else if (parsedData.parentData) {
+          // If it's not an object but exists, try to make sense of it
+          parsedData.parentData = [{ name: "Parent", role: "Parent" }];
+          console.log("Fixed localStorage parentData: Created default parent");
+        } else {
+          // Otherwise initialize as empty array
+          parsedData.parentData = [];
+          console.log("Fixed localStorage parentData: Initialized as empty array");
+        }
+      }
+      
+      setFamilyData(parsedData);
+    } catch (e) {
+      console.error("Error parsing family data:", e);
+      setError("We couldn't load your family information. Please try again.");
+    }
+  } else {
+    console.error("No family data found in location state or localStorage");
+    setError("No family information found. Please return to the previous steps.");
+  }
+}, [location]);
 
   const handleConfirm = async () => {
     if (!familyData) {
@@ -147,20 +185,27 @@ useEffect(() => {
   </h3>
   
   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-    {familyData.parentData && Array.isArray(familyData.parentData) && familyData.parentData.map((parent, index) => (
-      <div key={index} className="flex items-center p-4 bg-blue-50 rounded-lg">
-        {/* existing code */}
+  {familyData.parentData && Array.isArray(familyData.parentData) && familyData.parentData.map((parent, index) => (
+    <div key={index} className="flex items-center p-4 bg-blue-50 rounded-lg">
+      <div className="w-10 h-10 rounded-full bg-blue-100 flex items-center justify-center mr-3">
+        <User className="text-blue-600" size={16} />
       </div>
-    ))}
-    
-    {/* Emergency fallback display if parentData isn't formatted correctly */}
-    {(!familyData.parentData || !Array.isArray(familyData.parentData)) && (
-      <div className="p-4 bg-yellow-50 rounded-lg">
-        <p>Parent information may need to be re-entered.</p>
-        <p className="text-sm text-gray-600">Parent data format issue detected.</p>
+      <div>
+        <p className="font-medium">{parent.name || 'Parent'}</p>
+        <p className="text-sm text-gray-600">{parent.role || 'Parent'}</p>
+        <p className="text-xs text-gray-500">{parent.email}</p>
       </div>
-    )}
-  </div>
+    </div>
+  ))}
+  
+  {/* Emergency fallback display if parentData isn't formatted correctly */}
+  {(!familyData.parentData || !Array.isArray(familyData.parentData)) && (
+    <div className="p-4 bg-yellow-50 rounded-lg">
+      <p>Parent information may need to be re-entered.</p>
+      <p className="text-sm text-gray-600">Parent data format issue detected.</p>
+    </div>
+  )}
+</div>
 </div>
             
             {/* Children Section */}
