@@ -1,5 +1,5 @@
 // src/hooks/useOnboarding.js
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useEffect } from 'react';
 import * as onboardingService from '../services/onboardingService';
 import { getUserFriendlyError } from '../utils/errorHandling';
 
@@ -22,6 +22,9 @@ export function useOnboarding() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
 
+
+
+  
   const updateStepData = useCallback((step, data) => {
     try {
       // Validate the step data
@@ -38,6 +41,14 @@ export function useOnboarding() {
             parentData: parentArray
           };
           console.log("Updated onboarding data with parents:", updated);
+          
+          // Persist the updated data to localStorage
+          try {
+            localStorage.setItem('pendingFamilyData', JSON.stringify(updated));
+          } catch (e) {
+            console.error("Error saving to localStorage:", e);
+          }
+          
           return updated;
         });
         return true;
@@ -55,6 +66,14 @@ export function useOnboarding() {
             ...validatedData
           };
           console.log("Updated onboarding data:", updated);
+          
+          // Persist the updated data to localStorage
+          try {
+            localStorage.setItem('pendingFamilyData', JSON.stringify(updated));
+          } catch (e) {
+            console.error("Error saving to localStorage:", e);
+          }
+          
           return updated;
         });
         
@@ -71,6 +90,20 @@ export function useOnboarding() {
       return false;
     }
   }, []);
+
+  // Load any existing onboarding data from localStorage
+useEffect(() => {
+  try {
+    const savedData = localStorage.getItem('pendingFamilyData');
+    if (savedData) {
+      const parsedData = JSON.parse(savedData);
+      setOnboardingData(parsedData);
+      console.log("Loaded saved onboarding data from localStorage:", parsedData);
+    }
+  } catch (e) {
+    console.error("Error loading onboarding data from localStorage:", e);
+  }
+}, []);
   
   // Navigate to the next step
   const nextStep = useCallback(() => {

@@ -15,23 +15,32 @@ const PaymentScreen = () => {
     const { createFamily } = useAuth();
     
     // Effect to load pending family data
-    useEffect(() => {
-      // Check for data passed in location state
-      if (location?.state?.familyData) {
-        setPendingFamilyData(location.state.familyData);
-      } 
-      // Check for data in localStorage
-      else {
-        const storedData = localStorage.getItem('pendingFamilyData');
-        if (storedData) {
-          try {
-            setPendingFamilyData(JSON.parse(storedData));
-          } catch (e) {
-            console.error("Error parsing stored family data:", e);
-          }
-        }
+    // Update the useEffect to better handle family data
+useEffect(() => {
+  // Check for data passed in location state
+  if (location?.state?.familyData) {
+    console.log("Payment screen received family data:", location.state.familyData);
+    setPendingFamilyData(location.state.familyData);
+    
+    // Also store in localStorage as backup
+    localStorage.setItem('pendingFamilyData', JSON.stringify(location.state.familyData));
+  } 
+  // Check for data in localStorage
+  else {
+    const storedData = localStorage.getItem('pendingFamilyData');
+    if (storedData) {
+      try {
+        const parsedData = JSON.parse(storedData);
+        console.log("Payment screen using stored family data:", parsedData);
+        setPendingFamilyData(parsedData);
+      } catch (e) {
+        console.error("Error parsing stored family data:", e);
       }
-    }, [location]);
+    } else {
+      console.warn("No family data found in state or localStorage");
+    }
+  }
+}, [location]);
     
     const handleSubmit = async (event) => {
       event.preventDefault();
@@ -53,12 +62,19 @@ const PaymentScreen = () => {
             console.log("Payment completed, navigating to family-confirmation for confirmation");
             // Navigate to family-confirmation for final confirmation
             // Add debug logging
+// Navigate to family-confirmation for final confirmation
 console.log("Payment completed, navigating to family-confirmation with data:", {
   familyName: pendingFamilyData?.familyName,
   hasParentData: !!pendingFamilyData?.parentData,
   parentCount: pendingFamilyData?.parentData?.length || 0,
   childrenCount: pendingFamilyData?.childrenData?.length || 0
 });
+
+// Make sure to store data in localStorage before navigating
+if (pendingFamilyData) {
+  localStorage.setItem('pendingFamilyData', JSON.stringify(pendingFamilyData));
+  localStorage.setItem('paymentCompleted', 'true');
+}
 
 // Navigate to family-confirmation for final confirmation
 navigate('/family-confirmation', { 
