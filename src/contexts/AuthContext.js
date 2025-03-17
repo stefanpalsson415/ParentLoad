@@ -86,29 +86,55 @@ export function AuthProvider({ children }) {
   // Load family data by ID or user ID
   async function loadFamilyData(idParam) {
     try {
+      console.log("Loading family data with param:", idParam);
       let data;
+      
+      // Try to load from localStorage first as a fallback
+      const storedFamilyId = localStorage.getItem('selectedFamilyId');
+      console.log("Stored family ID from localStorage:", storedFamilyId);
       
       // Check if we have a family ID or a user ID
       if (idParam && typeof idParam === 'string' && !idParam.includes('@')) {
         // If it looks like a family ID, load by family ID
+        console.log("Attempting to load family by ID:", idParam);
         data = await familyService.loadFamilyById(idParam);
       } else {
         // Otherwise try to load by user ID (either passed in or current user)
         const userId = idParam || currentUser?.uid;
+        console.log("Attempting to load family by user ID:", userId);
+        
         if (!userId) {
-          throw new Error("No user ID available");
+          console.error("No user ID available");
+          
+          // Try the stored family ID as a last resort
+          if (storedFamilyId) {
+            console.log("Falling back to stored family ID:", storedFamilyId);
+            data = await familyService.loadFamilyById(storedFamilyId);
+          }
+        } else {
+          data = await familyService.loadFamilyByUserId(userId);
         }
-        data = await familyService.loadFamilyByUserId(userId);
+      }
+      
+      // If both approaches failed but we have a stored ID, try that
+      if (!data && storedFamilyId && idParam !== storedFamilyId) {
+        console.log("Primary loading failed. Trying stored family ID as fallback:", storedFamilyId);
+        data = await familyService.loadFamilyById(storedFamilyId);
       }
       
       if (data) {
+        console.log("Successfully loaded family data:", data.familyId);
         setFamilyData(data);
+        
+        // Also update localStorage for consistency
+        localStorage.setItem('selectedFamilyId', data.familyId);
+      } else {
+        console.error("Failed to load any family data");
       }
       
       return data;
     } catch (error) {
       console.error("Error loading family data:", error);
-      // Don't throw the error, just return null
       return null;
     }
   }

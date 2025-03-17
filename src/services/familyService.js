@@ -15,22 +15,29 @@ import {
     try {
       if (!familyId) throw new Error("No family ID provided");
       
+      console.log(`Attempting to load family with ID: ${familyId}`);
+      
       const docRef = doc(db, "families", familyId);
       const docSnap = await getDoc(docRef);
       
       if (docSnap.exists()) {
+        console.log(`Successfully found family: ${familyId}`);
         return {
           familyId,
           ...docSnap.data()
         };
       } else {
-        throw new Error("Family not found");
+        console.error(`Family with ID ${familyId} not found in database`);
+        
+        // Instead of throwing, return null
+        return null;
       }
     } catch (error) {
-      console.error("Error loading family:", error);
-      throw error;
+      console.error(`Error loading family ${familyId}:`, error);
+      return null; // Return null instead of throwing
     }
   }
+  
   
   /**
    * Load a family by user ID

@@ -39,6 +39,23 @@ const DashboardScreen = () => {
     loading: tasksLoading,
     error: tasksError
   } = useTasks();
+
+// Log localStorage state for debugging
+useEffect(() => {
+  console.log("--- Dashboard Debug ---");
+  console.log("localStorage familyId:", localStorage.getItem('selectedFamilyId'));
+  console.log("localStorage memberId:", localStorage.getItem('selectedMemberId'));
+  console.log("Current user:", selectedMember);
+  console.log("Current family data:", familyData);
+  
+  // If we have a family ID in localStorage but no family data loaded
+  const storedFamilyId = localStorage.getItem('selectedFamilyId');
+  if (storedFamilyId && (!familyData || !familyData.familyId)) {
+    console.log("Attempting emergency family load with ID:", storedFamilyId);
+    loadFamily(storedFamilyId);
+  }
+}, []);
+
   
   // Local state
   const [activeTab, setActiveTab] = useState('overview');
@@ -65,38 +82,64 @@ const DashboardScreen = () => {
   
   // Load family data and tasks when component mounts
   // Load family data and tasks when component mounts
-useEffect(() => {
-  const loadData = async () => {
-    try {
-      // Check if we need to load family data
-      if (!familyData || !familyData.familyId) {
-        // Try to get family ID from localStorage
-        const storedFamilyId = localStorage.getItem('selectedFamilyId');
-        console.log("No family data loaded yet, trying stored ID:", storedFamilyId);
+  useEffect(() => {
+    const loadData = async () => {
+      try {
+        console.log("Dashboard loading - Current family data:", 
+                   familyData ? `ID: ${familyData.familyId}` : "None");
         
-        if (storedFamilyId) {
-          // Explicitly load the family data
-          await loadFamily(storedFamilyId);
-          console.log("Loaded family data from stored ID");
+        // Check if we need to load family data
+        if (!familyData || !familyData.familyId) {
+          // Try to get family ID from localStorage
+          const storedFamilyId = localStorage.getItem('selectedFamilyId');
+          console.log("Trying to load family from stored ID:", storedFamilyId);
+          
+          if (storedFamilyId) {
+            // Explicitly load the family data with a small delay to ensure auth state is ready
+            setTimeout(async () => {
+              try {
+                const loadedFamily = await loadFamily(storedFamilyId);
+                console.log("Loaded family data result:", loadedFamily ? "Success" : "Failed");
+                
+                // If we couldn't load the family data, try a more direct approach
+                if (!loadedFamily) {
+                  console.log("Trying alternative loading approach...");
+                  // Try to get the family directly from the database
+                  const directFamily = await fetch(`/api/families/${storedFamilyId}`)
+                    .then(res => res.ok ? res.json() : null)
+                    .catch(err => console.error("Direct fetch failed:", err));
+                  
+                  if (directFamily) {
+                    console.log("Got family via direct fetch, updating context");
+                    // Manually update the family context with this data
+                    // This may require adding a direct update method to your context
+                  }
+                }
+                
+                // After loading family, load tasks
+                if (loadedFamily) {
+                  await loadTasks();
+                }
+              } catch (loadError) {
+                console.error("Error during delayed family load:", loadError);
+              }
+            }, 500); // Short delay to ensure auth state is ready
+          } else {
+            console.error("No family ID available in localStorage");
+          }
         } else {
-          console.error("No family ID available in localStorage");
+          console.log("Family data already loaded:", familyData.familyId);
+          // Load tasks for the family
+          await loadTasks();
         }
-      } else {
-        console.log("Family data already loaded:", familyData.familyId);
+      } catch (error) {
+        console.error("Error loading dashboard data:", error);
       }
-      
-      // Load tasks for the family after family data is loaded
-      if (familyData?.familyId) {
-        await loadTasks();
-      }
-    } catch (error) {
-      console.error("Error loading dashboard data:", error);
-    }
-  };
-  
-  loadData();
-}, [familyData, loadTasks, loadFamily]);
-  
+    };
+    
+    loadData();
+  }, [familyData, loadTasks, loadFamily]);
+
   // Generate notifications based on app state
   useEffect(() => {
     const newNotifications = [];
