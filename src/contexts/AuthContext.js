@@ -39,6 +39,9 @@ export function AuthProvider({ children }) {
 // In src/contexts/AuthContext.js
 // Replace the createFamily function
 
+// In src/contexts/AuthContext.js
+// Replace the existing createFamily function with this one
+
 async function createFamily(familyData) {
   try {
     console.log("AuthContext.createFamily called with:", 
