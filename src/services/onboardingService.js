@@ -65,45 +65,63 @@ export async function createFamilyFromOnboarding(onboardingData) {
     
     // Create user accounts for parents
     // Create user accounts for parents
+// Create user accounts for parents
 const parentUsers = [];
 for (const parent of parentData) {
   if (parent.email && parent.password) {
     try {
       console.log(`Attempting to create user for ${parent.role} with email: ${parent.email}`);
       
-      // First check if we can sign in with these credentials
+      // Skip sign-in attempt and go straight to creating a new account
       try {
-        const userCredential = await signInWithEmailAndPassword(auth, parent.email, parent.password);
+        // Create a new account directly
+        const userCredential = await createUserWithEmailAndPassword(auth, parent.email, parent.password);
         const user = userCredential.user;
-        
-        // If we got here, the account exists and credentials are valid
-        console.log(`User already exists, logged in as: ${user.uid}`);
         
         parentUsers.push({
           uid: user.uid,
           email: parent.email,
           role: parent.role
         });
-      } catch (signInError) {
-        // If we can't sign in, try creating the account
-        if (signInError.code === 'auth/user-not-found' || 
-            signInError.code === 'auth/wrong-password') {
-          // Create a new account
-          const userCredential = await createUserWithEmailAndPassword(auth, parent.email, parent.password);
-          const user = userCredential.user;
-          
-          parentUsers.push({
-            uid: user.uid,
-            email: parent.email,
-            role: parent.role
-          });
-          console.log(`Successfully created user for ${parent.role}:`, user.uid);
+        console.log(`Successfully created user for ${parent.role}:`, user.uid);
+      } catch (createError) {
+        // If user already exists, try signing in
+        if (createError.code === 'auth/email-already-in-use') {
+          try {
+            const userCredential = await signInWithEmailAndPassword(auth, parent.email, parent.password);
+            const user = userCredential.user;
+            
+            console.log(`User already exists, logged in as: ${user.uid}`);
+            
+            parentUsers.push({
+              uid: user.uid,
+              email: parent.email,
+              role: parent.role
+            });
+          } catch (signInError) {
+            console.error(`Error signing in existing user for ${parent.role}:`, signInError.code, signInError.message);
+            // Just log the error but continue - don't throw
+          }
         } else {
-          // Other sign-in error, rethrow
-          throw signInError;
+          console.error(`Error creating user for ${parent.role}:`, createError.code, createError.message);
+          // Just log the error but continue - don't throw
         }
       }
     } catch (error) {
+      console.error(`Error processing user for ${parent.role}:`, error.code, error.message);
+      // Do not throw here - keep going to try other parents
+    }
+  }
+}
+
+// Only check if we have parent users after trying all parents
+if (parentUsers.length === 0) {
+  // This is a true error case - no users could be created
+  throw createError(
+    ErrorCodes.DATA_INVALID, 
+    "Could not create or authenticate any parent users. Please try again with different email/password information."
+  );
+}    } catch (error) {
       console.error(`Error processing user for ${parent.role}:`, error.code, error.message);
       
       // Only throw if this is the last parent and we have no users
@@ -136,7 +154,7 @@ for (const parent of parentData) {
       console.warn(`Continuing with other parents after error for ${parent.role}`);
     }
   }
-}
+
     
     // Rest of the function...
     

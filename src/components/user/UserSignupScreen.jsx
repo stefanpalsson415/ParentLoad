@@ -103,60 +103,97 @@ useEffect(() => {
   
   // Handle form submission
   // Handle form submission
-const handleSubmit = async () => {
-  setIsSubmitting(true);
-  
-  try {
-    console.log("Starting family creation with data:", {
-      familyName,
-      parentData: parents.map(p => ({...p, password: '****'})), // Log without passwords
-      childrenData: children 
-    });
+  const handleSubmit = async () => {
+    setIsSubmitting(true);
     
-    // Create the family in Firebase
-    const familyData = {
-      familyName,
-      parentData: parents,
-      childrenData: children
-    };
-    
-    // Enhanced logging before family creation
-    console.log("Calling createFamily with:", JSON.stringify({
-      familyName: familyData.familyName,
-      parentCount: familyData.parentData?.length,
-      childrenCount: familyData.childrenData?.length,
-    }));
-    
-    const result = await createFamily(familyData);
-    console.log("Family creation result:", result);
-    
-    // Store the family ID in localStorage to help with debugging
-    if (result && result.familyId) {
-      localStorage.setItem('lastCreatedFamilyId', result.familyId);
-      console.log("Stored family ID in localStorage:", result.familyId);
+    try {
+      // Do some validation first
+      for (const parent of parents) {
+        if (!parent.email || !parent.password || !parent.name) {
+          alert("Please make sure all parent information is complete (name, email, and password)");
+          setIsSubmitting(false);
+          return;
+        }
+        
+        // Simple email validation
+        if (!parent.email.includes('@') || !parent.email.includes('.')) {
+          alert(`Please enter a valid email address for ${parent.role || 'parent'}`);
+          setIsSubmitting(false);
+          return;
+        }
+        
+        // Password validation
+        if (parent.password.length < 6) {
+          alert(`Password for ${parent.role || 'parent'} must be at least 6 characters`);
+          setIsSubmitting(false);
+          return;
+        }
+      }
       
-      // Navigate directly to dashboard with the newly created family
-      console.log("Navigating to dashboard with new family");
-      localStorage.setItem('selectedFamilyId', result.familyId);
-      // Set a flag to ensure we use this new family
-      localStorage.setItem('directFamilyAccess', JSON.stringify({
-        familyId: result.familyId,
-        familyName: familyName,
-        timestamp: new Date().getTime()
+      console.log("Starting family creation with data:", {
+        familyName,
+        parentData: parents.map(p => ({...p, password: '****'})), // Log without passwords
+        childrenData: children 
+      });
+      
+      // Create the family in Firebase
+      const familyData = {
+        familyName,
+        parentData: parents,
+        childrenData: children
+      };
+      
+      // Enhanced logging before family creation
+      console.log("Calling createFamily with:", JSON.stringify({
+        familyName: familyData.familyName,
+        parentCount: familyData.parentData?.length,
+        childrenCount: familyData.childrenData?.length,
       }));
-      navigate('/dashboard');
-    } else {
-      console.error("Family created but no familyId returned:", result);
-      throw new Error("Family creation failed: No family ID returned");
+      
+      try {
+        const result = await createFamily(familyData);
+        console.log("Family creation result:", result);
+        
+        // Store the family ID in localStorage to help with debugging
+        if (result && result.familyId) {
+          localStorage.setItem('lastCreatedFamilyId', result.familyId);
+          console.log("Stored family ID in localStorage:", result.familyId);
+          
+          // Navigate directly to dashboard with the newly created family
+          console.log("Navigating to dashboard with new family");
+          localStorage.setItem('selectedFamilyId', result.familyId);
+          // Set a flag to ensure we use this new family
+          localStorage.setItem('directFamilyAccess', JSON.stringify({
+            familyId: result.familyId,
+            familyName: familyName,
+            timestamp: new Date().getTime()
+          }));
+          navigate('/dashboard');
+        } else {
+          console.error("Family created but no familyId returned:", result);
+          throw new Error("Family creation failed: No family ID returned");
+        }
+      } catch (firebaseError) {
+        console.error("Firebase error creating family:", firebaseError);
+        
+        // More specific error messages based on the error code
+        if (firebaseError.code === 'auth/invalid-credential') {
+          alert("Authentication failed. Please check your email and password and try again.");
+        } else if (firebaseError.code === 'auth/email-already-in-use') {
+          alert("One of the email addresses is already in use. Please try logging in instead.");
+        } else if (firebaseError.code === 'auth/network-request-failed') {
+          alert("Network error. Please check your internet connection and try again.");
+        } else {
+          alert("There was an error creating your family: " + (firebaseError.message || "Unknown error"));
+        }
+      }
+    } catch (error) {
+      console.error("Detailed error creating family:", error);
+      alert("There was an error creating your family: " + (error.message || "Unknown error"));
+    } finally {
+      setIsSubmitting(false);
     }
-  } catch (error) {
-    console.error("Detailed error creating family:", error);
-    alert("There was an error creating your family: " + (error.message || "Unknown error"));
-  } finally {
-    setIsSubmitting(false);
-  }
-};
-  
+  };  
   // Render step content
   const renderStepContent = () => {
     switch (step) {
