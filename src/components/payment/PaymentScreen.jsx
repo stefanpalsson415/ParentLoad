@@ -52,12 +52,21 @@ const PaymentScreen = () => {
             
             console.log("Payment completed, navigating to family-confirmation for confirmation");
             // Navigate to family-confirmation for final confirmation
-            navigate('/family-confirmation', { 
-              state: { 
-                fromPayment: true,
-                familyData: pendingFamilyData 
-              } 
-            });
+            // Add debug logging
+console.log("Payment completed, navigating to family-confirmation with data:", {
+  familyName: pendingFamilyData?.familyName,
+  hasParentData: !!pendingFamilyData?.parentData,
+  parentCount: pendingFamilyData?.parentData?.length || 0,
+  childrenCount: pendingFamilyData?.childrenData?.length || 0
+});
+
+// Navigate to family-confirmation for final confirmation
+navigate('/family-confirmation', { 
+  state: { 
+    fromPayment: true,
+    familyData: pendingFamilyData 
+  } 
+});
           } else {
             console.error("No pending family data available");
             setError("Missing family information. Please try again.");

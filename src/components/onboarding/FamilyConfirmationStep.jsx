@@ -140,27 +140,28 @@ useEffect(() => {
           
           <div className="p-6 space-y-8">
             {/* Parents Section */}
-            <div>
-              <h3 className="text-lg font-medium mb-4 flex items-center">
-                <User className="mr-2 text-blue-500" size={20} />
-                Parents
-              </h3>
-              
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                {familyData.parentData && familyData.parentData.map((parent, index) => (
-                  <div key={index} className="flex items-center p-4 bg-blue-50 rounded-lg">
-                    <div className="w-10 h-10 rounded-full bg-blue-100 flex items-center justify-center mr-3">
-                      <User className="text-blue-600" size={16} />
-                    </div>
-                    <div>
-                      <p className="font-medium">{parent.name}</p>
-                      <p className="text-sm text-gray-600">{parent.role}</p>
-                      <p className="text-xs text-gray-500">{parent.email}</p>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </div>
+<div>
+  <h3 className="text-lg font-medium mb-4 flex items-center">
+    <User className="mr-2 text-blue-500" size={20} />
+    Parents
+  </h3>
+  
+  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+    {familyData.parentData && Array.isArray(familyData.parentData) && familyData.parentData.map((parent, index) => (
+      <div key={index} className="flex items-center p-4 bg-blue-50 rounded-lg">
+        {/* existing code */}
+      </div>
+    ))}
+    
+    {/* Emergency fallback display if parentData isn't formatted correctly */}
+    {(!familyData.parentData || !Array.isArray(familyData.parentData)) && (
+      <div className="p-4 bg-yellow-50 rounded-lg">
+        <p>Parent information may need to be re-entered.</p>
+        <p className="text-sm text-gray-600">Parent data format issue detected.</p>
+      </div>
+    )}
+  </div>
+</div>
             
             {/* Children Section */}
             {familyData.childrenData && familyData.childrenData.length > 0 && (

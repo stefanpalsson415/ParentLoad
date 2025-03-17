@@ -12,6 +12,13 @@ import { createError, ErrorCodes, logError } from '../utils/errorHandling';
 export async function createFamilyFromOnboarding(onboardingData) {
   try {
     console.log("createFamilyFromOnboarding received:", onboardingData);
+    console.log("COMPLETE ONBOARDING DATA CHECK:");
+console.log("- familyName:", onboardingData.familyName);
+console.log("- parentData:", onboardingData.parentData ? 
+  `${onboardingData.parentData.length} parents` : 'MISSING - THIS IS THE LIKELY ISSUE');
+console.log("- childrenData:", onboardingData.childrenData ? 
+  `${onboardingData.childrenData.length} children` : 'none');
+console.log("- priorities:", onboardingData.priorities);
     
     if (!onboardingData) {
       throw createError(ErrorCodes.DATA_INVALID, "No onboarding data provided");
