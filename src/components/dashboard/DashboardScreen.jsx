@@ -83,62 +83,27 @@ useEffect(() => {
   // Load family data and tasks when component mounts
   // Load family data and tasks when component mounts
   useEffect(() => {
-    const loadData = async () => {
-      try {
-        console.log("Dashboard loading - Current family data:", 
+    const loadDashboardData = async () => {
+      console.log("Dashboard loading - Family data:", 
                    familyData ? `ID: ${familyData.familyId}` : "None");
-        
-        // Check if we need to load family data
-        if (!familyData || !familyData.familyId) {
-          // Try to get family ID from localStorage
-          const storedFamilyId = localStorage.getItem('selectedFamilyId');
-          console.log("Trying to load family from stored ID:", storedFamilyId);
-          
-          if (storedFamilyId) {
-            // Explicitly load the family data with a small delay to ensure auth state is ready
-            setTimeout(async () => {
-              try {
-                const loadedFamily = await loadFamily(storedFamilyId);
-                console.log("Loaded family data result:", loadedFamily ? "Success" : "Failed");
-                
-                // If we couldn't load the family data, try a more direct approach
-                if (!loadedFamily) {
-                  console.log("Trying alternative loading approach...");
-                  // Try to get the family directly from the database
-                  const directFamily = await fetch(`/api/families/${storedFamilyId}`)
-                    .then(res => res.ok ? res.json() : null)
-                    .catch(err => console.error("Direct fetch failed:", err));
-                  
-                  if (directFamily) {
-                    console.log("Got family via direct fetch, updating context");
-                    // Manually update the family context with this data
-                    // This may require adding a direct update method to your context
-                  }
-                }
-                
-                // After loading family, load tasks
-                if (loadedFamily) {
-                  await loadTasks();
-                }
-              } catch (loadError) {
-                console.error("Error during delayed family load:", loadError);
-              }
-            }, 500); // Short delay to ensure auth state is ready
-          } else {
-            console.error("No family ID available in localStorage");
-          }
-        } else {
-          console.log("Family data already loaded:", familyData.familyId);
-          // Load tasks for the family
+      
+      if (familyData && familyData.familyId) {
+        console.log("Loading tasks for family:", familyData.familyId);
+        try {
           await loadTasks();
+        } catch (error) {
+          console.error("Error loading tasks:", error);
         }
-      } catch (error) {
-        console.error("Error loading dashboard data:", error);
+      } else {
+        console.log("No family data available, cannot load tasks");
       }
     };
     
-    loadData();
-  }, [familyData, loadTasks, loadFamily]);
+    // Only attempt to load dashboard data if not in loading state
+    if (!familyLoading) {
+      loadDashboardData();
+    }
+  }, [familyData, familyLoading, loadTasks]);
 
   // Generate notifications based on app state
   useEffect(() => {
@@ -308,22 +273,44 @@ useEffect(() => {
   };
 
   // If no family data is loaded yet
-  if (!familyData && !familyLoading) {
-    return (
-      <div className="flex flex-col items-center justify-center min-h-screen bg-gray-50 p-4">
-        <div className="text-center mb-6">
-          <h2 className="text-2xl font-bold mb-2">No Family Data Found</h2>
-          <p className="text-gray-600">Let's get you started with creating a family.</p>
+  // If no family data is loaded yet
+if (!familyData && !familyLoading) {
+  return (
+    <div className="flex flex-col items-center justify-center min-h-screen bg-gray-50 p-4">
+      <div className="text-center mb-6">
+        <h2 className="text-2xl font-bold mb-2">No Family Data Found</h2>
+        <p className="text-gray-600 mb-6">We couldn't find your family data. What would you like to do?</p>
+        
+        <div className="space-y-4 max-w-md mx-auto">
+          <button
+            onClick={() => navigate('/onboarding')}
+            className="w-full px-4 py-3 bg-black text-white rounded-md hover:bg-gray-800 transition-colors"
+          >
+            Create New Family
+          </button>
+          
+          <button
+            onClick={() => navigate('/login')}
+            className="w-full px-4 py-3 border border-gray-300 rounded-md hover:bg-gray-50 transition-colors"
+          >
+            Return to Login
+          </button>
+          
+          <button
+            onClick={() => window.location.reload()}
+            className="w-full px-4 py-3 bg-blue-50 text-blue-700 border border-blue-200 rounded-md hover:bg-blue-100 transition-colors"
+          >
+            Refresh Page
+          </button>
         </div>
-        <button
-          onClick={() => navigate('/onboarding')}
-          className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors"
-        >
-          Create Family
-        </button>
+        
+        <p className="mt-6 text-sm text-gray-500">
+          If you've just created a family, try refreshing the page or returning to login.
+        </p>
       </div>
-    );
-  }
+    </div>
+  );
+}
   
   // Generate week history tabs
   const weekHistoryTabs = [];

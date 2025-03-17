@@ -57,15 +57,29 @@ const FamilySelectionScreen = () => {
     }
     
     // Explicitly load the family data before navigating
-    if (familyData && familyData.familyId) {
-      console.log("Loading family data before navigation");
-      loadFamilyData(familyData.familyId).then(() => {
-        navigate('/dashboard');
-      });
-    } else {
-      console.log("No family ID available, redirecting to dashboard anyway");
-      navigate('/dashboard');
-    }
+    // Explicitly load the family data before navigating
+const navigateToDashboard = () => {
+  navigate('/dashboard');
+};
+
+if (familyData && familyData.familyId) {
+  console.log("Loading family data before navigation");
+  loadFamilyData(familyData.familyId).then(navigateToDashboard);
+} else if (availableFamilies && availableFamilies.length > 0) {
+  // If we don't have familyData but we do have availableFamilies, load the first one
+  console.log("Loading first available family before navigation");
+  loadFamilyData(availableFamilies[0].familyId).then(navigateToDashboard);
+} else {
+  // If we don't have familyData or availableFamilies, try to load from localStorage
+  const storedFamilyId = localStorage.getItem('selectedFamilyId');
+  if (storedFamilyId) {
+    console.log("Loading family from localStorage ID before navigation");
+    loadFamilyData(storedFamilyId).then(navigateToDashboard);
+  } else {
+    console.log("No family ID available, redirecting to dashboard anyway");
+    navigate('/dashboard');
+  }
+}
   };
   
   // Effect to check for direct navigation

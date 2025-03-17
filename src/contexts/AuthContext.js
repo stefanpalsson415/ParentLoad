@@ -84,57 +84,29 @@ export function AuthProvider({ children }) {
   }
 
   // Load family data by ID or user ID
-  async function loadFamilyData(idParam) {
+  async function loadFamilyData(familyId) {
     try {
-      console.log("Loading family data with param:", idParam);
-      let data;
-      
-      // Try to load from localStorage first as a fallback
-      const storedFamilyId = localStorage.getItem('selectedFamilyId');
-      console.log("Stored family ID from localStorage:", storedFamilyId);
-      
-      // Check if we have a family ID or a user ID
-      if (idParam && typeof idParam === 'string' && !idParam.includes('@')) {
-        // If it looks like a family ID, load by family ID
-        console.log("Attempting to load family by ID:", idParam);
-        data = await familyService.loadFamilyById(idParam);
-      } else {
-        // Otherwise try to load by user ID (either passed in or current user)
-        const userId = idParam || currentUser?.uid;
-        console.log("Attempting to load family by user ID:", userId);
-        
-        if (!userId) {
-          console.error("No user ID available");
-          
-          // Try the stored family ID as a last resort
-          if (storedFamilyId) {
-            console.log("Falling back to stored family ID:", storedFamilyId);
-            data = await familyService.loadFamilyById(storedFamilyId);
-          }
-        } else {
-          data = await familyService.loadFamilyByUserId(userId);
-        }
+      if (!familyId) {
+        console.error("No family ID provided to loadFamilyData");
+        return null;
       }
       
-      // If both approaches failed but we have a stored ID, try that
-      if (!data && storedFamilyId && idParam !== storedFamilyId) {
-        console.log("Primary loading failed. Trying stored family ID as fallback:", storedFamilyId);
-        data = await familyService.loadFamilyById(storedFamilyId);
-      }
+      console.log("AuthContext.loadFamilyData:", familyId);
+      const data = await familyService.loadFamilyById(familyId);
       
       if (data) {
         console.log("Successfully loaded family data:", data.familyId);
         setFamilyData(data);
         
-        // Also update localStorage for consistency
+        // Update localStorage for persistence
         localStorage.setItem('selectedFamilyId', data.familyId);
       } else {
-        console.error("Failed to load any family data");
+        console.error("Family data not found for ID:", familyId);
       }
       
       return data;
     } catch (error) {
-      console.error("Error loading family data:", error);
+      console.error("Error in loadFamilyData:", error);
       return null;
     }
   }
@@ -158,40 +130,79 @@ export function AuthProvider({ children }) {
   }
 
   useEffect(() => {
-    const unsubscribe = authService.observeAuthState(async (user) => {
-      setCurrentUser(user);
-      
-      if (user) {
-        try {
-          // Load all families first
-          await loadAllFamilies(user.uid);
+    let mounted = true;
+    console.log("AuthContext initializing");
+    
+    // This function handles the entire authentication and data loading sequence
+    const initializeAuth = async (user) => {
+      try {
+        if (user) {
+          console.log("User authenticated:", user.uid);
           
-          // Then load the primary family data if available
-          await loadFamilyData(user.uid);
-        } catch (error) {
-          console.error("Error loading family data on auth change:", error);
+          // Step 1: Load all families
+          console.log("Loading all families for user:", user.uid);
+          const families = await familyService.getAllFamiliesByUserId(user.uid);
+          
+          if (!mounted) return;
+          setAvailableFamilies(families || []);
+          
+          // Step 2: Determine which family to load
+          let familyToLoad = null;
+          const storedFamilyId = localStorage.getItem('selectedFamilyId');
+          
+          if (storedFamilyId) {
+            console.log("Found stored family ID:", storedFamilyId);
+            familyToLoad = storedFamilyId;
+          } else if (families && families.length > 0) {
+            console.log("Using first available family:", families[0].familyId);
+            familyToLoad = families[0].familyId;
+            localStorage.setItem('selectedFamilyId', families[0].familyId);
+          }
+          
+          // Step 3: Load the selected family data
+          if (familyToLoad) {
+            console.log("Loading family data for:", familyToLoad);
+            const data = await familyService.loadFamilyById(familyToLoad);
+            
+            if (!mounted) return;
+            
+            if (data) {
+              console.log("Successfully loaded family data:", data.familyId);
+              setFamilyData(data);
+            } else {
+              console.error("Failed to load family data for ID:", familyToLoad);
+              setFamilyData(null);
+            }
+          } else {
+            console.log("No family to load");
+            setFamilyData(null);
+          }
+        } else {
+          // No user is logged in
+          console.log("No authenticated user");
+          setFamilyData(null);
+          setAvailableFamilies([]);
         }
-      } else {
-        // Clear family data on logout
-        setFamilyData(null);
-        setAvailableFamilies([]);
+      } catch (error) {
+        console.error("Error in auth initialization:", error);
+        if (mounted) setFamilyData(null);
+      } finally {
+        if (mounted) setLoading(false);
       }
-      
-      setLoading(false);
+    };
+    
+    const unsubscribe = authService.observeAuthState((user) => {
+      console.log("Auth state changed, user:", user ? "authenticated" : "unauthenticated");
+      setCurrentUser(user);
+      initializeAuth(user);
     });
-  
-    // Add a timeout to prevent hanging indefinitely
-    const timeout = setTimeout(() => {
-      console.log("Auth loading timeout - forcing render");
-      setLoading(false);
-    }, 5000); // 5 seconds timeout
     
     return () => {
-      clearTimeout(timeout);
+      mounted = false;
       unsubscribe();
     };
   }, []);
-
+  
   // Context value
   const value = {
     currentUser,
