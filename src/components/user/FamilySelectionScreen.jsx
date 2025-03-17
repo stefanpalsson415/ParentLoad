@@ -58,15 +58,41 @@ const FamilySelectionScreen = () => {
  
   
 // Check for direct navigation state
+// Check for direct navigation state
 const location = useLocation();
 useEffect(() => {
-  if (location.state?.directAccess && location.state?.fromLanding) {
+  console.log("Location state:", location.state);
+  
+  // Handle direct access from payment screen
+  if (location.state?.directAccess && location.state?.fromPayment && location.state?.familyData) {
+    console.log("DIRECT ACCESS from payment page with family data");
+    
+    // Extract family data passed from payment
+    const incomingFamilyData = location.state.familyData;
+    console.log("Family data received:", incomingFamilyData);
+    
+    // If we have family members, update the local state
+    if (incomingFamilyData.familyMembers && incomingFamilyData.familyMembers.length > 0) {
+      // We can directly use the family members from the passed data
+      // This is a simple approach - in a real app you might want to load from DB
+      console.log("Setting family members from payment data:", incomingFamilyData.familyMembers);
+      
+      // Store family ID for later use
+      try {
+        localStorage.setItem('selectedFamilyId', incomingFamilyData.familyId);
+      } catch (e) {
+        console.error("Error saving family ID to localStorage:", e);
+      }
+    }
+  }
+  // Original direct access from landing page
+  else if (location.state?.directAccess && location.state?.fromLanding) {
     console.log("DIRECT ACCESS from landing page");
     
     // Only load if needed
     if (!selectedUser || !familyMembers || familyMembers.length === 0) {
       // Let's make sure we load the family data correctly
-      loadAllFamilies(currentUser.uid)
+      loadAllFamilies(currentUser?.uid)
         .then(families => {
           if (families && families.length > 0) {
             return loadFamilyData(families[0].familyId);
@@ -78,7 +104,7 @@ useEffect(() => {
         .catch(error => console.error("Error loading family:", error));
     }
   }
-}, [location]);
+}, [location, loadAllFamilies, loadFamilyData, currentUser]);
 
   // Effect to update login form visibility based on auth state
   useEffect(() => {
@@ -323,28 +349,42 @@ useEffect(() => {
     try {
       const user = await login(email, password);
       console.log("Login successful:", user);
-
+  
+      // Add a short delay to ensure auth state propagates
       await new Promise(resolve => setTimeout(resolve, 500));
-
       
       // Explicitly load all families
       const families = await loadAllFamilies(user.uid);
-    console.log("Loaded families:", families);
-
-     // If families exist, load the first one to populate familyMembers
-     if (families && families.length > 0) {
-      console.log("Loading first family:", families[0].familyId);
-      await loadFamilyData(families[0].familyId);
-    }
-      
-      // Stay on the family selection screen
+      console.log("Loaded families:", families);
+  
+      // If families exist, load the first one to populate familyMembers
+      if (families && families.length > 0) {
+        console.log("Loading first family:", families[0].familyId);
+        const familyData = await loadFamilyData(families[0].familyId);
+        
+        // Store selected family ID for persistence
+        try {
+          localStorage.setItem('selectedFamilyId', families[0].familyId);
+        } catch (e) {
+          console.error("Error saving family ID to localStorage:", e);
+        }
+  
+        // If we successfully loaded a family, update UI
+        if (familyData) {
+          console.log("Successfully loaded family data:", familyData);
           setShowLoginForm(false);
-  } catch (error) {
-    console.error("Login error:", error);
-    setLoginError('Invalid email or password. Please try again.');
-  } finally {
-    setIsLoggingIn(false);
-  }
+        }
+      } else {
+        // If no families found, redirect to onboarding
+        console.log("No families found, redirecting to onboarding");
+        navigate('/onboarding');
+      }
+    } catch (error) {
+      console.error("Login error:", error);
+      setLoginError('Invalid email or password. Please try again.');
+    } finally {
+      setIsLoggingIn(false);
+    }
   };
   
   const handleLogout = async () => {
@@ -358,101 +398,107 @@ useEffect(() => {
   };
   
   // Login Form UI
-  const renderLoginForm = () => {
-    return (
-      <div className="min-h-screen bg-white flex flex-col">
-        <div className="flex-1 flex flex-col items-center justify-center p-6">
-          <div className="w-full max-w-md">
-            {/* Header */}
-            <div className="text-center mb-8">
-              <h1 className="text-3xl font-bold text-black mb-2">Allie</h1>
-              <p className="text-gray-600">
-                Log in to access your family's workload balancer
-              </p>
-            </div>
-            
-            {/* Login Form */}
-            <div className="bg-white rounded-xl shadow-lg p-6 mb-8">
-              <h2 className="text-xl font-semibold mb-4 text-center">Log In</h2>
-              
-              {loginError && (
-                <div className="bg-red-50 text-red-700 p-3 rounded mb-4 text-sm">
-                  {loginError}
-                </div>
-              )}
-              
-              <form onSubmit={handleLogin}>
-                <div className="space-y-4">
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">Email</label>
-                    <div className="flex border rounded-md overflow-hidden">
-                      <div className="bg-gray-100 p-2 flex items-center justify-center">
-                        <Mail size={18} className="text-gray-500" />
-                      </div>
-                      <input
-                        type="email"
-                        value={email}
-                        onChange={(e) => setEmail(e.target.value)}
-                        className="flex-1 p-2 focus:outline-none"
-                        placeholder="Enter your email"
-                        required
-                      />
-                    </div>
-                  </div>
-                  
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">Password</label>
-                    <div className="flex border rounded-md overflow-hidden">
-                      <div className="bg-gray-100 p-2 flex items-center justify-center">
-                        <Lock size={18} className="text-gray-500" />
-                      </div>
-                      <input
-                        type="password"
-                        value={password}
-                        onChange={(e) => setPassword(e.target.value)}
-                        className="flex-1 p-2 focus:outline-none"
-                        placeholder="Enter your password"
-                        required
-                      />
-                    </div>
-                  </div>
-                  
-                  <button
-                    type="submit"
-                    disabled={isLoggingIn}
-                    className="w-full py-2 bg-black text-white rounded-md hover:bg-gray-800 flex items-center justify-center"
-                  >
-                    {isLoggingIn ? (
-                      <>
-                        <div className="mr-2 w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
-                        Logging in...
-                      </>
-                    ) : (
-                      'Log In'
-                    )}
-                  </button>
-                </div>
-              </form>
-            </div>
-            
-            {/* Create New Family Button */}
-            <button
-              onClick={() => navigate('/onboarding')}
-              className="w-full py-3 px-4 rounded-md font-medium text-black border border-black hover:bg-gray-50 flex items-center justify-center"
-            >
-              <PlusCircle size={16} className="mr-2" />
-              Create New Family
-            </button>
-          </div>
+  // Login Form UI
+const renderLoginForm = () => {
+  // Normal profile selection view
+return (
+  <div className="min-h-screen bg-white flex flex-col font-roboto">
+    <div className="flex-1 flex flex-col items-center justify-center p-6">
+      <div className="w-full max-w-md">
+        {/* Header with Logout */}
+        <div className="flex justify-between items-center mb-8">
+          <h1 className="text-3xl font-bold text-black font-roboto">Allie</h1>
+          <button 
+            onClick={handleLogout}
+            className="text-sm text-gray-600 hover:text-gray-800 flex items-center font-roboto"
+          >
+            <LogOut size={16} className="mr-1" />
+            Log Out
+          </button>
         </div>
-        
-        {/* Footer */}
-        <div className="p-4 text-center text-sm text-gray-500">
-          <p>Allie v1.0 - Balance family responsibilities together</p>
+          
+          {/* Login Form */}
+          <div className="bg-white rounded-xl shadow-lg p-6 mb-8">
+            <h2 className="text-xl font-semibold mb-4 text-center font-roboto">Log In</h2>
+            
+            {loginError && (
+              <div className="bg-red-50 text-red-700 p-3 rounded mb-4 text-sm font-roboto">
+                {loginError}
+              </div>
+            )}
+            
+            <form onSubmit={handleLogin} className="font-roboto">
+              <div className="space-y-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Email</label>
+                  <div className="flex border rounded-md overflow-hidden">
+                    <div className="bg-gray-100 p-2 flex items-center justify-center">
+                      <Mail size={18} className="text-gray-500" />
+                    </div>
+                    <input
+                      type="email"
+                      value={email}
+                      onChange={(e) => setEmail(e.target.value)}
+                      className="flex-1 p-2 focus:outline-none font-roboto"
+                      placeholder="Enter your email"
+                      required
+                    />
+                  </div>
+                </div>
+                
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Password</label>
+                  <div className="flex border rounded-md overflow-hidden">
+                    <div className="bg-gray-100 p-2 flex items-center justify-center">
+                      <Lock size={18} className="text-gray-500" />
+                    </div>
+                    <input
+                      type="password"
+                      value={password}
+                      onChange={(e) => setPassword(e.target.value)}
+                      className="flex-1 p-2 focus:outline-none font-roboto"
+                      placeholder="Enter your password"
+                      required
+                    />
+                  </div>
+                </div>
+                
+                <button
+                  type="submit"
+                  disabled={isLoggingIn}
+                  className="w-full py-2 bg-black text-white rounded-md hover:bg-gray-800 flex items-center justify-center font-roboto"
+                >
+                  {isLoggingIn ? (
+                    <>
+                      <div className="mr-2 w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+                      Logging in...
+                    </>
+                  ) : (
+                    'Log In'
+                  )}
+                </button>
+              </div>
+            </form>
+          </div>
+          
+          {/* Create New Family Button */}
+          <button
+            onClick={() => navigate('/onboarding')}
+            className="w-full py-3 px-4 rounded-md font-medium text-black border border-black hover:bg-gray-50 flex items-center justify-center font-roboto"
+          >
+            <PlusCircle size={16} className="mr-2" />
+            Create New Family
+          </button>
         </div>
       </div>
-    );
-  };
+      
+      {/* Footer */}
+      <div className="p-4 text-center text-sm text-gray-500 font-roboto">
+        <p>Allie v1.0 - Balance family responsibilities together</p>
+      </div>
+    </div>
+  );
+};
   
   // Empty state UI for when there are no families
   const renderEmptyState = () => {
