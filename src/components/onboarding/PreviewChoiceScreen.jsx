@@ -28,6 +28,20 @@ const PreviewChoiceScreen = () => {
     }
   }, [location]);
 
+  useEffect(() => {
+    if (familyData) {
+      console.log("PreviewChoiceScreen received family data:", {
+        familyName: familyData.familyName,
+        parentData: familyData.parentData ? 
+          familyData.parentData.map(p => ({...p, password: '******'})) : 
+          'none',
+        childrenData: familyData.childrenData,
+        priorities: familyData.priorities
+      });
+    }
+  }, [familyData]);
+
+
   // Store family data in localStorage for other screens to access
   useEffect(() => {
     if (familyData) {
@@ -92,42 +106,43 @@ const PreviewChoiceScreen = () => {
           
           <div className="p-6">
             {/* Parents Section */}
-            <div className="mb-6">
-              <h3 className="text-lg font-medium mb-3 flex items-center">
-                <User className="mr-2 text-blue-500" size={20} />
-                Family Members
-              </h3>
-              
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                {/* Display Parents */}
-                {familyData.parentData && familyData.parentData.map((parent, index) => (
-                  <div key={index} className="flex items-center p-3 bg-blue-50 rounded-lg">
-                    <div className="w-10 h-10 rounded-full bg-blue-100 flex items-center justify-center mr-3">
-                      <User className="text-blue-600" size={16} />
-                    </div>
-                    <div>
-                      <p className="font-medium">{parent.name}</p>
-                      <p className="text-sm text-gray-600">{parent.role}</p>
-                    </div>
-                  </div>
-                ))}
-                
-                {/* Display Children */}
-                {familyData.childrenData && familyData.childrenData.map((child, index) => (
-                  <div key={index} className="flex items-center p-3 bg-green-50 rounded-lg">
-                    <div className="w-10 h-10 rounded-full bg-green-100 flex items-center justify-center mr-3">
-                      <User className="text-green-600" size={16} />
-                    </div>
-                    <div>
-                      <p className="font-medium">{child.name}</p>
-                      <p className="text-sm text-gray-600">
-                        {child.age ? `Child, ${child.age} years old` : 'Child'}
-                      </p>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </div>
+            {/* Family Members Section */}
+<div className="mb-6">
+  <h3 className="text-lg font-medium mb-3 flex items-center">
+    <User className="mr-2 text-blue-500" size={20} />
+    Family Members
+  </h3>
+  
+  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+    {/* Display Parents */}
+    {familyData.parentData && familyData.parentData.map((parent, index) => (
+      <div key={index} className="flex items-center p-3 bg-blue-50 rounded-lg">
+        <div className="w-10 h-10 rounded-full bg-blue-100 flex items-center justify-center mr-3">
+          <User className="text-blue-600" size={16} />
+        </div>
+        <div>
+          <p className="font-medium">{parent.name}</p>
+          <p className="text-sm text-gray-600">{parent.role}</p>
+        </div>
+      </div>
+    ))}
+    
+    {/* Display Children */}
+    {familyData.childrenData && familyData.childrenData.map((child, index) => (
+      <div key={index} className="flex items-center p-3 bg-green-50 rounded-lg">
+        <div className="w-10 h-10 rounded-full bg-green-100 flex items-center justify-center mr-3">
+          <User className="text-green-600" size={16} />
+        </div>
+        <div>
+          <p className="font-medium">{child.name}</p>
+          <p className="text-sm text-gray-600">
+            {child.age ? `Child, ${child.age} years old` : 'Child'}
+          </p>
+        </div>
+      </div>
+    ))}
+  </div>
+</div>
             
             {/* Priorities Section */}
             <div className="mb-6">

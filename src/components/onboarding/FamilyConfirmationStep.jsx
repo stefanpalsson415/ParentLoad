@@ -13,10 +13,21 @@ const FamilyConfirmationStep = () => {
   const [error, setError] = useState('');
   
   // Load family data on mount
-  useEffect(() => {
+  // In src/components/onboarding/FamilyConfirmationStep.jsx
+// Around line 20-30 in the useEffect for loading family data
+
+useEffect(() => {
+    // Add debug logging
+    console.log("FamilyConfirmationStep checking for family data...");
+    console.log("Location state:", location.state);
+    
     // Try to get data from location state first (from payment screen)
     if (location.state?.familyData) {
-      console.log("Using family data from location state");
+      console.log("Using family data from location state:", {
+        familyName: location.state.familyData.familyName,
+        hasParentData: !!location.state.familyData.parentData,
+        parentCount: location.state.familyData.parentData?.length || 0
+      });
       setFamilyData(location.state.familyData);
       return;
     }
@@ -26,13 +37,18 @@ const FamilyConfirmationStep = () => {
     if (storedData) {
       try {
         const parsedData = JSON.parse(storedData);
-        console.log("Loaded family data from localStorage");
+        console.log("Loaded family data from localStorage:", {
+          familyName: parsedData.familyName,
+          hasParentData: !!parsedData.parentData,
+          parentCount: parsedData.parentData?.length || 0
+        });
         setFamilyData(parsedData);
       } catch (e) {
         console.error("Error parsing family data:", e);
         setError("We couldn't load your family information. Please try again.");
       }
     } else {
+      console.error("No family data found in location state or localStorage");
       setError("No family information found. Please return to the previous steps.");
     }
   }, [location]);

@@ -3,9 +3,6 @@ import React, { useState } from 'react';
 import { ArrowRight, ArrowLeft, CheckCircle, Award, Star, Scale, Sliders } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 
-
-
-
 // Add this debug function at the top of the file
 const debugObject = (obj) => {
   const safe = {};
@@ -25,7 +22,6 @@ const debugObject = (obj) => {
   return JSON.stringify(safe, null, 2);
 };
 
-
 const PrioritiesStep = ({ onboardingData, updateStepData, nextStep, prevStep, completeOnboarding }) => {
   const defaultPriorities = {
     highestPriority: "Invisible Parental Tasks",
@@ -34,7 +30,6 @@ const PrioritiesStep = ({ onboardingData, updateStepData, nextStep, prevStep, co
   };
   
   const navigate = useNavigate();
-
 
   const [priorities, setPriorities] = useState(onboardingData.priorities || defaultPriorities);
   const [loading, setLoading] = useState(false);
@@ -46,7 +41,6 @@ const PrioritiesStep = ({ onboardingData, updateStepData, nextStep, prevStep, co
     "Visible Parental Tasks",
     "Invisible Parental Tasks"
   ];
-
 
   const handlePriorityChange = (priorityLevel, value) => {
     // Check if this value is already used in another priority level
@@ -65,9 +59,6 @@ const PrioritiesStep = ({ onboardingData, updateStepData, nextStep, prevStep, co
     });
     setError('');
   };
-
-  
-
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -142,12 +133,11 @@ const PrioritiesStep = ({ onboardingData, updateStepData, nextStep, prevStep, co
     }
   };
 
-
   // Check if there are any duplicate selections
-const hasDuplicates = () => {
-  const values = Object.values(priorities);
-  return new Set(values).size !== values.length;
-};
+  const hasDuplicates = () => {
+    const values = Object.values(priorities);
+    return new Set(values).size !== values.length;
+  };
 
   // Helper function to get appropriate icon for each priority level
   const getPriorityIcon = (level) => {
@@ -162,8 +152,6 @@ const hasDuplicates = () => {
         return null;
     }
   };
-
-  
 
   return (
     <div className="max-w-2xl mx-auto">
@@ -275,88 +263,41 @@ const hasDuplicates = () => {
             </div>
           )}
 
-{error && (
-  <div className="mt-4">
-    <button
-      type="button"
-      className="w-full flex items-center justify-center bg-blue-600 text-white py-3 px-6 rounded-md hover:bg-blue-700 transition-colors font-medium"
-      onClick={() => {
-        // Create a proper family object with all onboarding data
-const familyPreviewData = {
-  familyId: `temp-${Date.now()}`,
-  familyName: onboardingData.familyName || "My Family",
-  parentData: onboardingData.parentData || [],
-  childrenData: onboardingData.childrenData || [],
-  priorities: priorities || {
-    highestPriority: "Invisible Parental Tasks",
-    secondaryPriority: "Visible Parental Tasks",
-    tertiaryPriority: "Invisible Household Tasks"
-  }
-};
+          {error && (
+            <div className="mt-4">
+              <button
+                type="button"
+                className="w-full flex items-center justify-center bg-blue-600 text-white py-3 px-6 rounded-md hover:bg-blue-700 transition-colors font-medium"
+                onClick={() => {
+                  // Create a proper family object with all onboarding data
+                  const familyPreviewData = {
+                    familyId: `temp-${Date.now()}`,
+                    familyName: onboardingData.familyName || "My Family",
+                    parentData: onboardingData.parentData || [],
+                    childrenData: onboardingData.childrenData || [],
+                    priorities: priorities || {
+                      highestPriority: "Invisible Parental Tasks",
+                      secondaryPriority: "Visible Parental Tasks",
+                      tertiaryPriority: "Invisible Household Tasks"
+                    }
+                  };
 
-// Store the complete family data
-localStorage.setItem('pendingFamilyData', JSON.stringify(familyPreviewData));
+                  // Store the complete family data
+                  localStorage.setItem('pendingFamilyData', JSON.stringify(familyPreviewData));
 
-// Navigate to the preview choice screen
-navigate('/preview-choice', { 
-  state: { 
-    familyData: familyPreviewData,
-    fromOnboarding: true
-  } 
-});
-            ...(onboardingData.parentData || []).map(parent => ({
-              id: `temp-${Date.now()}-${parent.name}`,
-              name: parent.name,
-              role: 'parent',
-              roleType: parent.role,
-              email: parent.email,
-              completed: false,
-              completedDate: null,
-              weeklyCompleted: [],
-              profilePicture: '/api/placeholder/150/150'
-            })),
-            ...(onboardingData.childrenData || []).map(child => ({
-              id: `temp-${Date.now()}-${child.name}`,
-              name: child.name,
-              role: 'child',
-              age: child.age,
-              completed: false,
-              completedDate: null,
-              weeklyCompleted: [],
-              profilePicture: '/api/placeholder/150/150'
-            }))
-          ],
-          tasks: [],
-          completedWeeks: [],
-          currentWeek: 1,
-          createdAt: new Date().toISOString(),
-          updatedAt: new Date().toISOString(),
-          memberIds: onboardingData.parentData?.map(p => `temp-${Date.now()}-${p.name}`) || [],
-          priorities: priorities || {
-            highestPriority: "Invisible Parental Tasks",
-            secondaryPriority: "Visible Parental Tasks",
-            tertiaryPriority: "Invisible Household Tasks"
-          },
-          surveySchedule: {},
-          familyPicture: null
-        };
-        
-        // Store the temporary family
-        localStorage.setItem('pendingFamilyData', JSON.stringify(tempFamily));
-        
-        // Navigate to the preview choice screen
-        navigate('/preview-choice', { 
-          state: { 
-            familyData: tempFamily,
-            fromOnboarding: true
-          } 
-        });
-      }}
-    >
-      Continue with Alternative Setup
-    </button>
-  </div>
-)}
+                  // Navigate to the preview choice screen
+                  navigate('/preview-choice', { 
+                    state: { 
+                      familyData: familyPreviewData,
+                      fromOnboarding: true
+                    } 
+                  });
+                }}
+              >
+                Continue with Alternative Setup
+              </button>
+            </div>
+          )}
           
           <div className="flex gap-4">
             <button
@@ -369,13 +310,13 @@ navigate('/preview-choice', {
               Back
             </button>
             <button
-  type="submit"
-  className="flex-1 flex items-center justify-center bg-black text-white py-3 px-6 rounded-md hover:bg-gray-800 transition-colors font-medium"
-  disabled={loading || hasDuplicates()}
->
-  {loading ? 'Creating Family...' : 'Complete Setup'}
-  {!loading && <ArrowRight size={18} className="ml-2" />}
-</button>
+              type="submit"
+              className="flex-1 flex items-center justify-center bg-black text-white py-3 px-6 rounded-md hover:bg-gray-800 transition-colors font-medium"
+              disabled={loading || hasDuplicates()}
+            >
+              {loading ? 'Creating Family...' : 'Complete Setup'}
+              {!loading && <ArrowRight size={18} className="ml-2" />}
+            </button>
           </div>
         </form>
       </div>

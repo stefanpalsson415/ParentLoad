@@ -65,6 +65,22 @@ const PaymentScreen = () => {
           return;
         }
         
+// Add debug logging
+console.log("Payment completed, navigating to family-confirmation with data:", {
+  familyName: pendingFamilyData?.familyName,
+  hasParentData: !!pendingFamilyData?.parentData,
+  parentCount: pendingFamilyData?.parentData?.length || 0,
+  childrenCount: pendingFamilyData?.childrenData?.length || 0
+});
+
+// Navigate to family-confirmation for final confirmation
+navigate('/family-confirmation', { 
+  state: { 
+    fromPayment: true,
+    familyData: pendingFamilyData 
+  } 
+});
+
         // Regular payment processing would happen here
         // ...
         

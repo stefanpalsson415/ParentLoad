@@ -25,6 +25,8 @@ import { ChatProvider } from './contexts/ChatContext';
 import ChatButton from './components/chat/ChatButton';
 import CoupleCheckInScreen from './components/assessment/CoupleCheckInScreen';
 import PreviewChoiceScreen from './components/onboarding/PreviewChoiceScreen';
+import FamilyConfirmationStep from './components/onboarding/FamilyConfirmationStep';
+
 
 
 

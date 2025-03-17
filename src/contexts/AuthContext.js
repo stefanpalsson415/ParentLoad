@@ -36,6 +36,9 @@ export function AuthProvider({ children }) {
   }
 
   // Create a new family
+// In src/contexts/AuthContext.js
+// Replace the createFamily function
+
 async function createFamily(familyData) {
   try {
     console.log("AuthContext.createFamily called with:", 
@@ -53,37 +56,23 @@ async function createFamily(familyData) {
     const result = await onboardingService.createFamilyFromOnboarding(familyData);
     
     console.log("Family created successfully:", result.familyId);
+    
+    // Important: Add a slight delay before trying to load the family
+    // This gives Firebase time to propagate the new family data
+    await new Promise(resolve => setTimeout(resolve, 1000));
+    
+    // Store the family ID for later use
+    if (result && result.familyId) {
+      setFamilyData(result);
+      localStorage.setItem('selectedFamilyId', result.familyId);
+    }
+    
     return result;
   } catch (error) {
     console.error("Error in AuthContext.createFamily:", error);
     throw error;
   }
 }
-
-  // Load family data
-  async function loadFamilyData(familyId) {
-    try {
-      // If no family ID is provided, try to load by user ID
-      let data;
-      if (familyId && typeof familyId === 'string') {
-        data = await familyService.loadFamilyById(familyId);
-      } else if (currentUser) {
-        data = await familyService.loadFamilyByUserId(currentUser.uid);
-      } else {
-        throw new Error("No family ID or user ID available");
-      }
-      
-      if (data) {
-        setFamilyData(data);
-      }
-      
-      return data;
-    } catch (error) {
-      console.error("Error loading family data:", error);
-      throw error;
-    }
-  }
-
   // Load all families for a user
   async function loadAllFamilies(userId) {
     try {
