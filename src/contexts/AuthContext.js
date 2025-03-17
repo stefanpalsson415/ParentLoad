@@ -36,9 +36,29 @@ export function AuthProvider({ children }) {
   }
 
   // Create a new family
-  async function createFamily(familyData) {
-    return familyService.createFamily(familyData);
+async function createFamily(familyData) {
+  try {
+    console.log("AuthContext.createFamily called with:", 
+      JSON.stringify({
+        familyName: familyData.familyName,
+        hasParentData: !!familyData.parentData,
+        parentCount: familyData.parentData?.length || 0
+      })
+    );
+    
+    // Import the onboarding service to use its createFamilyFromOnboarding function
+    const onboardingService = await import('../services/onboardingService');
+    
+    // Call the comprehensive family creation function that handles user accounts
+    const result = await onboardingService.createFamilyFromOnboarding(familyData);
+    
+    console.log("Family created successfully:", result.familyId);
+    return result;
+  } catch (error) {
+    console.error("Error in AuthContext.createFamily:", error);
+    throw error;
   }
+}
 
   // Load family data
   async function loadFamilyData(familyId) {

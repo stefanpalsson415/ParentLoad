@@ -110,7 +110,7 @@ const handleSubmit = async () => {
     console.log("Starting family creation with data:", {
       familyName,
       parentData: parents.map(p => ({...p, password: '****'})), // Log without passwords
-      children 
+      childrenData: children 
     });
     
     // Create the family in Firebase
@@ -120,6 +120,13 @@ const handleSubmit = async () => {
       childrenData: children
     };
     
+    // Enhanced logging before family creation
+    console.log("Calling createFamily with:", JSON.stringify({
+      familyName: familyData.familyName,
+      parentCount: familyData.parentData?.length,
+      childrenCount: familyData.childrenData?.length,
+    }));
+    
     const result = await createFamily(familyData);
     console.log("Family creation result:", result);
     
@@ -127,18 +134,21 @@ const handleSubmit = async () => {
     if (result && result.familyId) {
       localStorage.setItem('lastCreatedFamilyId', result.familyId);
       console.log("Stored family ID in localStorage:", result.familyId);
+      
+      // Navigate directly to dashboard with the newly created family
+      console.log("Navigating to dashboard with new family");
+      localStorage.setItem('selectedFamilyId', result.familyId);
+      // Set a flag to ensure we use this new family
+      localStorage.setItem('directFamilyAccess', JSON.stringify({
+        familyId: result.familyId,
+        familyName: familyName,
+        timestamp: new Date().getTime()
+      }));
+      navigate('/dashboard');
+    } else {
+      console.error("Family created but no familyId returned:", result);
+      throw new Error("Family creation failed: No family ID returned");
     }
-    
-    // Navigate directly to dashboard with the newly created family
-    console.log("Navigating to dashboard with new family");
-    localStorage.setItem('selectedFamilyId', result.familyId);
-    // Set a flag to ensure we use this new family
-    localStorage.setItem('directFamilyAccess', JSON.stringify({
-      familyId: result.familyId,
-      familyName: familyName,
-      timestamp: new Date().getTime()
-    }));
-    navigate('/dashboard');
   } catch (error) {
     console.error("Detailed error creating family:", error);
     alert("There was an error creating your family: " + (error.message || "Unknown error"));

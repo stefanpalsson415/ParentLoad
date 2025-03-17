@@ -15,6 +15,12 @@ import { createError, ErrorCodes, logError } from '../utils/errorHandling';
  */
 export async function createFamilyFromOnboarding(onboardingData) {
   try {
+    console.log("createFamilyFromOnboarding received:", onboardingData);
+    
+    if (!onboardingData) {
+      throw createError(ErrorCodes.DATA_INVALID, "No onboarding data provided");
+    }
+    
     const { familyName, parentData, childrenData, priorities } = onboardingData;
     
     console.log("Creating family with data:", { 
@@ -24,8 +30,37 @@ export async function createFamilyFromOnboarding(onboardingData) {
       priorities
     });
     
-    if (!familyName || !parentData || !Array.isArray(parentData) || parentData.length === 0) {
-      throw createError(ErrorCodes.DATA_INVALID, "Missing required family information");
+    // Detailed validation with specific error messages
+    if (!familyName) {
+      throw createError(ErrorCodes.DATA_INVALID, "Family name is required");
+    }
+    
+    if (!parentData) {
+      throw createError(ErrorCodes.DATA_INVALID, "Parent data is required");
+    }
+    
+    if (!Array.isArray(parentData)) {
+      throw createError(ErrorCodes.DATA_INVALID, "Parent data must be an array");
+    }
+    
+    if (parentData.length === 0) {
+      throw createError(ErrorCodes.DATA_INVALID, "At least one parent is required");
+    }
+    
+    // Validate parent data fields
+    for (const parent of parentData) {
+      if (!parent.name) {
+        throw createError(ErrorCodes.DATA_INVALID, "Parent name is required");
+      }
+      if (!parent.email) {
+        throw createError(ErrorCodes.DATA_INVALID, "Parent email is required");
+      }
+      if (!parent.password) {
+        throw createError(ErrorCodes.DATA_INVALID, "Parent password is required");
+      }
+      if (!parent.role) {
+        throw createError(ErrorCodes.DATA_INVALID, "Parent role is required");
+      }
     }
     
     // Create user accounts for parents
