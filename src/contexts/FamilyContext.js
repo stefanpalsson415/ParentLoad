@@ -5,8 +5,6 @@ import DatabaseService from '../services/DatabaseService';
 import { calculateBalanceScores } from '../utils/TaskWeightCalculator';
 import { useSurvey } from './SurveyContext';
 
-
-
 // Create the family context
 const FamilyContext = createContext();
 
@@ -18,28 +16,27 @@ export function useFamily() {
 // Provider component
 export function FamilyProvider({ children }) {
   const { currentUser, familyData: initialFamilyData } = useAuth();
-  
-// Save couple check-in data
-const saveCoupleCheckInData = async (weekNumber, data) => {
-  try {
-    if (!familyId) throw new Error("No family ID available");
-    
-    // Save to Firebase
-    await DatabaseService.saveCoupleCheckInData(familyId, weekNumber, data);
-    
-    // Update local state
-    setCoupleCheckInData(prev => ({
-      ...prev,
-      [weekNumber]: data
-    }));
-    
-    return true;
-  } catch (error) {
-    setError(error.message);
-    throw error;
-  }
-};
 
+  // Save couple check-in data
+  const saveCoupleCheckInData = async (familyId, weekNumber, data) => {
+    try {
+      if (!familyId) throw new Error("No family ID available");
+      
+      // Save to Firebase
+      await DatabaseService.saveCoupleCheckInData(familyId, weekNumber, data);
+      
+      // Update local state
+      setCoupleCheckInData(prev => ({
+        ...prev,
+        [weekNumber]: data
+      }));
+      
+      return true;
+    } catch (error) {
+      setError(error.message);
+      throw error;
+    }
+  };
 
   // Reference to store survey data passed from SurveyContext via the bridge component
   const surveyDataRef = useRef({
@@ -78,6 +75,7 @@ const saveCoupleCheckInData = async (weekNumber, data) => {
   const [impactInsights, setImpactInsights] = useState([]); // Store task impact insights
   const [kidTasksData, setKidTasksData] = useState({}); // Store kid tasks data
   const [coupleCheckInData, setCoupleCheckInData] = useState({});
+  
   // Set family priorities for weighting system
   const [familyPriorities, setFamilyPriorities] = useState({
     highestPriority: "Invisible Parental Tasks",
@@ -87,21 +85,6 @@ const saveCoupleCheckInData = async (weekNumber, data) => {
 
   // Initialize family data from auth context
   useEffect(() => {
-    // Log localStorage state for debugging
-useEffect(() => {
-  console.log("--- Dashboard Debug ---");
-  console.log("localStorage familyId:", localStorage.getItem('selectedFamilyId'));
-  console.log("localStorage memberId:", localStorage.getItem('selectedMemberId'));
-  console.log("Current user:", selectedUser);
-  console.log("Current family data:", familyData);
-  
-  // If we have a family ID in localStorage but no family data loaded
-  const storedFamilyId = localStorage.getItem('selectedFamilyId');
-  if (storedFamilyId && (!familyData || !familyData.familyId)) {
-    console.log("Attempting emergency family load with ID:", storedFamilyId);
-    loadFamily(storedFamilyId);
-  }
-}, []);
     if (initialFamilyData) {
       setFamilyId(initialFamilyData.familyId);
       setFamilyName(initialFamilyData.familyName || '');
@@ -147,46 +130,60 @@ useEffect(() => {
     }
   }, [initialFamilyData, currentUser]);
 
+  // Separate debugging useEffect
+  useEffect(() => {
+    console.log("--- Dashboard Debug ---");
+    console.log("localStorage familyId:", localStorage.getItem('selectedFamilyId'));
+    console.log("localStorage memberId:", localStorage.getItem('selectedMemberId'));
+    console.log("Current user:", selectedUser);
+    console.log("Current family data:", familyId ? { familyId, familyName } : null);
+    
+    // If we have a family ID in localStorage but no family data loaded
+    const storedFamilyId = localStorage.getItem('selectedFamilyId');
+    if (storedFamilyId && (!familyId)) {
+      console.log("Attempting emergency family load with ID:", storedFamilyId);
+      // Note: loadFamily function is not defined in this snippet
+      // If you have this function, you can uncomment the line below
+      // loadFamilyData(storedFamilyId);
+    }
+  }, [familyId, familyName, selectedUser]);
 
-// Load selected user from localStorage when components mount 
-// or when family members change
-useEffect(() => {
-  if (familyMembers.length > 0) {
-    try {
-      const savedUserId = localStorage.getItem('selectedUserId');
-      
-      if (savedUserId && !selectedUser) {
-        console.log("Attempting to restore selected user from localStorage:", savedUserId);
-        const member = familyMembers.find(m => m.id === savedUserId);
+  // Load selected user from localStorage when components mount
+  useEffect(() => {
+    if (familyMembers.length > 0) {
+      try {
+        const savedUserId = localStorage.getItem('selectedUserId');
         
+        if (savedUserId && !selectedUser) {
+          console.log("Attempting to restore selected user from localStorage:", savedUserId);
+          const member = familyMembers.find(m => m.id === savedUserId);
+          
+          if (member) {
+            console.log("Restored selected user:", member.name);
+            setSelectedUser(member);
+          } else {
+            console.log("Saved user ID not found in current family members");
+          }
+        }
+      } catch (error) {
+        console.error("Error restoring user selection from localStorage:", error);
+      }
+    }
+  }, [familyMembers, selectedUser]);
+
+  // Effect to restore selected user from localStorage
+  useEffect(() => {
+    if (familyMembers.length > 0 && !selectedUser) {
+      const storedMemberId = localStorage.getItem('selectedMemberId');
+      if (storedMemberId) {
+        const member = familyMembers.find(m => m.id === storedMemberId);
         if (member) {
-          console.log("Restored selected user:", member.name);
+          console.log("Restoring selected member from localStorage:", member.name);
           setSelectedUser(member);
-        } else {
-          console.log("Saved user ID not found in current family members");
         }
       }
-    } catch (error) {
-      console.error("Error restoring user selection from localStorage:", error);
     }
-  }
-}, [familyMembers, selectedUser]);
-
-
-// Effect to restore selected user from localStorage
-useEffect(() => {
-  if (familyMembers.length > 0 && !selectedUser) {
-    const storedMemberId = localStorage.getItem('selectedMemberId');
-    if (storedMemberId) {
-      const member = familyMembers.find(m => m.id === storedMemberId);
-      if (member) {
-        console.log("Restoring selected member from localStorage:", member.name);
-        setSelectedUser(member);
-      }
-    }
-  }
-}, [familyMembers, selectedUser]);
-
+  }, [familyMembers, selectedUser]);
 
   // Update favicon helper function
   const updateFavicon = (imageUrl) => {
@@ -228,26 +225,24 @@ useEffect(() => {
   };
 
   // Select a family member
-// Select a family member
-// Select a family member
-const selectFamilyMember = (member) => {
-  if (!member) return null;
-  
-  console.log("Selecting family member:", member);
-  setSelectedUser(member);
-  
-  // Store member ID in localStorage for persistence
-  try {
-    localStorage.setItem('selectedMemberId', member.id);
-    if (familyId) {
-      localStorage.setItem('selectedFamilyId', familyId);
+  const selectFamilyMember = (member) => {
+    if (!member) return null;
+    
+    console.log("Selecting family member:", member);
+    setSelectedUser(member);
+    
+    // Store member ID in localStorage for persistence
+    try {
+      localStorage.setItem('selectedMemberId', member.id);
+      if (familyId) {
+        localStorage.setItem('selectedFamilyId', familyId);
+      }
+    } catch (error) {
+      console.error("Error storing user selection in localStorage:", error);
     }
-  } catch (error) {
-    console.error("Error storing user selection in localStorage:", error);
-  }
-  
-  return member;
-};
+    
+    return member;
+  };
 
   // Update member profile
   const updateMemberProfile = async (memberId, data) => {
@@ -315,13 +310,11 @@ const selectFamilyMember = (member) => {
     }
   };
 
-
   // Get couple check-in data for a specific week
   const getCoupleCheckInData = (weekNumber) => {
     return coupleCheckInData[weekNumber] || null;
   };
 
-  
   // Update survey schedule
   const updateSurveySchedule = async (weekNumber, dueDate) => {
     try {
@@ -389,38 +382,35 @@ const selectFamilyMember = (member) => {
           completedDate: new Date().toISOString().split('T')[0]
         });
       }
-      
-
-    
 
       // Store initial survey data in week history
-const allComplete = updatedMembers.every(member => member.completed);
-if (allComplete) {
-  // Create initial survey snapshot using current responses
-  const initialSurveyData = {
-    responses: responses, // Use the responses that were just submitted
-    completionDate: new Date().toISOString(),
-    familyMembers: updatedMembers.map(m => ({
-      id: m.id,
-      name: m.name,
-      role: m.role,
-      completedDate: m.completedDate
-    }))
-  };
-  
-  // Update week history
-  const updatedHistory = {
-    ...weekHistory,
-    initial: initialSurveyData
-  };
-  
-  setWeekHistory(updatedHistory);
-  
-  // Save to Firebase
-  await DatabaseService.saveFamilyData({ 
-    weekHistory: updatedHistory
-  }, familyId);
-}
+      const allComplete = updatedMembers.every(member => member.completed);
+      if (allComplete) {
+        // Create initial survey snapshot using current responses
+        const initialSurveyData = {
+          responses: responses, // Use the responses that were just submitted
+          completionDate: new Date().toISOString(),
+          familyMembers: updatedMembers.map(m => ({
+            id: m.id,
+            name: m.name,
+            role: m.role,
+            completedDate: m.completedDate
+          }))
+        };
+        
+        // Update week history
+        const updatedHistory = {
+          ...weekHistory,
+          initial: initialSurveyData
+        };
+        
+        setWeekHistory(updatedHistory);
+        
+        // Save to Firebase
+        await DatabaseService.saveFamilyData({ 
+          weekHistory: updatedHistory
+        }, familyId);
+      }
       
       return true;
     } catch (error) {
@@ -681,53 +671,52 @@ if (allComplete) {
     return imbalances.sort((a, b) => b.imbalanceScore - a.imbalanceScore);
   };
 
-  
   // Get relationship trend data
-const getRelationshipTrendData = useCallback(() => {
-  // Default demo data
-  const demoData = [
-    { week: 'Initial', satisfaction: 3.5, communication: 3.2, workloadBalance: 30 },
-    { week: 'Week 1', satisfaction: 3.7, communication: 3.4, workloadBalance: 35 },
-    { week: 'Week 2', satisfaction: 3.9, communication: 3.6, workloadBalance: 40 },
-    { week: 'Week 3', satisfaction: 4.1, communication: 3.8, workloadBalance: 45 },
-    { week: 'Current', satisfaction: 4.3, communication: 4.0, workloadBalance: 48 }
-  ];
-  
-  // If we have real data in family data, use that instead
-  if (coupleCheckInData && Object.keys(coupleCheckInData).length > 0) {
-    const trends = [];
+  const getRelationshipTrendData = useCallback(() => {
+    // Default demo data
+    const demoData = [
+      { week: 'Initial', satisfaction: 3.5, communication: 3.2, workloadBalance: 30 },
+      { week: 'Week 1', satisfaction: 3.7, communication: 3.4, workloadBalance: 35 },
+      { week: 'Week 2', satisfaction: 3.9, communication: 3.6, workloadBalance: 40 },
+      { week: 'Week 3', satisfaction: 4.1, communication: 3.8, workloadBalance: 45 },
+      { week: 'Current', satisfaction: 4.3, communication: 4.0, workloadBalance: 48 }
+    ];
     
-    // Add initial point
-    trends.push({ 
-      week: 'Initial', 
-      satisfaction: 3.5, 
-      communication: 3.2, 
-      workloadBalance: 30 
-    });
+    // If we have real data in family data, use that instead
+    if (coupleCheckInData && Object.keys(coupleCheckInData).length > 0) {
+      const trends = [];
+      
+      // Add initial point
+      trends.push({ 
+        week: 'Initial', 
+        satisfaction: 3.5, 
+        communication: 3.2, 
+        workloadBalance: 30 
+      });
+      
+      // Add data for each week with check-in data
+      Object.entries(coupleCheckInData).forEach(([weekKey, data]) => {
+        const weekNum = parseInt(weekKey);
+        if (!isNaN(weekNum)) {
+          trends.push({
+            week: `Week ${weekNum}`,
+            satisfaction: data.satisfaction || 3,
+            communication: data.communication || 3,
+            workloadBalance: data.workloadBalance || 30 + (weekNum * 5)
+          });
+        }
+      });
+      
+      // Sort by week
+      return trends.sort((a, b) => {
+        if (a.week === 'Initial') return -1;
+        if (b.week === 'Initial') return 1;
+        return parseInt(a.week.replace('Week ', '')) - parseInt(b.week.replace('Week ', ''));
+      });
+    }
     
-    // Add data for each week with check-in data
-    Object.entries(coupleCheckInData).forEach(([weekKey, data]) => {
-      const weekNum = parseInt(weekKey);
-      if (!isNaN(weekNum)) {
-        trends.push({
-          week: `Week ${weekNum}`,
-          satisfaction: data.satisfaction || 3,
-          communication: data.communication || 3,
-          workloadBalance: data.workloadBalance || 30 + (weekNum * 5)
-        });
-      }
-    });
-    
-    // Sort by week
-    return trends.sort((a, b) => {
-      if (a.week === 'Initial') return -1;
-      if (b.week === 'Initial') return 1;
-      return parseInt(a.week.replace('Week ', '')) - parseInt(b.week.replace('Week ', ''));
-    });
-  }
-  
-  return demoData;
-}, [coupleCheckInData]);
+    return demoData;
+  }, [coupleCheckInData]);
   
   // NEW: Analyze task effectiveness
   const analyzeTaskEffectiveness = (completedTasks, weekHistoryData) => {
@@ -1955,7 +1944,7 @@ const getRelationshipTrendData = useCallback(() => {
     updateSurveySchedule,
     completeInitialSurvey,
     completeWeeklyCheckIn,
-    saveSurveyProgress, // Add this line
+    saveSurveyProgress,
     addTaskComment,
     updateTaskCompletion,
     updateSubtaskCompletion,
@@ -1974,7 +1963,7 @@ const getRelationshipTrendData = useCallback(() => {
     saveCoupleCheckInData,
     getCoupleCheckInData,
     getRelationshipTrendData,
-    setSurveyData // Add the bridge function to the context value
+    setSurveyData
   };
 
   return (
