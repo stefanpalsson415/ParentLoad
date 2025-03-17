@@ -34,6 +34,11 @@ const FamilySelectionScreen = () => {
   const handleSelectUser = (member) => {
     // Log the selection for debugging
     console.log("User selected:", member);
+    // Add at the beginning of handleSelectUser function
+console.log("====== SELECTION DEBUG ======");
+console.log("Selected user:", member);
+console.log("Family data available:", !!familyData);
+console.log("Available families:", availableFamilies);
     
     // Select the member in the family context
     selectFamilyMember(member);
@@ -56,25 +61,44 @@ const FamilySelectionScreen = () => {
       console.error("Error saving to localStorage:", error);
     }
     
+
+    if (familyData && familyData.familyId) {
+      localStorage.setItem('selectedFamilyId', familyData.familyId);
+      console.log("Stored family ID in localStorage:", familyData.familyId);
+    }
+    
+    // Just navigate to dashboard without the complex logic
+    console.log("EMERGENCY: Forcing direct navigation to dashboard");
+    window.location.href = '/dashboard';
     // Explicitly load the family data before navigating
     // Explicitly load the family data before navigating
-const navigateToDashboard = () => {
-  navigate('/dashboard');
+// Determine where to navigate based on whether the user has completed their survey
+const navigateUser = () => {
+  console.log("Navigating user with completion status:", member.completed);
+  
+  // If this user hasn't completed their initial survey, send them to the survey
+  if (!member.completed) {
+    console.log("User needs to complete survey, navigating to survey");
+    navigate('/survey');
+  } else {
+    console.log("User has completed survey, navigating to dashboard");
+    navigate('/dashboard');
+  }
 };
 
 if (familyData && familyData.familyId) {
   console.log("Loading family data before navigation");
-  loadFamilyData(familyData.familyId).then(navigateToDashboard);
+  loadFamilyData(familyData.familyId).then(navigateUser);
 } else if (availableFamilies && availableFamilies.length > 0) {
   // If we don't have familyData but we do have availableFamilies, load the first one
   console.log("Loading first available family before navigation");
-  loadFamilyData(availableFamilies[0].familyId).then(navigateToDashboard);
+  loadFamilyData(availableFamilies[0].familyId).then(navigateUser);
 } else {
   // If we don't have familyData or availableFamilies, try to load from localStorage
   const storedFamilyId = localStorage.getItem('selectedFamilyId');
   if (storedFamilyId) {
     console.log("Loading family from localStorage ID before navigation");
-    loadFamilyData(storedFamilyId).then(navigateToDashboard);
+    loadFamilyData(storedFamilyId).then(navigateUser);
   } else {
     console.log("No family ID available, redirecting to dashboard anyway");
     navigate('/dashboard');

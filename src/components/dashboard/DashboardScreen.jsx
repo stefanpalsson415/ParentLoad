@@ -1,10 +1,10 @@
 // src/components/dashboard/DashboardScreen.jsx
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { 
   BarChart3, CheckSquare, Heart, ClipboardCheck, History, 
   User, LogOut, Bell, Settings, ChevronDown, ChevronUp,
-  Info, MessageCircle, Calendar, Award
+  Info, MessageCircle, Calendar, Award, RefreshCw
 } from 'lucide-react';
 import { useFamily } from '../../hooks/useFamily';
 import { useSurvey } from '../../hooks/useSurvey';
@@ -40,22 +40,27 @@ const DashboardScreen = () => {
     error: tasksError
   } = useTasks();
 
-// Log localStorage state for debugging
-useEffect(() => {
-  console.log("--- Dashboard Debug ---");
-  console.log("localStorage familyId:", localStorage.getItem('selectedFamilyId'));
-  console.log("localStorage memberId:", localStorage.getItem('selectedMemberId'));
-  console.log("Current user:", selectedMember);
-  console.log("Current family data:", familyData);
-  
-  // If we have a family ID in localStorage but no family data loaded
-  const storedFamilyId = localStorage.getItem('selectedFamilyId');
-  if (storedFamilyId && (!familyData || !familyData.familyId)) {
-    console.log("Attempting emergency family load with ID:", storedFamilyId);
-    loadFamily(storedFamilyId);
-  }
-}, []);
+  // DEBUG INFO
+  console.log("======= DASHBOARD DEBUG =======");
+  console.log("Family Data:", familyData);
+  console.log("Family Loading:", familyLoading);
+  console.log("Family Error:", familyError);
+  console.log("Selected Member:", selectedMember);
+  console.log("Local Storage FamilyId:", localStorage.getItem('selectedFamilyId'));
 
+  // Emergency patch function to fix empty family state
+  const patchFamilyData = () => {
+    console.log("EMERGENCY: Attempting to patch family data");
+    
+    // Try to load from localStorage directly
+    const storedFamilyId = localStorage.getItem('selectedFamilyId');
+    if (storedFamilyId) {
+      console.log("Found stored family ID:", storedFamilyId);
+      
+      // Manually invoke the family loading function
+      loadFamily(storedFamilyId);
+    }
+  };
   
   // Local state
   const [activeTab, setActiveTab] = useState('overview');
@@ -63,7 +68,8 @@ useEffect(() => {
   const [isSmallScreen, setIsSmallScreen] = useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [notifications, setNotifications] = useState([]);
-  
+  const [recoveryAttempts, setRecoveryAttempts] = useState(0);
+
   // Check screen size on mount and resize
   useEffect(() => {
     const checkScreenSize = () => {
@@ -80,7 +86,42 @@ useEffect(() => {
     return () => window.removeEventListener('resize', checkScreenSize);
   }, []);
   
-  // Load family data and tasks when component mounts
+  // Log localStorage state for debugging
+  useEffect(() => {
+    console.log("--- Dashboard Debug ---");
+    console.log("localStorage familyId:", localStorage.getItem('selectedFamilyId'));
+    console.log("localStorage memberId:", localStorage.getItem('selectedMemberId'));
+    console.log("Current user:", selectedMember);
+    console.log("Current family data:", familyData);
+    
+    // If we have a family ID in localStorage but no family data loaded
+    const storedFamilyId = localStorage.getItem('selectedFamilyId');
+    if (storedFamilyId && (!familyData || !familyData.familyId)) {
+      console.log("Attempting emergency family load with ID:", storedFamilyId);
+      loadFamily(storedFamilyId);
+    }
+  }, []);
+
+  // Run patch function immediately if needed
+  useEffect(() => {
+    if (!familyData && !familyLoading && recoveryAttempts === 0) {
+      patchFamilyData();
+      setRecoveryAttempts(prev => prev + 1);
+    }
+  }, [familyData, familyLoading]);
+
+  // Simple emergency recovery for family data
+  useEffect(() => {
+    if (!familyData && !familyLoading && recoveryAttempts < 2) {
+      const storedFamilyId = localStorage.getItem('selectedFamilyId');
+      if (storedFamilyId) {
+        console.log("Emergency: Loading family with stored ID:", storedFamilyId);
+        loadFamily(storedFamilyId);
+        setRecoveryAttempts(prev => prev + 1);
+      }
+    }
+  }, [familyData, familyLoading, loadFamily, recoveryAttempts]);
+  
   // Load family data and tasks when component mounts
   useEffect(() => {
     const loadDashboardData = async () => {
@@ -96,6 +137,13 @@ useEffect(() => {
         }
       } else {
         console.log("No family data available, cannot load tasks");
+        
+        // Try to load family data if we have a family ID in localStorage
+        const storedFamilyId = localStorage.getItem('selectedFamilyId');
+        if (storedFamilyId) {
+          console.log("Found family ID in localStorage:", storedFamilyId);
+          loadFamily(storedFamilyId);
+        }
       }
     };
     
@@ -103,7 +151,7 @@ useEffect(() => {
     if (!familyLoading) {
       loadDashboardData();
     }
-  }, [familyData, familyLoading, loadTasks]);
+  }, [familyData, familyLoading, loadTasks, loadFamily]);
 
   // Generate notifications based on app state
   useEffect(() => {
@@ -176,6 +224,22 @@ useEffect(() => {
   const handleLogout = () => {
     navigate('/login');
   };
+
+  // Handle manual retry loading
+  const handleRetryLoading = () => {
+    clearFamilyError();
+    
+    // Try to load family data from localStorage
+    const storedFamilyId = localStorage.getItem('selectedFamilyId');
+    if (storedFamilyId) {
+      console.log("Retry: Loading family with ID:", storedFamilyId);
+      loadFamily(storedFamilyId);
+    } else {
+      // If no family ID in localStorage, navigate to login
+      console.log("No family ID in localStorage, navigating to login");
+      navigate('/login');
+    }
+  };
   
   // Determine which tab component to render
   const renderTabContent = () => {
@@ -190,21 +254,35 @@ useEffect(() => {
       );
     }
     
+    // Enhanced error handling
     if (familyError || tasksError) {
       return (
-        <div className="bg-red-50 p-4 rounded-lg border border-red-200">
-          <h3 className="text-red-700 font-medium mb-2">Error Loading Dashboard</h3>
-          <p className="text-red-600">{familyError || tasksError}</p>
-          <button 
-            onClick={() => {
-              clearFamilyError();
-              loadFamily(familyData?.familyId);
-              loadTasks();
-            }}
-            className="mt-4 px-4 py-2 bg-red-100 text-red-700 rounded hover:bg-red-200"
-          >
-            Retry
-          </button>
+        <div className="bg-red-50 p-6 rounded-lg border border-red-200">
+          <h3 className="text-red-700 font-bold text-xl mb-3">Error Loading Dashboard</h3>
+          <p className="text-red-600 mb-4">{familyError || tasksError}</p>
+          
+          <div className="space-y-3">
+            <button 
+              onClick={handleRetryLoading}
+              className="px-4 py-2 bg-red-100 text-red-700 rounded hover:bg-red-200 w-full flex items-center justify-center"
+            >
+              <RefreshCw size={16} className="mr-2" /> Retry Loading Family
+            </button>
+            
+            <button 
+              onClick={() => navigate('/login')}
+              className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 w-full"
+            >
+              Select Family Member
+            </button>
+            
+            <button 
+              onClick={() => navigate('/survey')}
+              className="px-4 py-2 bg-green-600 text-white rounded hover:bg-green-700 w-full"
+            >
+              Go to Initial Survey
+            </button>
+          </div>
         </div>
       );
     }
@@ -231,36 +309,36 @@ useEffect(() => {
                familyData={familyData}
                weeklyTasks={weeklyTasks}
               />;  
-              case 'survey-results':
-                return selectedMember && !selectedMember.completed ? (
-                  <div className="p-6 bg-white rounded-lg shadow">
-                    <div className="text-center">
-                      <h2 className="text-2xl font-bold mb-4">Welcome to Allie</h2>
-                      <div className="mb-6">
-                        <p className="text-lg mb-4">Let's complete your initial survey to get started.</p>
-                        <p className="text-gray-600 mb-6">This helps us understand your family's current balance so we can provide personalized recommendations.</p>
-                        <button 
-                          onClick={() => navigate('/survey')}
-                          className="px-6 py-3 bg-black text-white rounded-md hover:bg-gray-800 transition-colors"
-                        >
-                          Start Initial Survey
-                        </button>
-                      </div>
-                      
-                      <div className="mt-8 p-6 bg-gray-50 rounded-lg">
-                        <h3 className="font-medium mb-2">What to expect:</h3>
-                        <ul className="text-left text-gray-600 space-y-2">
-                          <li>• A series of questions about who handles different tasks in your family</li>
-                          <li>• Takes about 10-15 minutes to complete</li>
-                          <li>• Your responses help us identify areas for better balance</li>
-                          <li>• You'll get personalized recommendations once completed</li>
-                        </ul>
-                      </div>
-                    </div>
-                  </div>
-                ) : (
-                  <SurveysTab familyData={familyData} />
-                );
+      case 'survey-results':
+        return selectedMember && !selectedMember.completed ? (
+          <div className="p-6 bg-white rounded-lg shadow">
+            <div className="text-center">
+              <h2 className="text-2xl font-bold mb-4">Welcome to Allie</h2>
+              <div className="mb-6">
+                <p className="text-lg mb-4">Let's complete your initial survey to get started.</p>
+                <p className="text-gray-600 mb-6">This helps us understand your family's current balance so we can provide personalized recommendations.</p>
+                <button 
+                  onClick={() => navigate('/survey')}
+                  className="px-6 py-3 bg-black text-white rounded-md hover:bg-gray-800 transition-colors"
+                >
+                  Start Initial Survey
+                </button>
+              </div>
+              
+              <div className="mt-8 p-6 bg-gray-50 rounded-lg">
+                <h3 className="font-medium mb-2">What to expect:</h3>
+                <ul className="text-left text-gray-600 space-y-2">
+                  <li>• A series of questions about who handles different tasks in your family</li>
+                  <li>• Takes about 10-15 minutes to complete</li>
+                  <li>• Your responses help us identify areas for better balance</li>
+                  <li>• You'll get personalized recommendations once completed</li>
+                </ul>
+              </div>
+            </div>
+          </div>
+        ) : (
+          <SurveysTab familyData={familyData} />
+        );
       default:
         // If it's a week history tab
         if (activeTab.startsWith('week-') && selectedWeek) {
@@ -273,44 +351,43 @@ useEffect(() => {
   };
 
   // If no family data is loaded yet
-  // If no family data is loaded yet
-if (!familyData && !familyLoading) {
-  return (
-    <div className="flex flex-col items-center justify-center min-h-screen bg-gray-50 p-4">
-      <div className="text-center mb-6">
-        <h2 className="text-2xl font-bold mb-2">No Family Data Found</h2>
-        <p className="text-gray-600 mb-6">We couldn't find your family data. What would you like to do?</p>
-        
-        <div className="space-y-4 max-w-md mx-auto">
-          <button
-            onClick={() => navigate('/onboarding')}
-            className="w-full px-4 py-3 bg-black text-white rounded-md hover:bg-gray-800 transition-colors"
-          >
-            Create New Family
-          </button>
+  if (!familyData && !familyLoading) {
+    return (
+      <div className="flex flex-col items-center justify-center min-h-screen bg-gray-50 p-4">
+        <div className="text-center mb-6">
+          <h2 className="text-2xl font-bold mb-2">Family Data Not Found</h2>
+          <p className="text-gray-600 mb-6">We're having trouble loading your family data. Let's get you back on track!</p>
           
-          <button
-            onClick={() => navigate('/login')}
-            className="w-full px-4 py-3 border border-gray-300 rounded-md hover:bg-gray-50 transition-colors"
-          >
-            Return to Login
-          </button>
+          <div className="space-y-4 max-w-md mx-auto">
+            <button
+              onClick={handleRetryLoading}
+              className="w-full px-4 py-3 bg-black text-white rounded-md hover:bg-gray-800 transition-colors flex items-center justify-center"
+            >
+              <RefreshCw size={18} className="mr-2" /> Reload Family Data
+            </button>
+            
+            <button
+              onClick={() => navigate('/login')}
+              className="w-full px-4 py-3 border border-gray-300 rounded-md hover:bg-gray-50 transition-colors"
+            >
+              Return to Family Selection
+            </button>
+            
+            <button
+              onClick={() => navigate('/survey')}
+              className="w-full px-4 py-3 bg-blue-50 text-blue-700 border border-blue-200 rounded-md hover:bg-blue-100 transition-colors"
+            >
+              Start Initial Survey
+            </button>
+          </div>
           
-          <button
-            onClick={() => window.location.reload()}
-            className="w-full px-4 py-3 bg-blue-50 text-blue-700 border border-blue-200 rounded-md hover:bg-blue-100 transition-colors"
-          >
-            Refresh Page
-          </button>
+          <p className="mt-6 text-sm text-gray-500">
+            You may need to re-select your family member or complete the initial survey.
+          </p>
         </div>
-        
-        <p className="mt-6 text-sm text-gray-500">
-          If you've just created a family, try refreshing the page or returning to login.
-        </p>
       </div>
-    </div>
-  );
-}
+    );
+  }
   
   // Generate week history tabs
   const weekHistoryTabs = [];
