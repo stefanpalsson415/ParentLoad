@@ -27,7 +27,7 @@ import CoupleCheckInScreen from './components/assessment/CoupleCheckInScreen';
 import PreviewChoiceScreen from './components/onboarding/PreviewChoiceScreen';
 import FamilyConfirmationStep from './components/onboarding/FamilyConfirmationStep';
 import StateDebugger from './components/common/StateDebugger';
-
+import DashboardLoader from './components/common/DashboardLoader';
 
 
 
@@ -57,7 +57,10 @@ function AppRoutes() {
       <Route path="/mini-survey" element={<MiniSurvey />} />
       <Route path="/mini-results" element={<MiniResultsScreen />} />
       <Route path="/payment" element={<PaymentScreen />} />
+      <Route path="/dashboard-loader" element={<DashboardLoader />} />
+
       <Route path="/dashboard" element={<DashboardScreen />} />
+      
 {/* Couple Check-in route */}
 <Route path="/couple-check-in" element={<CoupleCheckInScreen />} />
       

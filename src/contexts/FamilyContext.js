@@ -130,6 +130,12 @@ export function FamilyProvider({ children }) {
     }
   }, [initialFamilyData, currentUser]);
 
+
+  // Track selectedUser changes
+useEffect(() => {
+  console.log("SELECTED USER CHANGED:", selectedUser ? selectedUser.name : "null");
+}, [selectedUser]);
+
   // Separate debugging useEffect
   useEffect(() => {
     console.log("--- Dashboard Debug ---");
@@ -225,24 +231,32 @@ export function FamilyProvider({ children }) {
   };
 
   // Select a family member
-  const selectFamilyMember = (member) => {
-    if (!member) return null;
-    
-    console.log("Selecting family member:", member);
-    setSelectedUser(member);
-    
-    // Store member ID in localStorage for persistence
-    try {
-      localStorage.setItem('selectedMemberId', member.id);
-      if (familyId) {
-        localStorage.setItem('selectedFamilyId', familyId);
-      }
-    } catch (error) {
-      console.error("Error storing user selection in localStorage:", error);
+  // Select a family member
+const selectFamilyMember = (member) => {
+  if (!member) {
+    console.error("Cannot select null/undefined member!");
+    return null;
+  }
+  
+  console.log("MEMBER SELECTION: Selecting family member:", member.name, "with ID:", member.id);
+  
+  // Store member ID in localStorage FIRST, before state updates
+  try {
+    localStorage.setItem('selectedMemberId', member.id);
+    if (familyId) {
+      localStorage.setItem('selectedFamilyId', familyId);
     }
-    
-    return member;
-  };
+    console.log("MEMBER SELECTION: Saved to localStorage - memberId:", member.id, "familyId:", familyId);
+  } catch (error) {
+    console.error("Error storing user selection in localStorage:", error);
+  }
+  
+  // Update state
+  setSelectedUser(member);
+  console.log("MEMBER SELECTION: Updated selectedUser state");
+  
+  return member;
+};
 
   // Update member profile
   const updateMemberProfile = async (memberId, data) => {

@@ -56,14 +56,8 @@ const PaymentScreen = () => {
     
     // Simulate payment processing
     setTimeout(() => {
-      // Redirect directly to login/family selection screen
-      navigate('/login', { 
-        state: { 
-          directAccess: true,
-          fromPayment: true,
-          familyData: familyData
-        }
-      });
+      // Redirect to dashboard loader that will handle family data loading
+      navigate('/dashboard-loader');
     }, 1000);
   };
 

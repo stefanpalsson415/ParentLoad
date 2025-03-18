@@ -129,9 +129,10 @@ localStorage.setItem('dashboardNavigationTime', Date.now().toString());
 
 // Use a more forceful approach for navigation with cachebuster
 updateDebug("Using forceful navigation approach with cache busting");
+// Inside handleSelectUser function
+// Update to navigate to dashboard-loader instead
 setTimeout(() => {
-  // Direct URL navigation with cache-busting parameter can help force a fresh load
-  window.location.href = `/dashboard?refresh=${Date.now()}`;
+  window.location.href = `/dashboard-loader?refresh=${Date.now()}`;
   
   // Remove debug div after navigation
   setTimeout(() => {

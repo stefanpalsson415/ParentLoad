@@ -17,6 +17,8 @@ import RelationshipTab from './tabs/RelationshipTab';
 import SurveysTab from './tabs/SurveysTab';
 import WeeklyHistoryTab from './tabs/WeeklyHistoryTab';
 import FamilyMeetingGenerator from '../meeting/FamilyMeetingGenerator';
+import MemberSelector from '../common/MemberSelector';
+
 
 const DashboardScreen = () => {
   const navigate = useNavigate();
@@ -487,6 +489,7 @@ if (familyError || tasksError) {
   
   return (
     <div className="min-h-screen bg-gray-50 flex flex-col">
+      <MemberSelector />
       {/* Header */}
       <header className="bg-white border-b border-gray-200 sticky top-0 z-10">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
