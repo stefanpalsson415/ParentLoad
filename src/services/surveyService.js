@@ -7,35 +7,42 @@ import {
   import { createError, ErrorCodes, logError } from '../utils/errorHandling';
   
   /**
-   * Save survey responses for a family member
-   * @param {string} familyId Family ID
-   * @param {string} memberId Member ID
-   * @param {string} surveyType Type of survey (initial, weekly, etc.)
-   * @param {Object} responses Survey question responses
-   * @returns {Promise<boolean>} Success status
-   */
-  export async function saveSurveyResponses(familyId, memberId, surveyType, responses) {
-    try {
-      if (!familyId || !memberId || !surveyType) {
-        throw createError(ErrorCodes.DATA_INVALID, "Missing required parameters");
-      }
-      
-      const docRef = doc(db, "surveyResponses", `${familyId}-${memberId}-${surveyType}`);
-      
-      await setDoc(docRef, {
-        familyId,
-        memberId,
-        surveyType,
-        responses,
-        completedAt: serverTimestamp()
-      });
-      
-      return true;
-    } catch (error) {
-      logError("saveSurveyResponses", error);
-      throw error;
+ * Save survey responses for a family member
+ * @param {string} familyId Family ID
+ * @param {string} memberId Member ID
+ * @param {string} surveyType Type of survey (initial, weekly, etc.)
+ * @param {Object} responses Survey question responses
+ * @returns {Promise<boolean>} Success status
+ */
+export async function saveSurveyResponses(familyId, memberId, surveyType, responses) {
+  try {
+    console.log(`Saving survey responses for ${memberId} in family ${familyId}`, responses);
+    
+    if (!familyId || !memberId || !surveyType) {
+      throw createError(ErrorCodes.DATA_INVALID, "Missing required parameters");
     }
+    
+    // Create document reference with a specific format
+    const docRef = doc(db, "surveyResponses", `${familyId}-${memberId}-${surveyType}`);
+    
+    // Save the data with additional metadata
+    await setDoc(docRef, {
+      familyId,
+      memberId,
+      surveyType,
+      responses,
+      completedAt: serverTimestamp(),
+      updatedAt: serverTimestamp()
+    });
+    
+    console.log(`Survey responses saved successfully for ${memberId}`);
+    return true;
+  } catch (error) {
+    console.error("Error saving survey responses:", error);
+    logError("saveSurveyResponses", error);
+    throw error;
   }
+}
   
   /**
    * Load survey responses for a family member
@@ -263,23 +270,3 @@ export function generateSurveyQuestions(surveyType, weekNumber = 1, familyData =
   ];
 }
     
-    if (surveyType === 'initial') {
-      // Return full set of questions for initial survey
-      return baseQuestions.concat([
-        // Add more questions for initial survey
-      ]);
-    } else if (surveyType.startsWith('weekly')) {
-      // Return a subset of questions for weekly check-in
-      // We could vary these based on the week number
-      return baseQuestions.slice(0, 2).concat([
-        {
-          id: `week-${weekNumber}-q1`,
-          text: 'How balanced do you feel the workload was this week?',
-          category: 'Perception',
-          options: ['Very Unbalanced', 'Somewhat Unbalanced', 'Neutral', 'Somewhat Balanced', 'Very Balanced']
-        }
-      ]);
-    }
-    
-    return baseQuestions;
-  }

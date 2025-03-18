@@ -72,12 +72,9 @@ const SurveyScreen = () => {
   // Navigate to next category or complete survey
   const handleNext = async () => {
     const currentIndex = categories.indexOf(currentCategory);
-
+    
     // Before the try block in handleNext
-console.log("Attempting to save survey responses:", surveyResponses);
-
-// After the successful save
-console.log("Survey responses saved successfully");
+    console.log("Attempting to save survey responses:", surveyResponses);
     
     if (currentIndex < categories.length - 1) {
       // Move to next category
@@ -91,12 +88,25 @@ console.log("Survey responses saved successfully");
         
         // Save responses to database
         if (familyData?.familyId && selectedMember?.id) {
-          await saveSurveyResponses(
+          console.log("Attempting to save survey responses with:", {
+            familyId: familyData.familyId,
+            memberId: selectedMember.id,
+            surveyType: 'initial',
+            responseCount: Object.keys(surveyResponses).length
+          });
+          
+          const saveResult = await saveSurveyResponses(
             familyData.familyId, 
             selectedMember.id, 
             'initial',
             surveyResponses
           );
+          
+          if (!saveResult) {
+            throw new Error("Failed to save survey responses");
+          }
+          
+          console.log("Survey saved successfully, updating member status");
           
           // Update family member's completion status
           const updatedMembers = familyData.familyMembers.map(member => {
@@ -270,21 +280,21 @@ console.log("Survey responses saved successfully");
                   )}
                   
                   <div className="flex flex-wrap gap-3 mt-4">
-  {['Mama', 'Papa'].map((option) => (
-    <button
-      key={option}
-      type="button"
-      className={`px-4 py-2 rounded-md border ${
-        surveyResponses[question.id] === option
-          ? 'bg-black text-white border-black'
-          : 'bg-white text-gray-700 border-gray-300 hover:bg-gray-50'
-      }`}
-      onClick={() => handleResponseChange(question.id, option)}
-    >
-      {option}
-    </button>
-  ))}
-</div>
+                    {['Mama', 'Papa'].map((option) => (
+                      <button
+                        key={option}
+                        type="button"
+                        className={`px-4 py-2 rounded-md border ${
+                          surveyResponses[question.id] === option
+                            ? 'bg-black text-white border-black'
+                            : 'bg-white text-gray-700 border-gray-300 hover:bg-gray-50'
+                        }`}
+                        onClick={() => handleResponseChange(question.id, option)}
+                      >
+                        {option}
+                      </button>
+                    ))}
+                  </div>
                 </div>
               ))}
             </div>

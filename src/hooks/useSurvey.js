@@ -71,32 +71,39 @@ export function useSurvey() {
   }, []);
 
   // Save survey responses
-  const saveSurveyResponses = useCallback(async (familyId, memberId, surveyType, responses, isCompleted = true) => {
-    if (!familyId || !memberId || !surveyType) {
-      setError("Missing required parameters");
-      return false;
+const saveSurveyResponses = useCallback(async (familyId, memberId, surveyType, responses, isCompleted = true) => {
+  if (!familyId || !memberId || !surveyType) {
+    setError("Missing required parameters");
+    return false;
+  }
+  
+  setError(null);
+  try {
+    setLoading(true);
+    console.log(`Attempting to save survey responses for ${memberId} in ${familyId}`, {
+      surveyType,
+      responseCount: Object.keys(responses).length
+    });
+    
+    // Save the survey responses
+    await surveyService.saveSurveyResponses(familyId, memberId, surveyType, responses);
+    
+    // If the survey is marked as completed, update the completion status
+    if (isCompleted) {
+      await surveyService.updateSurveyCompletionStatus(familyId, memberId, surveyType, true);
     }
     
-    setError(null);
-    try {
-      setLoading(true);
-      // Save the survey responses
-      await surveyService.saveSurveyResponses(familyId, memberId, surveyType, responses);
-      
-      // If the survey is marked as completed, update the completion status
-      if (isCompleted) {
-        await surveyService.updateSurveyCompletionStatus(familyId, memberId, surveyType, true);
-      }
-      
-      return true;
-    } catch (err) {
-      const errorMessage = getUserFriendlyError(err);
-      setError(errorMessage);
-      return false;
-    } finally {
-      setLoading(false);
-    }
-  }, []);
+    console.log("Survey responses saved successfully");
+    return true;
+  } catch (err) {
+    console.error("Error in useSurvey.saveSurveyResponses:", err);
+    const errorMessage = getUserFriendlyError(err);
+    setError(errorMessage);
+    return false;
+  } finally {
+    setLoading(false);
+  }
+}, []);
 
   // Update a single survey response
   const updateSurveyResponse = useCallback((questionId, answer) => {
