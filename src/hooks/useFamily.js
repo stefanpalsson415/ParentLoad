@@ -25,9 +25,10 @@ export function useFamily() {
       // If no family ID is provided, try to load by user ID
       let data;
       if (familyId && typeof familyId === 'string') {
-        data = await familyService.loadFamilyById(familyId);
+        data = await familyService.getFamilyById(familyId);
       } else if (currentUser) {
-        data = await familyService.loadFamilyByUserId(currentUser.uid);
+        data = await familyService.getFamilyById(currentUser.uid);
+
       } else {
         throw new Error("No family ID or user ID available");
       }
@@ -55,7 +56,8 @@ export function useFamily() {
     setError(null);
     try {
       setLoading(true);
-      const families = await familyService.getAllFamiliesByUserId(currentUser.uid);
+      const families = await familyService.getFamiliesByUserId(currentUser.uid);
+
       setAvailableFamilies(families);
       return families;
     } catch (err) {
@@ -93,7 +95,8 @@ export function useFamily() {
     setError(null);
     try {
       setLoading(true);
-      await familyService.updateFamilyData(familyData.familyId, data);
+      await familyService.updateFamily(familyData.familyId, data);
+
       
       // Update local state
       setFamilyData(prev => ({
