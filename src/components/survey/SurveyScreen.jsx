@@ -441,7 +441,7 @@ const SurveyScreen = () => {
                       <div className="w-full bg-gray-200 h-1.5 mt-1 rounded-full overflow-hidden">
                         <div 
                           className="bg-blue-500 h-full rounded-full" 
-                          style={{ width: `${(currentQuestion.baseWeight / a5) * 100}%` }}
+                          style={{ width: `${(currentQuestion.baseWeight / 5) * 100}%` }}
                         ></div>
                       </div>
                     </div>

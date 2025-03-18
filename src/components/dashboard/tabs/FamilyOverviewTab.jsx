@@ -7,6 +7,8 @@ import {
 } from 'recharts';
 import { useFamily } from '../../../hooks/useFamily';
 import ResearchInsightsCard from '../ResearchInsightsCard';
+import AIService from '../../../services/AIService';
+
 
 const FamilyOverviewTab = ({ familyData, familyMembers, tasks }) => {
   // Simple, focused state
@@ -25,49 +27,38 @@ const FamilyOverviewTab = ({ familyData, familyMembers, tasks }) => {
   
   // Load AI insights when component mounts
   useEffect(() => {
-    const loadAiInsights = async () => {
-      if (!familyData) return;
-      
-      setLoadingInsights(true);
+    const loadAIInsights = async () => {
       try {
-        // Import AI service
-        const aiService = await import('../../../services/aiService').then(module => module.default);
+        // Direct import at the top of the file is better than dynamic import
+        const insights = await AIService.generateInsights(familyData);
         
-        // Get AI insights
-        const aiResults = await aiService.generateInsights(familyData);
+        if (!insights) {
+          console.log("No insights returned");
+          return;
+        }
         
-        // Map AI insights to our format
-        const formattedInsights = aiResults.insights.map(insight => {
-          let icon = <Info size={20} className="text-blue-600" />;
-          let type = 'insight';
-          
-          if (insight.type === 'challenge') {
-            icon = <AlertTriangle size={20} className="text-amber-600" />;
-            type = 'challenge';
-          } else if (insight.type === 'progress') {
-            icon = <CheckCircle size={20} className="text-green-600" />;
-            type = 'progress';
-          }
-          
-          return {
-            type,
-            title: insight.title,
-            description: insight.content || insight.description,
-            icon
-          };
-        });
-        
-        setAiInsights(formattedInsights);
+        // Process insights here
+        setAiInsights(insights.insights || []);
       } catch (error) {
         console.error("Error getting AI insights:", error);
-        // Use fallback insights
-        setAiInsights(getFallbackInsights());
-      } finally {
-        setLoadingInsights(false);
+        // Provide a fallback
+        setAiInsights([
+          {
+            title: "Balance Improvement",
+            content: "Working on better family task distribution can improve relationship satisfaction.",
+            type: "insight"
+          },
+          {
+            title: "Invisible Work",
+            content: "Consider the mental load and planning tasks that often go unnoticed.",
+            type: "challenge"
+          }
+        ]);
       }
     };
     
-    loadAiInsights();
+    loadAIInsights();
+
   }, [familyData]);
   
   // Toggle section expansion

@@ -121,17 +121,25 @@ const handleSelectUser = async (member) => {
     await new Promise(resolve => setTimeout(resolve, 1000));
     
     // Add more explicit navigation with consistent approach
-    updateDebug("Navigating to dashboard...");
-    
-    // Use React Router navigation instead of direct location change
-    navigate('/dashboard', { replace: true });
-    
-    // Remove the debug div after navigation (should display for a moment)
-    setTimeout(() => {
-      if (document.body.contains(debugDiv)) {
-        document.body.removeChild(debugDiv);
-      }
-    }, 2000);
+    // Add more explicit navigation with consistent approach
+updateDebug("Navigating to dashboard...");
+
+// Add a timestamp to localStorage to signal a fresh navigation
+localStorage.setItem('dashboardNavigationTime', Date.now().toString());
+
+// Use a more forceful approach for navigation with cachebuster
+updateDebug("Using forceful navigation approach with cache busting");
+setTimeout(() => {
+  // Direct URL navigation with cache-busting parameter can help force a fresh load
+  window.location.href = `/dashboard?refresh=${Date.now()}`;
+  
+  // Remove debug div after navigation
+  setTimeout(() => {
+    if (document.body.contains(debugDiv)) {
+      document.body.removeChild(debugDiv);
+    }
+  }, 2000);
+}, 1200); // Longer delay to ensure context updates complete
     
   } catch (error) {
     console.error("Error in handleSelectUser:", error);

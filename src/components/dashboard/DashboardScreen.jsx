@@ -26,6 +26,7 @@ const DashboardScreen = () => {
     familyData,
     familyMembers,
     selectedMember,
+    selectFamilyMember,
     loadFamily,
     loading: familyLoading,
     error: familyError,
@@ -64,26 +65,41 @@ const DashboardScreen = () => {
       console.log("Found stored family ID:", storedFamilyId);
       
       try {
-        // Manually invoke the family loading function and wait for it
-        const result = await loadFamily(storedFamilyId);
-        console.log("Family load result:", result);
+        // Set a loading indicator
+        const loadingDiv = document.createElement('div');
+        loadingDiv.innerHTML = '<div style="position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.5);display:flex;align-items:center;justify-content:center;z-index:9999;"><div style="background:white;padding:20px;border-radius:8px;box-shadow:0 4px 12px rgba(0,0,0,0.2);"><p style="margin:0;font-weight:bold;">Loading family data...</p></div></div>';
+        document.body.appendChild(loadingDiv);
+        
+        // Wait a bit longer before attempting the load
+        await new Promise(resolve => setTimeout(resolve, 500));
+        
+        // Manually invoke the family loading function with retry
+        let result = null;
+        for (let attempt = 0; attempt < 3 && !result; attempt++) {
+          console.log(`Family load attempt ${attempt + 1}`);
+          result = await loadFamily(storedFamilyId);
+          if (!result) await new Promise(resolve => setTimeout(resolve, 500));
+        }
+        
+        // Remove loading indicator
+        document.body.removeChild(loadingDiv);
         
         if (!result) {
-          console.log("RECOVERY: Family load failed, redirecting to login");
-          navigate('/login');
+          console.log("RECOVERY: Family load failed after multiple attempts, forcing direct navigation");
+          window.location.href = '/login';
           return;
         }
         
-        // DO NOT reload the page - it causes a loop
-        // Just rely on the state update from loadFamily
+        // Force a reload of the current page to ensure state is updated
+        window.location.reload();
       } catch (error) {
         console.error("Error during emergency family load:", error);
         // Navigate to login as a last resort
-        navigate('/login');
+        window.location.href = '/login';
       }
     } else {
       console.log("NO FAMILY ID: Navigating to login");
-      navigate('/login');
+      window.location.href = '/login';
     }
   };
   
@@ -174,6 +190,33 @@ useEffect(() => {
       loadDashboardData();
     }
   }, [familyData, familyLoading, loadTasks, loadFamily]);
+
+  // Add this new useEffect to fix the user selection issue
+useEffect(() => {
+  // This useEffect specifically handles member selection
+  if (familyData && familyData.familyId && familyData.familyMembers && familyData.familyMembers.length > 0) {
+    const storedMemberId = localStorage.getItem('selectedMemberId');
+    console.log("Checking for stored member ID:", storedMemberId);
+    
+    if (storedMemberId) {
+      // Find the member in the family members array
+      const member = familyData.familyMembers.find(m => m.id === storedMemberId);
+      if (member) {
+        console.log("Found member to select:", member.name);
+        // Use the context function to select this member
+        selectFamilyMember(member);
+      } else {
+        console.log("Member not found, defaulting to first member");
+        // If member not found, select the first member
+        selectFamilyMember(familyData.familyMembers[0]);
+      }
+    } else {
+      console.log("No stored member ID, defaulting to first member");
+      // If no stored member ID, select the first member
+      selectFamilyMember(familyData.familyMembers[0]);
+    }
+  }
+}, [familyData, selectFamilyMember]);
 
   // Generate notifications based on app state
   useEffect(() => {
