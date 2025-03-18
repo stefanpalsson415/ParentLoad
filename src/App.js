@@ -32,6 +32,7 @@ import DashboardLoader from './components/common/DashboardLoader';
 
 
 
+
 // App Routes Component - Used after context providers are set up
 function AppRoutes() {
   const { selectedUser } = useFamily();
@@ -60,6 +61,9 @@ function AppRoutes() {
       <Route path="/dashboard-loader" element={<DashboardLoader />} />
 
       <Route path="/dashboard" element={<DashboardScreen />} />
+      <Route path="/dashboard-bootstrapper" element={<DashboardBootstrapper />} />
+<Route path="/simple-dashboard" element={<SimpleDashboard />} />
+
       
 {/* Couple Check-in route */}
 <Route path="/couple-check-in" element={<CoupleCheckInScreen />} />

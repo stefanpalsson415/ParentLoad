@@ -1,6 +1,5 @@
-// src/components/common/MemberSelector.jsx
-import React, { useEffect } from 'react';
-import { useFamily } from '../../contexts/FamilyContext';
+import React, { useEffect, useState } from 'react';
+import { useFamily } from '../../hooks/useFamily';
 
 const MemberSelector = () => {
   const { 
@@ -9,57 +8,76 @@ const MemberSelector = () => {
     selectedMember, 
     selectFamilyMember 
   } = useFamily();
+  
+  const [attempted, setAttempted] = useState(false);
 
+  // Force selection after a delay if initial attempt fails
   useEffect(() => {
-    const selectMember = () => {
-      // Only run if we have family data and members but no selected member
-      if (familyData && 
-          familyMembers && 
-          familyMembers.length > 0 && 
-          !selectedMember) {
+    if (!selectedMember && familyMembers?.length > 0 && !attempted) {
+      console.log("CRITICAL: Forcing member selection with timeout");
+      
+      // Mark that we've attempted selection
+      setAttempted(true);
+      
+      // Add a timeout to ensure DOM has updated
+      setTimeout(() => {
+        // Force select the first parent (or first member if no parents)
+        const parentMember = familyMembers.find(m => 
+          m.role === 'parent' || m.roleType === 'Mama' || m.roleType === 'Papa'
+        );
         
-        console.log("MemberSelector: Attempting to select member");
+        const memberToSelect = parentMember || familyMembers[0];
         
-        // Try to get stored member ID
-        const storedMemberId = localStorage.getItem('selectedMemberId');
-        let memberToSelect = null;
-        
-        if (storedMemberId) {
-          console.log("MemberSelector: Found stored member ID:", storedMemberId);
-          memberToSelect = familyMembers.find(m => m.id === storedMemberId);
-        }
-        
-        // If no member found by ID, use first member
-        if (!memberToSelect) {
-          console.log("MemberSelector: Using first available member");
-          memberToSelect = familyMembers[0];
-          // Save this member ID for future use
+        if (memberToSelect) {
+          console.log("FORCE SELECTING MEMBER:", memberToSelect.name);
+          selectFamilyMember(memberToSelect);
+          
+          // Store in localStorage
           localStorage.setItem('selectedMemberId', memberToSelect.id);
         }
-        
-        console.log("MemberSelector: Selecting member:", memberToSelect.name);
+      }, 1000); // Wait 1 second before force selecting
+    }
+  }, [familyMembers, selectedMember, selectFamilyMember, attempted]);
+
+  // Initial selection attempt
+  useEffect(() => {
+    if (!selectedMember && familyMembers?.length > 0 && !attempted) {
+      console.log("MemberSelector: Found", familyMembers.length, "family members");
+      
+      // Try to get stored member ID
+      const storedMemberId = localStorage.getItem('selectedMemberId');
+      let memberToSelect = null;
+      
+      if (storedMemberId) {
+        console.log("MemberSelector: Looking for stored ID:", storedMemberId);
+        memberToSelect = familyMembers.find(m => m.id === storedMemberId);
+      }
+      
+      // If no member found by ID, find a parent
+      if (!memberToSelect) {
+        console.log("MemberSelector: No stored member found, looking for a parent");
+        memberToSelect = familyMembers.find(m => 
+          m.role === 'parent' || m.roleType === 'Mama' || m.roleType === 'Papa'
+        );
+      }
+      
+      // If still no member, use first available
+      if (!memberToSelect && familyMembers.length > 0) {
+        console.log("MemberSelector: No parent found, using first member");
+        memberToSelect = familyMembers[0];
+      }
+      
+      // If we found a member, select it
+      if (memberToSelect) {
+        console.log("MemberSelector: Selecting", memberToSelect.name);
         selectFamilyMember(memberToSelect);
+        
+        // Save to localStorage
+        localStorage.setItem('selectedMemberId', memberToSelect.id);
       }
-    };
+    }
+  }, [familyMembers, selectedMember, selectFamilyMember, attempted]);
 
-    // Run the selection logic
-    selectMember();
-    
-    // Also set up an interval to try selection repeatedly for 5 seconds
-    // This helps with race conditions
-    const interval = setInterval(() => {
-      if (selectedMember) {
-        clearInterval(interval);
-      } else {
-        selectMember();
-      }
-    }, 500);
-    
-    // Clean up interval
-    return () => clearInterval(interval);
-  }, [familyData, familyMembers, selectedMember, selectFamilyMember]);
-
-  // This component doesn't render anything
   return null;
 };
 

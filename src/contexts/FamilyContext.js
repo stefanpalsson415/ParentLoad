@@ -232,6 +232,7 @@ useEffect(() => {
 
   // Select a family member
   // Select a family member
+// Updated selectFamilyMember function
 const selectFamilyMember = (member) => {
   if (!member) {
     console.error("Cannot select null/undefined member!");

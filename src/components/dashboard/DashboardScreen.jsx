@@ -113,6 +113,16 @@ const DashboardScreen = () => {
   const [notifications, setNotifications] = useState([]);
   const [recoveryAttempts, setRecoveryAttempts] = useState(0);
 
+
+// Emergency redirect if no selected member
+useEffect(() => {
+  if (!selectedMember && familyMembers?.length > 0) {
+    console.log("DASHBOARD: No selected member, redirecting to bootstrapper");
+    navigate('/dashboard-bootstrapper');
+  }
+}, [selectedMember, familyMembers, navigate]);
+
+
   // Check screen size on mount and resize
   useEffect(() => {
     const checkScreenSize = () => {
@@ -490,7 +500,50 @@ if (familyError || tasksError) {
   return (
     <div className="min-h-screen bg-gray-50 flex flex-col">
       <MemberSelector />
+
+      {/* Member selection overlay with emergency button */}
+{!selectedMember && familyMembers && familyMembers.length > 0 && (
+  <div className="fixed inset-0 bg-black bg-opacity-70 flex items-center justify-center z-50">
+    <div className="bg-white p-6 rounded-lg max-w-md w-full">
+      <h3 className="text-xl font-bold mb-4">Selecting Family Member...</h3>
+      <p className="mb-4">Please wait while we select your profile.</p>
+      <div className="w-full h-2 bg-gray-200 rounded-full overflow-hidden mb-6">
+        <div className="bg-blue-600 h-full animate-pulse" style={{width: '100%'}}></div>
+      </div>
+      
+      {/* Emergency manual selection */}
+      <div className="border-t pt-4 mt-4">
+        <p className="text-sm text-gray-600 mb-3">If selection is taking too long, choose a member manually:</p>
+        <div className="grid gap-2">
+          {familyMembers.map(member => (
+            <button
+              key={member.id}
+              onClick={() => {
+                console.log("EMERGENCY: Manual selection of", member.name);
+                selectFamilyMember(member);
+                localStorage.setItem('selectedMemberId', member.id);
+              }}
+              className="px-3 py-2 bg-blue-50 hover:bg-blue-100 border border-blue-200 rounded flex items-center"
+            >
+              <div className="w-8 h-8 rounded-full overflow-hidden mr-2 border border-gray-300">
+                <img 
+                  src={member.profilePicture || "/api/placeholder/150/150"} 
+                  alt={member.name}
+                  className="w-full h-full object-cover"
+                />
+              </div>
+              <span>{member.name} ({member.roleType || member.role})</span>
+            </button>
+          ))}
+        </div>
+      </div>
+    </div>
+  </div>
+)}
+
+
       {/* Header */}
+      
       <header className="bg-white border-b border-gray-200 sticky top-0 z-10">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
           <div className="flex justify-between items-center">
