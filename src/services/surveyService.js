@@ -177,44 +177,91 @@ import {
   }
   
   /**
-   * Generate survey questions based on the given parameters
-   * @param {string} surveyType Type of survey (initial, weekly, etc.)
-   * @param {number} weekNumber Week number for weekly surveys
-   * @param {Object} familyData Family data for customization
-   * @returns {Array} Array of survey questions
-   */
-  export function generateSurveyQuestions(surveyType, weekNumber = 1, familyData = {}) {
-    // This function would generate the appropriate questions
-    // based on survey type and family data
-    // In a real implementation, this might pull from a database or API
-    
-    // For now, return some sample questions
-    const baseQuestions = [
+ * Generate survey questions based on the given parameters
+ * @param {string} surveyType Type of survey (initial, weekly, etc.)
+ * @param {number} weekNumber Week number for weekly surveys
+ * @param {Object} familyData Family data for customization
+ * @returns {Array} Array of survey questions
+ */
+export function generateSurveyQuestions(surveyType, weekNumber = 1, familyData = {}) {
+  // This is a simplified implementation - in a real version, you would
+  // fetch questions from your database or use a more robust system
+  
+  // For initial survey, provide a comprehensive set of questions
+  if (surveyType === 'initial') {
+    return [
       {
         id: 'q1',
         text: 'Who is primarily responsible for meal planning in your household?',
         category: 'Invisible Household Tasks',
-        options: ['Mama', 'Papa', 'Shared', 'Not Applicable']
+        explanation: 'This question helps us understand who is primarily handling invisible household tasks in your family.'
       },
       {
         id: 'q2',
         text: 'Who typically prepares breakfast for the family?',
         category: 'Visible Household Tasks',
-        options: ['Mama', 'Papa', 'Shared', 'Not Applicable']
+        explanation: 'This question helps us understand who is primarily handling visible household tasks in your family.'
       },
       {
         id: 'q3',
-        text: 'Who usually puts the children to bed?',
-        category: 'Visible Parental Tasks',
-        options: ['Mama', 'Papa', 'Shared', 'Not Applicable']
+        text: 'Who usually does laundry in your home?',
+        category: 'Visible Household Tasks',
+        explanation: 'Laundry is a recurring visible task that takes significant time.'
       },
       {
         id: 'q4',
-        text: 'Who keeps track of children\'s activities and schedules?',
+        text: 'Who manages children\'s schedules and activities?',
         category: 'Invisible Parental Tasks',
-        options: ['Mama', 'Papa', 'Shared', 'Not Applicable']
+        explanation: 'This is an important invisible task that requires significant planning.'
+      },
+      {
+        id: 'q5',
+        text: 'Who handles emotional support for children?',
+        category: 'Invisible Parental Tasks',
+        explanation: 'Emotional labor is an often overlooked but critical parental task.'
       }
     ];
+  } 
+  // For weekly survey, provide a smaller subset of key questions
+  else if (surveyType.startsWith('weekly')) {
+    return [
+      {
+        id: `week${weekNumber}-q1`,
+        text: 'Who handled meal planning this week?',
+        category: 'Invisible Household Tasks',
+        weeklyExplanation: 'Tracking this task helps us see if the workload distribution is changing.'
+      },
+      {
+        id: `week${weekNumber}-q2`,
+        text: 'Who managed most of the household cleaning this week?',
+        category: 'Visible Household Tasks',
+        weeklyExplanation: 'Regular tracking of visible tasks shows progress in balance.'
+      },
+      {
+        id: `week${weekNumber}-q3`,
+        text: 'Who coordinated children\'s activities this week?',
+        category: 'Invisible Parental Tasks',
+        weeklyExplanation: 'This helps track changes in invisible parental work.'
+      }
+    ];
+  }
+  
+  // Fallback to sample questions if something goes wrong
+  return [
+    {
+      id: 'sample-q1',
+      text: 'Who handles most household planning?',
+      category: 'Invisible Household Tasks',
+      explanation: 'This helps us understand the mental load distribution.'
+    },
+    {
+      id: 'sample-q2',
+      text: 'Who does most visible household chores?',
+      category: 'Visible Household Tasks',
+      explanation: 'This tracks the physical workload balance.'
+    }
+  ];
+}
     
     if (surveyType === 'initial') {
       // Return full set of questions for initial survey

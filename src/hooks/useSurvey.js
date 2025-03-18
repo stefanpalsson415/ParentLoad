@@ -31,6 +31,19 @@ export function useSurvey() {
     }
   }, [familyData]);
 
+  // Generate weekly questions
+  const generateWeeklyQuestions = useCallback((weekNumber) => {
+    try {
+      const weeklyQuestions = surveyService.generateSurveyQuestions(`weekly-${weekNumber}`, weekNumber, familyData);
+      setSurveyQuestions(weeklyQuestions);
+      return weeklyQuestions;
+    } catch (err) {
+      const errorMessage = getUserFriendlyError(err);
+      setError(errorMessage);
+      return [];
+    }
+  }, [familyData]);
+
   // Load saved survey responses
   const loadSurveyResponses = useCallback(async (familyId, memberId, surveyType) => {
     if (!familyId || !memberId || !surveyType) {
@@ -128,10 +141,10 @@ export function useSurvey() {
   }, []);
 
   // Get survey progress percentage
-  const getSurveyProgress = useCallback(() => {
-    if (surveyQuestions.length === 0) return 0;
-    return (completedQuestions.length / surveyQuestions.length) * 100;
-  }, [surveyQuestions, completedQuestions]);
+  const getSurveyProgress = useCallback((totalQuestions) => {
+    if (!totalQuestions) return 0;
+    return (completedQuestions.length / totalQuestions) * 100;
+  }, [completedQuestions]);
 
   // Reset error state
   const clearError = useCallback(() => {
@@ -146,6 +159,7 @@ export function useSurvey() {
     loading,
     error,
     generateQuestions,
+    generateWeeklyQuestions,
     loadSurveyResponses,
     saveSurveyResponses,
     updateSurveyResponse,

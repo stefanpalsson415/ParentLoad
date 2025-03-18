@@ -195,34 +195,20 @@ const MiniSurvey = () => {
         </div>
         
         <div className="space-y-3">
-          <button
-            className="w-full p-3 bg-white border border-gray-300 rounded-md hover:bg-gray-50 text-left"
-            onClick={() => handleResponse('Mama')}
-          >
-            Mama
-          </button>
-          
-          <button
-            className="w-full p-3 bg-white border border-gray-300 rounded-md hover:bg-gray-50 text-left"
-            onClick={() => handleResponse('Papa')}
-          >
-            Papa
-          </button>
-          
-          <button
-            className="w-full p-3 bg-white border border-gray-300 rounded-md hover:bg-gray-50 text-left"
-            onClick={() => handleResponse('Shared')}
-          >
-            Shared Equally
-          </button>
-          
-          <button
-            className="w-full p-3 bg-white border border-gray-300 rounded-md hover:bg-gray-50 text-left"
-            onClick={() => handleResponse('N/A')}
-          >
-            Not Applicable
-          </button>
-        </div>
+  <button
+    className="w-full p-3 bg-white border border-gray-300 rounded-md hover:bg-gray-50 text-left"
+    onClick={() => handleResponse('Mama')}
+  >
+    Mama
+  </button>
+  
+  <button
+    className="w-full p-3 bg-white border border-gray-300 rounded-md hover:bg-gray-50 text-left"
+    onClick={() => handleResponse('Papa')}
+  >
+    Papa
+  </button>
+</div>
         
         {currentQuestionIndex > 0 && (
           <div className="mt-6 flex justify-center">

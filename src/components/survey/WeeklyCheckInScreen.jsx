@@ -265,21 +265,21 @@ const WeeklyCheckInScreen = () => {
                   )}
                   
                   <div className="flex flex-wrap gap-3 mt-4">
-                    {['Mama', 'Papa', 'Shared', 'N/A'].map((option) => (
-                      <button
-                        key={option}
-                        type="button"
-                        className={`px-4 py-2 rounded-md border ${
-                          surveyResponses[question.id] === option
-                            ? 'bg-black text-white border-black'
-                            : 'bg-white text-gray-700 border-gray-300 hover:bg-gray-50'
-                        }`}
-                        onClick={() => handleResponseChange(question.id, option)}
-                      >
-                        {option}
-                      </button>
-                    ))}
-                  </div>
+  {['Mama', 'Papa'].map((option) => (
+    <button
+      key={option}
+      type="button"
+      className={`px-4 py-2 rounded-md border ${
+        surveyResponses[question.id] === option
+          ? 'bg-black text-white border-black'
+          : 'bg-white text-gray-700 border-gray-300 hover:bg-gray-50'
+      }`}
+      onClick={() => handleResponseChange(question.id, option)}
+    >
+      {option}
+    </button>
+  ))}
+</div>
                 </div>
               ))}
             </div>
