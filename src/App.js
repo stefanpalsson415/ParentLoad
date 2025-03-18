@@ -28,39 +28,60 @@ import PrivateRoute from './components/common/PrivateRoute';
 import NotFoundPage from './components/common/NotFoundPage';
 import LoadingScreen from './components/common/LoadingScreen';
 
+// Add these imports to the imports section at the top of App.js
+import SurveyScreen from './components/survey/SurveyScreen';
+import WeeklyCheckInScreen from './components/survey/WeeklyCheckInScreen';
+import MiniSurvey from './components/survey/MiniSurvey';
+
+
 function App() {
   return (
     <Router>
       <AuthProvider>
         <FamilyProvider>
-          <Routes>
-            {/* Marketing Routes */}
-            <Route path="/" element={<LandingPage />} />
-            <Route path="/about-us" element={<AboutUsPage />} />
-            <Route path="/how-it-works" element={<HowThisWorksScreen />} />
-            <Route path="/product-overview" element={<ProductOverviewPage />} />
-            <Route path="/blog" element={<BlogHomePage />} />
-            <Route path="/blog/:slug" element={<BlogArticlePage />} />
-            
-            {/* Authentication Routes */}
-            <Route path="/login" element={<LoginPage />} />
-            <Route path="/signup" element={<SignupPage />} />
-            <Route path="/forgot-password" element={<ForgotPasswordPage />} />
-            
-            {/* Onboarding */}
-            <Route path="/onboarding" element={<OnboardingFlow />} />
-            
-            {/* Protected App Routes */}
-            <Route path="/dashboard" element={
-              <PrivateRoute>
-                <Dashboard />
-              </PrivateRoute>
-            } />
-            
-            {/* Fallback routes */}
-            <Route path="/loading" element={<LoadingScreen />} />
-            <Route path="*" element={<NotFoundPage />} />
-          </Routes>
+        <Routes>
+  {/* Marketing Routes */}
+  <Route path="/" element={<LandingPage />} />
+  <Route path="/about-us" element={<AboutUsPage />} />
+  <Route path="/how-it-works" element={<HowThisWorksScreen />} />
+  <Route path="/product-overview" element={<ProductOverviewPage />} />
+  <Route path="/blog" element={<BlogHomePage />} />
+  <Route path="/blog/:slug" element={<BlogArticlePage />} />
+  
+  {/* Authentication Routes */}
+  <Route path="/login" element={<LoginPage />} />
+  <Route path="/signup" element={<SignupPage />} />
+  <Route path="/forgot-password" element={<ForgotPasswordPage />} />
+  
+  {/* Onboarding */}
+  <Route path="/onboarding" element={<OnboardingFlow />} />
+  
+  {/* Survey Routes */}
+  <Route path="/survey" element={
+    <PrivateRoute>
+      <SurveyScreen />
+    </PrivateRoute>
+  } />
+  <Route path="/weekly-check-in" element={
+    <PrivateRoute>
+      <WeeklyCheckInScreen />
+    </PrivateRoute>
+  } />
+  
+  <Route path="/mini-survey" element={<MiniSurvey />} />
+
+
+  {/* Protected App Routes */}
+  <Route path="/dashboard" element={
+    <PrivateRoute>
+      <Dashboard />
+    </PrivateRoute>
+  } />
+  
+  {/* Fallback routes */}
+  <Route path="/loading" element={<LoadingScreen />} />
+  <Route path="*" element={<NotFoundPage />} />
+</Routes>
         </FamilyProvider>
       </AuthProvider>
     </Router>

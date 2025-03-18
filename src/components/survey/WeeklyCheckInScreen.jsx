@@ -1,602 +1,323 @@
-// src/components/survey/WeeklyCheckInScreen.jsx
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { LogOut, HelpCircle, Brain, Scale } from 'lucide-react';
-import { useFamily } from '../../hooks/useFamily';
 import { useSurvey } from '../../hooks/useSurvey';
+import { useFamily } from '../../hooks/useFamily';
+import { useTasks } from '../../hooks/useTasks';
+import { ArrowLeft, ArrowRight, HelpCircle, CheckCircle } from 'lucide-react';
 
 const WeeklyCheckInScreen = () => {
   const navigate = useNavigate();
   const { 
-    familyData,
-    familyMembers,
-    selectedMember,
-    loading: familyLoading,
-    error: familyError,
-    clearError: clearFamilyError
-  } = useFamily();
-  
-  const {
-    surveyQuestions,
-    surveyResponses,
-    loading: surveyLoading,
-    error: surveyError,
-    generateQuestions,
-    loadSurveyResponses,
+    surveyQuestions, 
+    generateWeeklyQuestions, 
+    surveyResponses, 
+    updateSurveyResponse, 
     saveSurveyResponses,
-    updateSurveyResponse,
-    resetSurvey,
-    getSurveyProgress,
-    clearError: clearSurveyError
+    getSurveyProgress 
   } = useSurvey();
   
-  const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0);
-  const [selectedParent, setSelectedParent] = useState(null);
-  const [showExplanation, setShowExplanation] = useState(false);
-  const [weeklyQuestions, setWeeklyQuestions] = useState([]);
-  const [isSubmitting, setIsSubmitting] = useState(false);
-  const [isProcessing, setIsProcessing] = useState(false);
+  const { 
+    familyData, 
+    currentWeek,
+    selectedMember, 
+    updateFamilyData
+  } = useFamily();
+  
+  const { generateWeeklyTasks } = useTasks();
+  
+  const [currentPage, setCurrentPage] = useState(1);
+  const [pageSize, setPageSize] = useState(5); // 5 questions per page
+  const [showHelp, setShowHelp] = useState({});
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState(null);
+  const [checkInCompleted, setCheckInCompleted] = useState(false);
+  const [generatedTasks, setGeneratedTasks] = useState([]);
 
-  // Ref to track if keyboard listeners are initialized
-  const keyboardInitialized = useRef(false);
-  const questionTimerRef = useRef(null);
-  const keyBlockerRef = useRef(false);
-  
-  // Redirect if no user is selected
+  // Calculate number of pages
+  const totalPages = Math.ceil(surveyQuestions.length / pageSize);
+
+  // Load weekly questions
   useEffect(() => {
-    if (!selectedMember) {
-      navigate('/');
+    if (surveyQuestions.length === 0) {
+      generateWeeklyQuestions(currentWeek || 1);
     }
-  }, [selectedMember, navigate]);
-  
-  // Initialize survey data
-  useEffect(() => {
-    resetSurvey();
-    
-    // Get current week from family data
-    const currentWeek = familyData?.currentWeek || 1;
-    
-    // Generate questions for this week
-    const weekQuestions = generateQuestions('weekly', currentWeek);
-    setWeeklyQuestions(weekQuestions);
-    
-    // If there's a selected member and family data, try to load their previous responses
-    if (familyData?.familyId && selectedMember?.id) {
-      loadSurveyResponses(familyData.familyId, selectedMember.id, `weekly-${currentWeek}`);
-    }
-    
-    // Check if user has already completed this week's check-in
-    if (selectedMember?.weeklyCompleted && 
-        selectedMember.weeklyCompleted[currentWeek-1]?.completed) {
-      alert("You've already completed this week's check-in!");
-      navigate('/dashboard');
-    }
-  }, [familyData, selectedMember, resetSurvey, generateQuestions, loadSurveyResponses, navigate]);
-  
-  // Find Mama and Papa users from family members
-  const mamaUser = familyMembers.find(m => m.roleType === 'Mama' || m.name === 'Mama');
-  const papaUser = familyMembers.find(m => m.roleType === 'Papa' || m.name === 'Papa');
-  
-  // Generate AI explanation for a specific question
-  const generateAIExplanation = (question) => {
-    if (!question) return "";
-    
-    // Base explanation parts
-    let aiLogic = "";
-    
-    // Add category-specific insights
-    switch (question.category) {
-      case "Visible Household Tasks":
-        aiLogic = `This question about ${question.text.toLowerCase()} helps reveal imbalances in day-to-day household management that are easily observable. The AI selected it because visible tasks often show the most immediate opportunities for rebalancing.`;
-        break;
-      case "Invisible Household Tasks":
-        aiLogic = `This question about ${question.text.toLowerCase()} targets the mental load and planning work that often goes unnoticed. The AI prioritized it because invisible work imbalance is a significant predictor of relationship strain.`;
-        break;
-      case "Visible Parental Tasks":
-        aiLogic = `This question about ${question.text.toLowerCase()} helps identify patterns in direct childcare responsibilities. The AI selected it because balancing these tasks has immediate impact on parent stress levels and child development.`;
-        break;
-      case "Invisible Parental Tasks":
-        aiLogic = `This question about ${question.text.toLowerCase()} addresses the emotional labor and planning work of parenting. The AI prioritized it because these tasks often account for the largest imbalances in family workload.`;
-        break;
-      default:
-        aiLogic = `This question was selected because it addresses a key aspect of family workload balance.`;
-    }
-    
-    // Add weight-related explanation if available
-    if (question.totalWeight) {
-      const weightNum = parseFloat(question.totalWeight);
-      if (weightNum > 10) {
-        aiLogic += ` With an impact score of ${weightNum.toFixed(1)}, this is considered a high-impact task that significantly affects family dynamics.`;
-      } else if (weightNum > 7) {
-        aiLogic += ` With an impact score of ${weightNum.toFixed(1)}, this task has medium-high impact on overall family balance.`;
-      } else {
-        aiLogic += ` Tracking this task over time provides valuable insights for improving family balance.`;
-      }
-    }
-    
-    return aiLogic;
+  }, [generateWeeklyQuestions, currentWeek, surveyQuestions.length]);
+
+  // Get current page questions
+  const getCurrentPageQuestions = () => {
+    const startIndex = (currentPage - 1) * pageSize;
+    const endIndex = startIndex + pageSize;
+    return surveyQuestions.slice(startIndex, endIndex);
   };
 
-  // Parent profile images with fallbacks
-  const parents = {
-    mama: {
-      name: mamaUser?.name || 'Mama',
-      image: mamaUser?.profilePicture || 'data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAyNTYgMjU2Ij48Y2lyY2xlIGN4PSIxMjgiIGN5PSIxMjgiIHI9IjEyOCIgZmlsbD0iI2U5YjFkYSIvPjxjaXJjbGUgY3g9IjEyOCIgY3k9IjkwIiByPSI0MCIgZmlsbD0iI2ZmZiIvPjxwYXRoIGQ9Ik0yMTUsMTcyLjVjMCwzNS05NSwzNS05NSwzNXMtOTUsMC05NS0zNWMwLTIzLjMsOTUtMTAsOTUtMTBTMjE1LDE0OS4yLDIxNSwxNzIuNVoiIGZpbGw9IiNmZmYiLz48L3N2Zz4='
-    },
-    papa: {
-      name: papaUser?.name || 'Papa',
-      image: papaUser?.profilePicture || 'data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAyNTYgMjU2Ij48Y2lyY2xlIGN4PSIxMjgiIGN5PSIxMjgiIHI9IjEyOCIgZmlsbD0iIzg0YzRlMiIvPjxjaXJjbGUgY3g9IjEyOCIgY3k9IjkwIiByPSI0MCIgZmlsbD0iI2ZmZiIvPjxwYXRoIGQ9Ik0yMTUsMTcyLjVjMCwzNS05NSwzNS05NSwzNXMtOTUsMC05NS0zNWMwLTIzLjMsOTUtMTAsOTUtMTBTMjE1LDE0OS4yLDIxNSwxNzIuNVoiIGZpbGw9IiNmZmYiLz48L3N2Zz4='
-    }
+  // Toggle help text for a question
+  const toggleHelp = (questionId) => {
+    setShowHelp(prev => ({
+      ...prev,
+      [questionId]: !prev[questionId]
+    }));
   };
-  
-  // Set up keyboard shortcuts with debouncing protection
-  useEffect(() => {
-    // Function to handle key press with strict debounce
-    const handleKeyPress = (e) => {
-      // If already processing or another state prevents handling, ignore the event
-      if (keyBlockerRef.current || isProcessing) {
-        e.preventDefault();
-        return;
-      }
-      
-      // Immediately block further keypresses
-      keyBlockerRef.current = true;
-      
-      // Check if we have a valid question at current index
-      const hasValidQuestion = weeklyQuestions && weeklyQuestions[currentQuestionIndex];
-      
-      if (!hasValidQuestion) {
-        keyBlockerRef.current = false;
-        return;
-      }
-      
-      // Only handle M and P keys
-      if (e.key.toLowerCase() === 'm') {
-        handleSelectParent('Mama');
-      } 
-      else if (e.key.toLowerCase() === 'p') {
-        handleSelectParent('Papa');
-      }
-      
-      // Keep blocking keypresses for a full second
-      setTimeout(() => {
-        keyBlockerRef.current = false;
-      }, 1500);
-    };
-    
-    // Add the listener - use capture phase to get the event first
-    window.addEventListener('keydown', handleKeyPress, { capture: true });
-    keyboardInitialized.current = true;
-    
-    // Cleanup function
-    return () => {
-      window.removeEventListener('keydown', handleKeyPress, { capture: true });
-      keyboardInitialized.current = false;
-      
-      // Clear any pending timers
-      if (questionTimerRef.current) {
-        clearTimeout(questionTimerRef.current);
-        questionTimerRef.current = null;
-      }
-    };
-  }, [currentQuestionIndex, isProcessing, weeklyQuestions]);
 
-  // Get current question
-  const currentQuestion = weeklyQuestions[currentQuestionIndex];
-  
-  // Handle parent selection
-  const handleSelectParent = (parent) => {
-    // Prevent multiple calls while processing
-    if (isProcessing) {
-      console.log("Ignoring selection - already processing");
-      return;
-    }
-    
-    // Set processing state immediately
-    setIsProcessing(true);
-    
-    // Cancel any existing timers
-    if (questionTimerRef.current) {
-      clearTimeout(questionTimerRef.current);
-      questionTimerRef.current = null;
-    }
-    
-    // Set the selected parent for UI feedback
-    setSelectedParent(parent);
-    
-    // Save response
-    if (currentQuestion) {
-      updateSurveyResponse(currentQuestion.id, parent);
-    
-      // Wait for a moment to show selection before moving to next question
-      questionTimerRef.current = setTimeout(() => {
-        if (currentQuestionIndex < weeklyQuestions.length - 1) {
-          // Use functional state update to ensure we're using the latest value
-          setCurrentQuestionIndex(prevIndex => prevIndex + 1);
-          setSelectedParent(null);
-          setShowExplanation(false);
-          setIsProcessing(false); // Reset processing state
-        } else {
-          // Survey completed, move to completion
-          handleCompleteSurvey();
-        }
-      }, 500);
-    }
+  // Handle response selection
+  const handleResponseChange = (questionId, value) => {
+    updateSurveyResponse(questionId, value);
   };
-  
-  // Handle survey completion
-  const handleCompleteSurvey = async () => {
-    if (isSubmitting) return;
-    
-    setIsSubmitting(true);
-    
-    try {
-      // First navigate to loading screen to show transition
-      navigate('/loading');
-      
-      const currentWeek = familyData?.currentWeek || 1;
-      
-      // Save weekly check-in responses to database
-      await saveSurveyResponses(
-        familyData.familyId,
-        selectedMember.id,
-        `weekly-${currentWeek}`,
-        surveyResponses,
-        true // Mark as completed
-      );
-      
-      // Add a timeout before navigating to dashboard to ensure data is processed
-      setTimeout(() => {
-        navigate('/dashboard');
-      }, 1500);
-    } catch (error) {
-      console.error('Error completing weekly check-in:', error);
-      alert('There was an error saving your responses. Please try again.');
-      
-      // Even on error, navigate back to dashboard after a delay
-      setTimeout(() => {
-        navigate('/dashboard');
-      }, 1000);
-    } finally {
-      setIsSubmitting(false);
-    }
-  };
-  
-  // Move to previous question
-  const handlePrevious = () => {
-    if (currentQuestionIndex > 0) {
-      setCurrentQuestionIndex(prevIndex => prevIndex - 1);
-      setSelectedParent(surveyResponses[weeklyQuestions[currentQuestionIndex - 1].id] || null);
-      setShowExplanation(false);
-    }
-  };
-  
-  // Skip question
-  const handleSkip = () => {
-    if (currentQuestionIndex < weeklyQuestions.length - 1) {
-      setCurrentQuestionIndex(prevIndex => prevIndex + 1);
-      setSelectedParent(null);
-      setShowExplanation(false);
+
+  // Navigate to next page or complete check-in
+  const handleNext = async () => {
+    if (currentPage < totalPages) {
+      // Go to next page
+      setCurrentPage(currentPage + 1);
+      window.scrollTo(0, 0);
     } else {
-      // Survey completed, move to dashboard
-      handleCompleteSurvey();
-    }
-  };
-  
-  // Handle exit
-  const handleExit = async () => {
-    if (isProcessing) return;
-    setIsProcessing(true);
-    
-    try {
-      const currentWeek = familyData?.currentWeek || 1;
-      
-      // Only save if we have at least one response
-      if (Object.keys(surveyResponses).length > 0) {
-        await saveSurveyResponses(
-          familyData.familyId,
-          selectedMember.id,
-          `weekly-${currentWeek}`,
-          surveyResponses,
-          false // Not marking as completed
-        );
+      // Complete check-in
+      try {
+        setLoading(true);
+        setError(null);
+        
+        // Save responses to database
+        if (familyData?.familyId && selectedMember?.id) {
+          await saveSurveyResponses(
+            familyData.familyId, 
+            selectedMember.id, 
+            `weekly-${currentWeek}`,
+            surveyResponses
+          );
+          
+          // Update family member's weekly completion status
+          const updatedMembers = familyData.familyMembers.map(member => {
+            if (member.id === selectedMember.id) {
+              // Create or update weeklyCompleted array
+              const weeklyCompleted = [...(member.weeklyCompleted || [])];
+              
+              // Ensure we have entries up to the current week
+              while (weeklyCompleted.length < currentWeek) {
+                weeklyCompleted.push({
+                  completed: false,
+                  date: null
+                });
+              }
+              
+              // Update the current week
+              weeklyCompleted[currentWeek - 1] = {
+                completed: true,
+                date: new Date().toISOString()
+              };
+              
+              return {
+                ...member,
+                weeklyCompleted
+              };
+            }
+            return member;
+          });
+          
+          await updateFamilyData({ familyMembers: updatedMembers });
+          
+          // Generate new tasks based on survey responses
+          const tasks = await generateWeeklyTasks(
+            currentWeek,
+            [],  // No previous tasks for this example
+            surveyResponses
+          );
+          
+          setGeneratedTasks(tasks);
+          setCheckInCompleted(true);
+        } else {
+          throw new Error('Missing family or member information');
+        }
+      } catch (err) {
+        console.error('Error completing weekly check-in:', err);
+        setError('Failed to save check-in. Please try again.');
+      } finally {
+        setLoading(false);
       }
-      
-      // Now navigate to dashboard
-      navigate('/dashboard');
-    } catch (error) {
-      console.error('Error saving survey progress:', error);
-      alert('There was an error saving your progress, but you can continue later.');
-      navigate('/dashboard');
-    } finally {
-      setIsProcessing(false);
     }
   };
-  
-  // Toggle explanation
-  const toggleExplanation = () => {
-    setShowExplanation(!showExplanation);
+
+  // Navigate to previous page
+  const handlePrevious = () => {
+    if (currentPage > 1) {
+      setCurrentPage(currentPage - 1);
+      window.scrollTo(0, 0);
+    }
   };
-  
-  // Handle logout
-  const handleLogout = () => {
-    navigate('/login');
+
+  // Navigation to dashboard after completion
+  const handleContinueToDashboard = () => {
+    navigate('/dashboard');
   };
-  
-  // Calculate progress
-  const progress = getSurveyProgress();
-  
-  // If no selected user, return loading
-  if (!selectedMember || !currentQuestion) {
-    return <div className="flex items-center justify-center h-screen">Loading...</div>;
-  }
-  
-  return (
-    <div className="flex flex-col min-h-screen bg-gray-50">
-      {/* Header */}
-      <div className="bg-black text-white p-4">
-        <div className="max-w-3xl mx-auto flex items-center justify-between">
-          <div className="flex items-center">
-            <div className="w-8 h-8 rounded-full overflow-hidden mr-2">
-              <img 
-                src={selectedMember.profilePicture} 
-                alt={selectedMember.name}
-                className="w-full h-full object-cover"
-              />
-            </div>
-            <span className="font-roboto">{selectedMember.name}</span>
-          </div>
-          <button 
-            onClick={handleLogout}
-            className="flex items-center text-sm bg-gray-800 hover:bg-gray-700 px-2 py-1 rounded font-roboto"
-          >
-            <LogOut size={14} className="mr-1" />
-            Switch User
-          </button>
-        </div>
-      </div>
-      
-      {/* Main content */}
-      <div className="flex-1 p-4">
+
+  // Calculate survey progress
+  const progress = getSurveyProgress(surveyQuestions.length);
+
+  // Check if current page's questions are all answered
+  const isPageComplete = getCurrentPageQuestions().every(question => 
+    surveyResponses[question.id] !== undefined
+  );
+
+  // If check-in is completed, show success message
+  if (checkInCompleted) {
+    return (
+      <div className="min-h-screen bg-gray-50 py-12 px-4 sm:px-6 lg:px-8">
         <div className="max-w-3xl mx-auto">
-          {/* Survey title */}
-          <div className="text-center mb-4">
-            <h2 className="text-2xl font-bold font-roboto">Weekly Check-in - Cycle {familyData?.currentWeek || 1}</h2>
-            <p className="text-gray-600 mt-1 font-roboto">Help us track your family's balance progress</p>
+          <div className="text-center mb-12">
+            <h1 className="text-3xl font-light text-gray-900">Allie</h1>
+            <h2 className="mt-2 text-2xl font-bold text-gray-900">Week {currentWeek} Check-In Complete!</h2>
           </div>
+
+          <div className="bg-white p-8 rounded-lg shadow-sm">
+            <div className="flex justify-center mb-6">
+              <div className="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center">
+                <CheckCircle className="h-8 w-8 text-green-600" />
+              </div>
+            </div>
             
-          {/* Question */}
-          <div className="bg-white rounded-lg p-6 shadow-sm mb-4">
-            <p className="text-lg text-center">
-              {currentQuestion.text}
-            </p>
-            <p className="text-xs text-gray-500 text-center mt-1">
-              {currentQuestion.category}
+            <p className="text-center text-lg text-gray-700 mb-8">
+              Thank you for completing your Week {currentWeek} check-in! We've generated new task recommendations based on your responses.
             </p>
             
-            {/* Question explanation toggle */}
-            <div className="flex justify-center mt-3">
-              <button 
-                onClick={toggleExplanation}
-                className="flex items-center text-sm text-blue-600"
+            {generatedTasks.length > 0 && (
+              <div className="mb-8">
+                <h3 className="text-lg font-medium mb-4">New Task Recommendations:</h3>
+                <div className="space-y-4">
+                  {generatedTasks.map((task, index) => (
+                    <div key={index} className="p-4 border border-gray-200 rounded-lg">
+                      <h4 className="font-medium">{task.title}</h4>
+                      <p className="text-gray-600 text-sm">{task.description}</p>
+                      <p className="text-sm mt-2">
+                        <span className="text-gray-500">Assigned to:</span> {task.assignedTo}
+                      </p>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+            
+            <div className="mt-8 flex justify-center">
+              <button
+                onClick={handleContinueToDashboard}
+                className="px-6 py-3 bg-black text-white rounded-md hover:bg-gray-800"
               >
-                <HelpCircle size={16} className="mr-1" />
-                {showExplanation ? "Hide explanation" : "Why are we asking this again?"}
+                Continue to Dashboard
               </button>
             </div>
-
-            {/* Explanation panel - Always show part of it */}
-            <div className="mt-3">
-              {/* Weekly explanation - always visible */}
-              <div className="bg-gray-50 p-3 rounded-md border text-sm text-gray-600 mb-2">
-                <p className="font-roboto">{currentQuestion.weeklyExplanation}</p>
-              </div>
-              
-              {/* AI explanation - always visible */}
-              <div className="p-3 bg-purple-50 border border-purple-200 rounded">
-                <div className="flex items-start">
-                  <Brain size={16} className="text-purple-600 mr-2 mt-0.5 flex-shrink-0" />
-                  <div>
-                    <p className="text-purple-800 font-medium mb-1">AI Selection Logic:</p>
-                    <p className="text-purple-800 font-roboto text-sm">
-                      {generateAIExplanation(currentQuestion)}
-                    </p>
-                  </div>
-                </div>
-              </div>
-
-              {/* Weight metrics visualization */}
-              {currentQuestion.totalWeight && (
-                <div className="mt-4 p-3 bg-gray-50 rounded-md border">
-                  <h4 className="text-sm font-medium mb-2 flex items-center">
-                    <Scale size={16} className="mr-2 text-gray-700" />
-                    Task Weight Analysis
-                  </h4>
-                  <div className="grid grid-cols-2 gap-2">
-                    <div className="text-xs">
-                      <div className="flex items-center justify-between">
-                        <span className="text-gray-600">Base Time:</span>
-                        <span className="font-medium">{currentQuestion.baseWeight}/5</span>
-                      </div>
-                      <div className="w-full bg-gray-200 h-1.5 mt-1 rounded-full overflow-hidden">
-                        <div 
-                          className="bg-blue-500 h-full rounded-full" 
-                          style={{ width: `${(currentQuestion.baseWeight / 5) * 100}%` }}
-                        ></div>
-                      </div>
-                    </div>
-                    <div className="text-xs">
-                      <div className="flex items-center justify-between">
-                        <span className="text-gray-600">Frequency:</span>
-                        <span className="font-medium">{currentQuestion.frequency}</span>
-                      </div>
-                      <div className="w-full bg-gray-200 h-1.5 mt-1 rounded-full overflow-hidden">
-                        <div 
-                          className="bg-green-500 h-full rounded-full" 
-                          style={{ 
-                            width: `${
-                              currentQuestion.frequency === 'daily' ? 100 :
-                              currentQuestion.frequency === 'several' ? 80 :
-                              currentQuestion.frequency === 'weekly' ? 60 :
-                              currentQuestion.frequency === 'monthly' ? 40 : 
-                              20
-                            }%` 
-                          }}
-                        ></div>
-                      </div>
-                    </div>
-                    {currentQuestion.invisibility && (
-                      <div className="text-xs">
-                        <div className="flex items-center justify-between">
-                          <span className="text-gray-600">Invisibility:</span>
-                          <span className="font-medium">{currentQuestion.invisibility}</span>
-                        </div>
-                        <div className="w-full bg-gray-200 h-1.5 mt-1 rounded-full overflow-hidden">
-                          <div 
-                            className="bg-purple-500 h-full rounded-full" 
-                            style={{ 
-                              width: `${
-                                currentQuestion.invisibility === 'completely' ? 100 :
-                                currentQuestion.invisibility === 'mostly' ? 75 :
-                                currentQuestion.invisibility === 'partially' ? 50 : 
-                                25
-                              }%` 
-                            }}
-                          ></div>
-                        </div>
-                      </div>
-                    )}
-                    {currentQuestion.emotionalLabor && (
-                      <div className="text-xs">
-                        <div className="flex items-center justify-between">
-                          <span className="text-gray-600">Emotional Labor:</span>
-                          <span className="font-medium">{currentQuestion.emotionalLabor}</span>
-                        </div>
-                        <div className="w-full bg-gray-200 h-1.5 mt-1 rounded-full overflow-hidden">
-                          <div 
-                            className="bg-red-500 h-full rounded-full" 
-                            style={{ 
-                              width: `${
-                                currentQuestion.emotionalLabor === 'extreme' ? 100 :
-                                currentQuestion.emotionalLabor === 'high' ? 80 :
-                                currentQuestion.emotionalLabor === 'moderate' ? 60 :
-                                currentQuestion.emotionalLabor === 'low' ? 40 : 
-                                20
-                              }%` 
-                            }}
-                          ></div>
-                        </div>
-                      </div>
-                    )}
-                  </div>
-                  <div className="mt-2 pt-2 border-t text-xs text-gray-600">
-                    <div className="flex justify-between">
-                      <span>Total Weight Impact:</span>
-                      <span className="font-bold">{parseFloat(currentQuestion.totalWeight).toFixed(1)}</span>
-                    </div>
-                  </div>
-                </div>
-              )}
-            </div>
-          </div>
-            
-          {/* Parent selection */}
-          <div className="flex justify-center items-center mb-8">
-            <div className="flex w-full max-w-md justify-between items-center">
-              {/* Mama */}
-              <div className="flex flex-col items-center">
-                <button
-                  onClick={() => handleSelectParent('Mama')}
-                  className={`w-32 h-32 sm:w-40 sm:h-40 rounded-full focus:outline-none border-4 overflow-hidden ${
-                    selectedParent === 'Mama' ? 'border-blue-500' : 'border-transparent'
-                  }`}
-                  disabled={isProcessing}
-                >
-                  <img 
-                    src={parents.mama.image} 
-                    alt="Mama"
-                    className="w-full h-full object-cover"
-                  />
-                </button>
-                <p className="mt-2 font-medium">{parents.mama.name}</p>
-                <p className="text-xs text-gray-500">(press 'M' key)</p>
-              </div>
-              
-              {/* Divider */}
-              <div className="h-32 sm:h-40 w-px bg-gray-300"></div>
-              
-              {/* Papa */}
-              <div className="flex flex-col items-center">
-                <button
-                  onClick={() => handleSelectParent('Papa')}
-                  className={`w-32 h-32 sm:w-40 sm:h-40 rounded-full focus:outline-none border-4 overflow-hidden ${
-                    selectedParent === 'Papa' ? 'border-blue-500' : 'border-transparent'
-                  }`}
-                  disabled={isProcessing}
-                >
-                  <img 
-                    src={parents.papa.image} 
-                    alt="Papa"
-                    className="w-full h-full object-cover"
-                  />
-                </button>
-                <p className="mt-2 font-medium">{parents.papa.name}</p>
-                <p className="text-xs text-gray-500">(press 'P' key)</p>
-              </div>
-            </div>
-          </div>
-            
-          {/* Progress */}
-          <div className="text-center">
-            <p className="font-medium mb-2">
-              Question {currentQuestionIndex + 1} of {weeklyQuestions.length}
-            </p>
-            <div className="h-2 bg-gray-200 rounded overflow-hidden">
-              <div 
-                className="h-full bg-blue-500 transition-all duration-300" 
-                style={{ width: `${progress}%` }}
-              />
-            </div>
           </div>
         </div>
       </div>
-      
-      {/* Footer with navigation */}
-      <div className="border-t bg-white p-4">
-        <div className="max-w-3xl mx-auto flex justify-between">
-          <button 
-            onClick={handlePrevious}
-            disabled={currentQuestionIndex === 0 || isSubmitting || isProcessing}
-            className={`px-4 py-2 border rounded font-roboto ${
-              currentQuestionIndex === 0 || isSubmitting || isProcessing
-                ? 'bg-gray-100 text-gray-400 cursor-not-allowed' 
-                : 'bg-white hover:bg-gray-50'
-            }`}
-          >
-            Previous
-          </button>
-          <button 
-            className={`px-4 py-2 border rounded font-roboto ${
-              isSubmitting || isProcessing
-                ? 'bg-gray-100 text-gray-400 cursor-not-allowed'
-                : 'bg-white hover:bg-gray-50'
-            }`}
-            onClick={handleExit}
-            disabled={isSubmitting || isProcessing}
-          >
-            Save & Exit
-          </button>
-          <button 
-            className={`px-4 py-2 border rounded font-roboto ${
-              isSubmitting || isProcessing
-                ? 'bg-gray-100 text-gray-400 cursor-not-allowed'
-                : 'bg-white hover:bg-gray-50'
-            }`}
-            onClick={handleSkip}
-            disabled={isSubmitting || isProcessing}
-          >
-            Skip
-          </button>
+    );
+  }
+
+  return (
+    <div className="min-h-screen bg-gray-50 py-12 px-4 sm:px-6 lg:px-8">
+      <div className="max-w-3xl mx-auto">
+        <div className="text-center mb-12">
+          <h1 className="text-3xl font-light text-gray-900">Allie</h1>
+          <h2 className="mt-2 text-2xl font-bold text-gray-900">Week {currentWeek} Check-In</h2>
+          <p className="mt-2 text-gray-600">
+            Help us track your family's progress and update recommendations
+          </p>
+        </div>
+
+        {/* Progress bar */}
+        <div className="mb-8">
+          <div className="flex justify-between text-sm text-gray-500">
+            <span>Page {currentPage} of {totalPages}</span>
+            <span>{Math.round(progress)}% Complete</span>
+          </div>
+          <div className="mt-2 h-2 bg-gray-200 rounded-full">
+            <div 
+              className="h-full bg-black rounded-full transition-all duration-300" 
+              style={{ width: `${progress}%` }}
+            ></div>
+          </div>
+        </div>
+
+        {error && (
+          <div className="mb-8 p-4 bg-red-100 text-red-700 rounded-md">
+            {error}
+          </div>
+        )}
+
+        {/* Questions */}
+        <div className="bg-white shadow rounded-lg overflow-hidden">
+          <div className="p-6">
+            <h3 className="text-xl font-bold mb-6">Weekly Check-In Questions</h3>
+            
+            <div className="space-y-6">
+              {getCurrentPageQuestions().map((question) => (
+                <div key={question.id} className="p-4 border border-gray-200 rounded-lg">
+                  <div className="flex justify-between items-start">
+                    <h4 className="text-lg font-medium mb-4">{question.text}</h4>
+                    <button
+                      type="button"
+                      onClick={() => toggleHelp(question.id)}
+                      className="ml-2 text-gray-400 hover:text-gray-600"
+                    >
+                      <HelpCircle size={20} />
+                    </button>
+                  </div>
+                  
+                  {showHelp[question.id] && (
+                    <div className="mb-4 p-3 bg-blue-50 text-blue-800 rounded-md text-sm">
+                      <p>{question.weeklyExplanation || question.explanation}</p>
+                    </div>
+                  )}
+                  
+                  <div className="flex flex-wrap gap-3 mt-4">
+                    {['Mama', 'Papa', 'Shared', 'N/A'].map((option) => (
+                      <button
+                        key={option}
+                        type="button"
+                        className={`px-4 py-2 rounded-md border ${
+                          surveyResponses[question.id] === option
+                            ? 'bg-black text-white border-black'
+                            : 'bg-white text-gray-700 border-gray-300 hover:bg-gray-50'
+                        }`}
+                        onClick={() => handleResponseChange(question.id, option)}
+                      >
+                        {option}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              ))}
+            </div>
+            
+            <div className="mt-8 flex justify-between">
+              <button
+                type="button"
+                onClick={handlePrevious}
+                disabled={currentPage === 1}
+                className={`px-4 py-2 rounded-md flex items-center ${
+                  currentPage === 1
+                    ? 'text-gray-400 cursor-not-allowed'
+                    : 'text-gray-700 hover:bg-gray-100'
+                }`}
+              >
+                <ArrowLeft size={16} className="mr-2" />
+                Previous
+              </button>
+              
+              <button
+                type="button"
+                onClick={handleNext}
+                disabled={!isPageComplete || loading}
+                className={`px-4 py-2 rounded-md flex items-center ${
+                  isPageComplete && !loading
+                    ? 'bg-black text-white hover:bg-gray-800'
+                    : 'bg-gray-300 text-gray-500 cursor-not-allowed'
+                }`}
+              >
+                {loading ? 'Processing...' : (
+                  <>
+                    {currentPage === totalPages ? 'Complete' : 'Next'}
+                    <ArrowRight size={16} className="ml-2" />
+                  </>
+                )}
+              </button>
+            </div>
+          </div>
         </div>
       </div>
     </div>

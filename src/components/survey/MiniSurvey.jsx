@@ -1,164 +1,240 @@
-// src/components/survey/MiniSurvey.jsx
 import React, { useState, useEffect } from 'react';
-import { useNavigate, useLocation } from 'react-router-dom';
-import { Brain } from 'lucide-react';
-import { useSurvey } from '../../hooks/useSurvey';
+import { useNavigate } from 'react-router-dom';
+import { ArrowRight, ChevronLeft, ChevronRight, HelpCircle, BarChart } from 'lucide-react';
 
 const MiniSurvey = () => {
-  const [currentQuestion, setCurrentQuestion] = useState(0);
-  const [responses, setResponses] = useState({});
   const navigate = useNavigate();
-  const location = useLocation();
-  const [pendingFamilyData, setPendingFamilyData] = useState(null);
-  const [isProcessing, setIsProcessing] = useState(false);
+  const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0);
+  const [responses, setResponses] = useState({});
+  const [showResults, setShowResults] = useState(false);
   
-  const {
-    error: surveyError,
-    clearError: clearSurveyError
-  } = useSurvey();
-  
-  // Sample 20 questions covering the different categories
+  // Sample questions for mini assessment
   const questions = [
-    // Visible Household Tasks (5 questions)
-    { id: "q1", text: "Who is responsible for cooking meals in your home?", category: "Visible Household Tasks" },
-    { id: "q2", text: "Who typically cleans the bathroom?", category: "Visible Household Tasks" },
-    { id: "q3", text: "Who does the laundry in your household?", category: "Visible Household Tasks" },
-    { id: "q4", text: "Who takes out the trash regularly?", category: "Visible Household Tasks" },
-    { id: "q5", text: "Who handles yard work and gardening?", category: "Visible Household Tasks" },
-    
-    // Invisible Household Tasks (5 questions)
-    { id: "q6", text: "Who plans meals for the week?", category: "Invisible Household Tasks" },
-    { id: "q7", text: "Who remembers birthdays and special occasions?", category: "Invisible Household Tasks" },
-    { id: "q8", text: "Who schedules home maintenance appointments?", category: "Invisible Household Tasks" },
-    { id: "q9", text: "Who makes shopping lists?", category: "Invisible Household Tasks" },
-    { id: "q10", text: "Who researches products before purchasing?", category: "Invisible Household Tasks" },
-    
-    // Visible Parental Tasks (5 questions)
-    { id: "q11", text: "Who drives kids to school and activities?", category: "Visible Parental Tasks" },
-    { id: "q12", text: "Who helps with homework?", category: "Visible Parental Tasks" },
-    { id: "q13", text: "Who prepares school lunches?", category: "Visible Parental Tasks" },
-    { id: "q14", text: "Who coordinates extracurricular activities?", category: "Visible Parental Tasks" },
-    { id: "q15", text: "Who attends parent-teacher conferences?", category: "Visible Parental Tasks" },
-    
-    // Invisible Parental Tasks (5 questions)
-    { id: "q16", text: "Who provides emotional support during tough times?", category: "Invisible Parental Tasks" },
-    { id: "q17", text: "Who anticipates children's developmental needs?", category: "Invisible Parental Tasks" },
-    { id: "q18", text: "Who mediates conflicts between siblings?", category: "Invisible Parental Tasks" },
-    { id: "q19", text: "Who monitors academic progress?", category: "Invisible Parental Tasks" },
-    { id: "q20", text: "Who handles cultural and moral education?", category: "Invisible Parental Tasks" }
-  ];
-  
-  // Effect to load pending family data
-  useEffect(() => {
-    // Check for data passed in location state
-    if (location?.state?.familyData) {
-      setPendingFamilyData(location.state.familyData);
-    } 
-    // Check for data in localStorage
-    else {
-      const storedData = localStorage.getItem('pendingFamilyData');
-      if (storedData) {
-        try {
-          setPendingFamilyData(JSON.parse(storedData));
-        } catch (e) {
-          console.error("Error parsing stored family data:", e);
-        }
-      }
+    {
+      id: 'mini-1',
+      text: "Who is primarily responsible for meal planning in your household?",
+      category: "Invisible Household Tasks",
+      explanation: "Meal planning involves mental load to anticipate family needs."
+    },
+    {
+      id: 'mini-2',
+      text: "Who usually handles school communications and appointments?",
+      category: "Invisible Parental Tasks",
+      explanation: "Managing communications creates significant invisible mental load."
+    },
+    {
+      id: 'mini-3',
+      text: "Who typically cleans the kitchen after meals?",
+      category: "Visible Household Tasks",
+      explanation: "Regular cleaning tasks are visible but time-consuming."
+    },
+    {
+      id: 'mini-4',
+      text: "Who provides emotional support when children are upset?",
+      category: "Invisible Parental Tasks",
+      explanation: "Emotional caregiving is high-impact invisible work."
+    },
+    {
+      id: 'mini-5',
+      text: "Who notices when household supplies need to be restocked?",
+      category: "Invisible Household Tasks",
+      explanation: "Keeping mental inventory is classic invisible labor."
     }
-  }, [location]);
-  
-  // Handle parent selection
-  const handleSelectParent = (parent) => {
-    // Prevent multiple submissions while processing
-    if (isProcessing) return;
-    setIsProcessing(true);
+  ];
+
+  const currentQuestion = questions[currentQuestionIndex];
+
+  // Handle response selection
+  const handleResponse = (value) => {
+    setResponses({
+      ...responses,
+      [currentQuestion.id]: value
+    });
     
-    // Save response
-    const updatedResponses = {...responses};
-    updatedResponses[questions[currentQuestion].id] = parent;
-    setResponses(updatedResponses);
-    
-    // Move to next question or complete survey with a slight delay
-    setTimeout(() => {
-      if (currentQuestion < questions.length - 1) {
-        setCurrentQuestion(currentQuestion + 1);
-        setIsProcessing(false);
-      } else {
-        // Save responses and navigate to results
-        localStorage.setItem('miniSurveyResponses', JSON.stringify(updatedResponses));
-        
-        // Pass along the pending family data if it exists
-        navigate('/mini-results', pendingFamilyData ? {
-          state: {
-            fromMiniSurvey: true,
-            familyData: pendingFamilyData
-          }
-        } : undefined);
-      }
-    }, 300);
+    // Move to next question or show results
+    if (currentQuestionIndex < questions.length - 1) {
+      setCurrentQuestionIndex(currentQuestionIndex + 1);
+    } else {
+      setShowResults(true);
+    }
   };
-  
-  const currentQ = questions[currentQuestion];
-  
-  return (
-    <div className="min-h-screen bg-gray-50 py-8">
-      <div className="max-w-2xl mx-auto bg-white rounded-lg shadow p-6">
-        <h1 className="text-2xl font-bold mb-6 text-center font-roboto">Family Balance Mini-Assessment</h1>
-          
-        {/* Progress indicator */}
-        <div className="mb-6">
-          <div className="flex justify-between text-sm mb-1">
-            <span>Question {currentQuestion + 1} of {questions.length}</span>
-            <span>{Math.round(((currentQuestion + 1) / questions.length) * 100)}% complete</span>
-          </div>
-          <div className="h-2 bg-gray-200 rounded-full">
-            <div 
-              className="h-full bg-black rounded-full transition-all"
-              style={{ width: `${((currentQuestion + 1) / questions.length) * 100}%` }}
-            ></div>
-          </div>
-        </div>
+
+  // Calculate results
+  const calculateResults = () => {
+    const results = {
+      mama: 0,
+      papa: 0,
+      shared: 0,
+      na: 0
+    };
+    
+    Object.values(responses).forEach(response => {
+      if (response === 'Mama') results.mama++;
+      else if (response === 'Papa') results.papa++;
+      else if (response === 'Shared') results.shared++;
+      else results.na++;
+    });
+    
+    // Calculate percentages
+    const total = results.mama + results.papa + results.shared;
+    return {
+      mama: total ? Math.round((results.mama / total) * 100) : 0,
+      papa: total ? Math.round((results.papa / total) * 100) : 0,
+      shared: total ? Math.round((results.shared / total) * 100) : 0,
+      imbalance: total ? Math.abs(results.mama - results.papa) : 0
+    };
+  };
+
+  // Navigate to previous question
+  const handlePrevious = () => {
+    if (currentQuestionIndex > 0) {
+      setCurrentQuestionIndex(currentQuestionIndex - 1);
+    }
+  };
+
+  // Get sign up for full assessment
+  const handleSignUp = () => {
+    navigate('/signup');
+  };
+
+  if (showResults) {
+    const results = calculateResults();
+    
+    return (
+      <div className="max-w-2xl mx-auto p-6">
+        <h2 className="text-2xl font-bold mb-6 text-center">Your Quick Assessment Results</h2>
         
-        {/* Question */}
-        <div className="mb-8">
-          <h2 className="text-xl mb-2 font-roboto">{currentQ.text}</h2>
-          <p className="text-sm text-gray-500 font-roboto">{currentQ.category}</p>
+        <div className="bg-white rounded-lg shadow-sm p-6">
+          <div className="flex justify-center mb-8">
+            <div className="w-14 h-14 bg-blue-100 rounded-full flex items-center justify-center">
+              <BarChart className="h-8 w-8 text-blue-600" />
+            </div>
+          </div>
           
-          {/* Add a simplified AI explanation */}
-          <div className="mt-3 p-3 bg-purple-50 border border-purple-200 rounded">
-            <div className="flex items-start">
-              <Brain size={16} className="text-purple-600 mr-2 mt-0.5 flex-shrink-0" />
-              <div>
-                <p className="text-purple-800 font-medium text-sm mb-1">Why This Question Matters:</p>
-                <p className="text-purple-800 font-roboto text-sm">
-                  This question helps identify who handles key {currentQ.category.toLowerCase()} in your family. 
-                  Balancing these responsibilities leads to healthier family dynamics and relationships.
-                </p>
+          <h3 className="text-xl font-medium mb-6 text-center">
+            Your Family's Current Balance
+          </h3>
+          
+          <div className="space-y-6 mb-8">
+            <div>
+              <div className="flex justify-between mb-1">
+                <span className="text-sm font-medium">Mama ({results.mama}%)</span>
+                <span className="text-sm font-medium">Papa ({results.papa}%)</span>
+              </div>
+              <div className="h-4 bg-gray-200 rounded-full overflow-hidden">
+                <div 
+                  className={`h-full ${Math.abs(results.mama - results.papa) > 30 ? 'bg-amber-500' : 'bg-green-500'}`} 
+                  style={{ width: `${results.mama}%` }} 
+                />
+              </div>
+            </div>
+            
+            <div>
+              <p className="text-sm font-medium mb-1">Shared Responsibilities ({results.shared}%)</p>
+              <div className="h-4 bg-gray-200 rounded-full overflow-hidden">
+                <div 
+                  className="h-full bg-blue-500" 
+                  style={{ width: `${results.shared}%` }} 
+                />
               </div>
             </div>
           </div>
+          
+          <div className="mb-8 p-4 bg-gray-50 rounded-lg">
+            {results.imbalance > 3 ? (
+              <p className="text-gray-700">
+                Your quick assessment suggests there may be some imbalance in your family workload. 
+                A full assessment would provide more detailed insights and personalized recommendations.
+              </p>
+            ) : (
+              <p className="text-gray-700">
+                Your quick assessment suggests your family has a relatively balanced distribution of responsibilities. 
+                A full assessment would help identify specific areas for further improvement.
+              </p>
+            )}
+          </div>
+          
+          <div className="text-center">
+            <button
+              onClick={handleSignUp}
+              className="px-6 py-3 bg-black text-white rounded-md hover:bg-gray-800 inline-flex items-center"
+            >
+              Get Your Full Assessment
+              <ArrowRight size={16} className="ml-2" />
+            </button>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="max-w-2xl mx-auto p-6">
+      <h2 className="text-2xl font-bold mb-6 text-center">Quick Family Balance Assessment</h2>
+      
+      <div className="mb-6 flex justify-center">
+        <div className="flex items-center">
+          <span className="text-sm text-gray-500">Question {currentQuestionIndex + 1} of {questions.length}</span>
+          <div className="w-24 h-1 mx-4 rounded-full bg-gray-200 overflow-hidden">
+            <div 
+              className="h-full bg-black transition-all duration-300" 
+              style={{ width: `${((currentQuestionIndex + 1) / questions.length) * 100}%` }}
+            />
+          </div>
+        </div>
+      </div>
+      
+      <div className="bg-white rounded-lg shadow-sm p-6">
+        <div className="mb-6">
+          <h3 className="text-lg font-medium mb-2">
+            {currentQuestion.text}
+          </h3>
+          <p className="text-sm text-gray-500">
+            {currentQuestion.explanation}
+          </p>
         </div>
         
-        {/* Answer options */}
-        <div className="grid grid-cols-2 gap-4 mb-8">
-          <button 
-            onClick={() => handleSelectParent('Mama')}
-            className="p-4 bg-purple-100 hover:bg-purple-200 rounded-lg text-center transition-all"
-            disabled={isProcessing}
+        <div className="space-y-3">
+          <button
+            className="w-full p-3 bg-white border border-gray-300 rounded-md hover:bg-gray-50 text-left"
+            onClick={() => handleResponse('Mama')}
           >
-            <span className="block font-bold text-lg text-purple-800 mb-1 font-roboto">Mama</span>
-            <span className="text-sm text-purple-600 font-roboto">Click to select</span>
+            Mama
           </button>
           
-          <button 
-            onClick={() => handleSelectParent('Papa')}
-            className="p-4 bg-blue-100 hover:bg-blue-200 rounded-lg text-center transition-all"
-            disabled={isProcessing}
+          <button
+            className="w-full p-3 bg-white border border-gray-300 rounded-md hover:bg-gray-50 text-left"
+            onClick={() => handleResponse('Papa')}
           >
-            <span className="block font-bold text-lg text-blue-800 mb-1 font-roboto">Papa</span>
-            <span className="text-sm text-blue-600 font-roboto">Click to select</span>
+            Papa
+          </button>
+          
+          <button
+            className="w-full p-3 bg-white border border-gray-300 rounded-md hover:bg-gray-50 text-left"
+            onClick={() => handleResponse('Shared')}
+          >
+            Shared Equally
+          </button>
+          
+          <button
+            className="w-full p-3 bg-white border border-gray-300 rounded-md hover:bg-gray-50 text-left"
+            onClick={() => handleResponse('N/A')}
+          >
+            Not Applicable
           </button>
         </div>
+        
+        {currentQuestionIndex > 0 && (
+          <div className="mt-6 flex justify-center">
+            <button
+              onClick={handlePrevious}
+              className="text-gray-600 hover:text-gray-900 inline-flex items-center"
+            >
+              <ChevronLeft size={16} className="mr-1" />
+              Previous Question
+            </button>
+          </div>
+        )}
       </div>
     </div>
   );
