@@ -1,154 +1,183 @@
 // src/services/familyService.js
+
+import { db } from './firebase';
 import { 
-    doc, getDoc, setDoc, updateDoc, 
-    query, collection, where, getDocs,
-    serverTimestamp 
-  } from 'firebase/firestore';
-  import { db } from './firebase';
-  
-  /**
-   * Load a family by ID
-   * @param {string} familyId The ID of the family to load
-   * @returns {Promise<Object>} Family data
-   */
-  export async function loadFamilyById(familyId) {
-    try {
-      if (!familyId) throw new Error("No family ID provided");
-      
-      console.log(`Attempting to load family with ID: ${familyId}`);
-      
-      const docRef = doc(db, "families", familyId);
-      const docSnap = await getDoc(docRef);
-      
-      if (docSnap.exists()) {
-        console.log(`Successfully found family: ${familyId}`);
-        return {
-          familyId,
-          ...docSnap.data()
-        };
-      } else {
-        console.error(`Family with ID ${familyId} not found in database`);
-        
-        // Instead of throwing, return null
-        return null;
-      }
-    } catch (error) {
-      console.error(`Error loading family ${familyId}:`, error);
-      return null; // Return null instead of throwing
-    }
+  collection, 
+  doc, 
+  setDoc, 
+  getDoc, 
+  query, 
+  where, 
+  getDocs,
+  updateDoc
+} from 'firebase/firestore';
+
+// Create a new family with detailed logging
+export const createFamily = async (familyData, userId) => {
+  try {
+    console.log('🔵 Creating family with data:', JSON.stringify(familyData, null, 2));
+    console.log('🔵 Creator user ID:', userId);
+    
+    // Create a new document in the families collection
+    const familyRef = doc(collection(db, 'families'));
+    
+    // Add the creator as the first family member if not already included
+    const creatorExists = familyData.parents.some(parent => parent.id === userId);
+    
+    const familyMembers = [
+      ...familyData.parents,
+      ...(familyData.children || [])
+    ];
+    
+    // Combined data to save
+    const combinedData = {
+      familyName: familyData.familyName,
+      createdBy: userId,
+      createdAt: new Date().toISOString(),
+      currentWeek: 1,
+      completedWeeks: [],
+      priorities: familyData.priorities || {
+        highestPriority: 'Invisible Parental Tasks',
+        secondaryPriority: 'Visible Parental Tasks',
+        tertiaryPriority: 'Invisible Household Tasks'
+      },
+      familyMembers: familyMembers
+    };
+    
+    console.log('🔵 Combined data for saving:', JSON.stringify(combinedData, null, 2));
+    
+    // Save to Firestore
+    await setDoc(familyRef, combinedData);
+    console.log('🔵 Family document created with ID:', familyRef.id);
+    
+    // Also add this family reference to the user's profile
+    const userRef = doc(db, 'users', userId);
+    await setDoc(userRef, {
+      families: [familyRef.id]
+    }, { merge: true });
+    
+    console.log('🔵 Family reference added to user document');
+    
+    // Return the complete family data including ID
+    const result = {
+      familyId: familyRef.id,
+      ...combinedData
+    };
+    
+    console.log('🔵 Returning family data with ID');
+    return result;
+  } catch (error) {
+    console.error('❌ Error creating family:', error);
+    throw error;
   }
-  
-  
-  /**
-   * Load a family by user ID
-   * @param {string} userId The ID of the user
-   * @returns {Promise<Object>} Family data
-   */
-  export async function loadFamilyByUserId(userId) {
-    try {
-      if (!userId) throw new Error("No user ID provided");
-      
-      const q = query(collection(db, "families"), where("memberIds", "array-contains", userId));
-      const querySnapshot = await getDocs(q);
-      
-      if (!querySnapshot.empty) {
-        const familyId = querySnapshot.docs[0].id;
-        const familyData = querySnapshot.docs[0].data();
-        
-        return {
-          ...familyData,
-          familyId
-        };
-      } else {
-        return null;
-      }
-    } catch (error) {
-      console.error("Error loading family by user:", error);
-      throw error;
+};
+
+// Get a family by ID
+export const getFamilyById = async (familyId) => {
+  try {
+    const familyRef = doc(db, 'families', familyId);
+    const familySnapshot = await getDoc(familyRef);
+    
+    if (!familySnapshot.exists()) {
+      throw new Error('Family not found');
     }
+    
+    return {
+      familyId: familySnapshot.id,
+      ...familySnapshot.data()
+    };
+  } catch (error) {
+    console.error('Error getting family:', error);
+    throw error;
   }
-  
-  /**
-   * Get all families for a user
-   * @param {string} userId The ID of the user
-   * @returns {Promise<Array>} Array of family data objects
-   */
-  export async function getAllFamiliesByUserId(userId) {
-    try {
-      if (!userId) throw new Error("No user ID provided");
-      
-      const q = query(collection(db, "families"), where("memberIds", "array-contains", userId));
-      const querySnapshot = await getDocs(q);
-      
-      const families = [];
-      querySnapshot.forEach((doc) => {
-        families.push({
-          ...doc.data(),
-          familyId: doc.id
-        });
-      });
-      
-      return families;
-    } catch (error) {
-      console.error("Error loading all families by user:", error);
-      throw error;
+};
+
+// Get all families for a user
+export const getFamiliesByUserId = async (userId) => {
+  try {
+    // First get user document to find family IDs
+    const userRef = doc(db, 'users', userId);
+    const userSnapshot = await getDoc(userRef);
+    
+    if (!userSnapshot.exists()) {
+      return [];
     }
-  }
-  
-  /**
-   * Create a new family
-   * @param {Object} familyData Family information
-   * @returns {Promise<Object>} Created family data
-   */
-  export async function createFamily(familyData) {
-    try {
-      // Validate required fields
-      if (!familyData.familyName) {
-        throw new Error("Family name is required");
-      }
-      
-      // Generate a simple family ID
-      const familyId = Date.now().toString(36) + Math.random().toString(36).substring(2);
-      
-      // Prepare family document data
-      const familyDoc = {
-        ...familyData,
-        createdAt: serverTimestamp(),
-        updatedAt: serverTimestamp()
-      };
-      
-      // Create the family document
-      await setDoc(doc(db, "families", familyId), familyDoc);
-      
-      return {
-        familyId,
-        ...familyData
-      };
-    } catch (error) {
-      console.error("Error creating family:", error);
-      throw error;
+    
+    const userData = userSnapshot.data();
+    const familyIds = userData.families || [];
+    
+    // If no families, return empty array
+    if (familyIds.length === 0) {
+      return [];
     }
+    
+    // Get each family document
+    const families = await Promise.all(
+      familyIds.map(async (familyId) => {
+        try {
+          const family = await getFamilyById(familyId);
+          return family;
+        } catch (error) {
+          console.error(`Error getting family ${familyId}:`, error);
+          return null;
+        }
+      })
+    );
+    
+    // Filter out any nulls (failed retrievals)
+    return families.filter(Boolean);
+  } catch (error) {
+    console.error('Error getting families for user:', error);
+    throw error;
   }
-  
-  /**
-   * Update family data
-   * @param {string} familyId The ID of the family
-   * @param {Object} data Data to update
-   * @returns {Promise<boolean>} Success status
-   */
-  export async function updateFamilyData(familyId, data) {
-    try {
-      if (!familyId) throw new Error("No family ID provided");
-      
-      const docRef = doc(db, "families", familyId);
-      await updateDoc(docRef, {
-        ...data,
-        updatedAt: serverTimestamp()
-      });
-      
-      return true;
-    } catch (error) {
-      console.error("Error updating family data:", error);
-      throw error;
+};
+
+// Update family data
+export const updateFamily = async (familyId, updates) => {
+  try {
+    const familyRef = doc(db, 'families', familyId);
+    await updateDoc(familyRef, {
+      ...updates,
+      updatedAt: new Date().toISOString()
+    });
+    
+    return true;
+  } catch (error) {
+    console.error('Error updating family:', error);
+    throw error;
+  }
+};
+
+// Add a member to a family
+export const addFamilyMember = async (familyId, memberData) => {
+  try {
+    const familyRef = doc(db, 'families', familyId);
+    const familySnapshot = await getDoc(familyRef);
+    
+    if (!familySnapshot.exists()) {
+      throw new Error('Family not found');
     }
+    
+    const familyData = familySnapshot.data();
+    const familyMembers = familyData.familyMembers || [];
+    
+    // Check if member already exists
+    const exists = familyMembers.some(member => member.id === memberData.id);
+    if (exists) {
+      throw new Error('Member already exists in this family');
+    }
+    
+    // Add new member to the array
+    const updatedMembers = [...familyMembers, memberData];
+    
+    await updateDoc(familyRef, {
+      familyMembers: updatedMembers,
+      updatedAt: new Date().toISOString()
+    });
+    
+    return true;
+  } catch (error) {
+    console.error('Error adding family member:', error);
+    throw error;
   }
+};
